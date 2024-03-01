@@ -312,8 +312,8 @@ impl eframe::App for App {
     }
 
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
-        eapp_utils::window_frame(ctx).show(ctx, |ui| {
-            eapp_utils::handle_resize(ui);
+        eapp_utils::borderless::window_frame(ctx).show(ctx, |ui| {
+            eapp_utils::borderless::handle_resize(ui);
 
             let app_rect = ui.max_rect();
 
@@ -323,7 +323,7 @@ impl eframe::App for App {
                 rect.max.y = rect.min.y + title_bar_height;
                 rect
             };
-            eapp_utils::title_bar(ui, title_bar_rect, "script-caller");
+            eapp_utils::borderless::title_bar(ui, title_bar_rect, "script-caller");
 
             let content_rect = {
                 let mut rect = app_rect;
