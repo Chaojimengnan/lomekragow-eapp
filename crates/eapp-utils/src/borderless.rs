@@ -1,7 +1,7 @@
 //! Contains borderless application related utils
 
-use crate::{codicons, widgets::plain_button};
-use eframe::egui::{self, Color32, CursorIcon, ResizeDirection, Rounding, ViewportCommand};
+use crate::{codicons, widgets::PlainButton};
+use eframe::egui::{self, vec2, Color32, CursorIcon, ResizeDirection, ViewportCommand};
 
 // https://github.com/emilk/egui/pull/3762
 pub fn handle_resize(ui: &mut egui::Ui) -> bool {
@@ -76,7 +76,12 @@ pub fn window_frame(ctx: &egui::Context) -> egui::containers::panel::CentralPane
 pub fn title_bar_behavior(ui: &egui::Ui, title_bar_rect: eframe::epaint::Rect) {
     use egui::*;
 
-    let title_bar_response = ui.interact(title_bar_rect, Id::new("title_bar"), Sense::click());
+    let title_bar_response = ui.interact(
+        title_bar_rect,
+        Id::new("title_bar_behavior"),
+        Sense::click(),
+    );
+
     if title_bar_response.double_clicked() {
         let is_maximized = ui.input(|i| i.viewport().maximized.unwrap_or(false));
         ui.ctx()
@@ -117,6 +122,7 @@ pub fn title_bar(ui: &mut egui::Ui, title_bar_rect: eframe::epaint::Rect, title:
                 120.0,
                 title_bar_rect.height() - 1.0,
                 Color32::TRANSPARENT,
+                1.0,
             );
         });
     });
@@ -127,26 +133,43 @@ pub fn close_maximize_minimize(
     width_total: f32,
     height: f32,
     fill_color: impl Into<Color32>,
+    opacity: f32,
 ) {
     let width = width_total / 3.0;
     let f_col: Color32 = fill_color.into();
 
+    let new_button = |str| PlainButton::new(vec2(width, height), str).opacity(opacity);
+
     ui.scope(|ui| {
         ui.spacing_mut().item_spacing.x = 0.0;
 
-        let close_response = plain_button(
-            ui,
-            &codicons::ICON_CHROME_CLOSE.to_string(),
-            width,
-            height,
+        let frame_rect = {
+            let mut start = ui.cursor();
+            start.set_left(start.right() - width_total);
+            start.set_bottom(start.top() + height);
+            start
+        };
+
+        ui.painter().rect_filled(
+            frame_rect,
             egui::Rounding {
                 ne: 8.0,
                 ..egui::Rounding::ZERO
             },
-            f_col,
-            Color32::from_rgb(200, 5, 5),
+            f_col.linear_multiply(opacity),
         );
-        if close_response.clicked() {
+
+        if ui
+            .add(
+                new_button(codicons::ICON_CHROME_CLOSE.to_string())
+                    .rounding(egui::Rounding {
+                        ne: 8.0,
+                        ..egui::Rounding::ZERO
+                    })
+                    .hover(Color32::from_rgb(200, 5, 5)),
+            )
+            .clicked()
+        {
             ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
         }
 
@@ -157,30 +180,15 @@ pub fn close_maximize_minimize(
             codicons::ICON_CHROME_MAXIMIZE
         };
 
-        let maximized_response = plain_button(
-            ui,
-            &text.to_string(),
-            width,
-            height,
-            egui::Rounding::ZERO,
-            f_col,
-            Color32::DARK_GRAY,
-        );
-        if maximized_response.clicked() {
+        if ui.add(new_button(text.to_string())).clicked() {
             ui.ctx()
                 .send_viewport_cmd(ViewportCommand::Maximized(!is_maximized));
         }
 
-        let minimized_response = plain_button(
-            ui,
-            &codicons::ICON_CHROME_MINIMIZE.to_string(),
-            width,
-            height,
-            Rounding::ZERO,
-            f_col,
-            Color32::DARK_GRAY,
-        );
-        if minimized_response.clicked() {
+        if ui
+            .add(new_button(codicons::ICON_CHROME_MINIMIZE.to_string()))
+            .clicked()
+        {
             ui.ctx().send_viewport_cmd(ViewportCommand::Minimized(true));
         }
     });

@@ -1,5 +1,5 @@
 use crate::script::{self, Script};
-use eframe::egui::{self, Event, Key, Margin, Vec2};
+use eframe::egui::{self, Event, Key, Margin, Vec2, Vec2b};
 
 #[derive(PartialEq, Eq)]
 enum RunMode {
@@ -143,20 +143,20 @@ impl App {
         res
     }
 
-    fn contents(&mut self, ui: &mut egui::Ui) {
+    fn ui_contents(&mut self, ui: &mut egui::Ui) {
         let max_width = ui.available_width() * 0.65;
 
         egui::SidePanel::left("left_panel")
             .default_width(200.0)
             .width_range(200.0..=max_width)
-            .show_inside(ui, |ui| self.left_panel(ui));
+            .show_inside(ui, |ui| self.ui_left_panel(ui));
 
         egui::CentralPanel::default()
             .frame(egui::Frame::default().inner_margin(Margin::symmetric(8.0, 2.0)))
-            .show_inside(ui, |ui| self.right_panel(ui));
+            .show_inside(ui, |ui| self.ui_right_panel(ui));
     }
 
-    fn left_panel(&mut self, ui: &mut egui::Ui) {
+    fn ui_left_panel(&mut self, ui: &mut egui::Ui) {
         let mut t_changed = false; // tag
         let mut s_changed = false; // script
 
@@ -229,7 +229,7 @@ impl App {
         });
     }
 
-    fn right_panel(&mut self, ui: &mut egui::Ui) {
+    fn ui_right_panel(&mut self, ui: &mut egui::Ui) {
         let script = self.get_cur_script();
         if script.is_none() {
             ui.heading("No script selected");
@@ -259,6 +259,7 @@ impl App {
         let height = ui.available_height() - 48.0 - ui.spacing().item_spacing.y * 2.0;
         egui::ScrollArea::vertical()
             .max_height(height)
+            .auto_shrink(Vec2b::new(false, true))
             .show(ui, |ui| {
                 ui.set_min_height(height);
                 ui.with_layout(egui::Layout::top_down_justified(egui::Align::LEFT), |ui| {
@@ -332,7 +333,7 @@ impl eframe::App for App {
             }
             .shrink2(Vec2::new(0.5, 6.0));
 
-            self.contents(&mut ui.child_ui(content_rect, *ui.layout()));
+            self.ui_contents(&mut ui.child_ui(content_rect, *ui.layout()));
         });
     }
 }
