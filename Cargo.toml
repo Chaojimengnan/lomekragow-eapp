@@ -1,6 +1,6 @@
 [workspace]
 
-members = ["crates/eapp-utils", "crates/script-caller"]
+members = ["crates/eapp-utils", "crates/image-viewer", "crates/script-caller"]
 resolver = "2"
 
 [workspace.dependencies]
@@ -8,4 +8,8 @@ eframe = { version = "0.26.2", default-features = false }
 eapp-utils = { version = "0.1.0", path = "crates/eapp-utils", default-features = false }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1" }
-image = { version = "0.24", default-features = false }
+simplelog = { version = "0.12.2", default-features = false, features = [
+    "local-offset",
+] }
+log = "*"
+anyhow = "1.0"

@@ -287,22 +287,24 @@ impl App {
             .clicked()
         {
             let script_base_path = self.loader.script_path.clone();
-            if let Some(script) = self.get_cur_script() {
-                let args = script.generate_args_string();
-                let script_path = format!("{}/{}", script_base_path, script.name);
-                let require_admin = script.require_admin;
-                match self.run_mode {
-                    RunMode::Config => {
-                        if require_admin {
-                            script::runas_admin(&script_path, &args)
-                        } else {
-                            script::runas_normal(&script_path, &args)
+            eapp_utils::capture_error!(error, { log::error!("error when run script: {error}") }, {
+                if let Some(script) = self.get_cur_script() {
+                    let args = script.generate_args_string();
+                    let script_path = format!("{}/{}", script_base_path, script.name);
+                    let require_admin = script.require_admin;
+                    match self.run_mode {
+                        RunMode::Config => {
+                            if require_admin {
+                                script::runas_admin(&script_path, &args)?
+                            } else {
+                                script::runas_normal(&script_path, &args)?
+                            }
                         }
+                        RunMode::Normal => script::runas_normal(&script_path, &args)?,
+                        RunMode::Admin => script::runas_admin(&script_path, &args)?,
                     }
-                    RunMode::Normal => script::runas_normal(&script_path, &args),
-                    RunMode::Admin => script::runas_admin(&script_path, &args),
                 }
-            }
+            });
         }
     }
 }

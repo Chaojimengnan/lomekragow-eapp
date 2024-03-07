@@ -227,9 +227,10 @@ impl Loader {
     }
 }
 
-pub fn runas_admin(script_path: &str, args: &str) {
+pub fn runas_admin(script_path: &str, args: &str) -> anyhow::Result<()> {
     #[cfg(windows)]
     unsafe {
+        use windows_sys::Win32::Foundation::GetLastError;
         use windows_sys::Win32::UI::Shell::{
             ShellExecuteExW, SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW, SHELLEXECUTEINFOW_0,
         };
@@ -262,21 +263,30 @@ pub fn runas_admin(script_path: &str, args: &str) {
         };
 
         ShellExecuteExW(std::ptr::from_mut(&mut info));
+
+        let error_code = GetLastError();
+        if error_code != 0 {
+            anyhow::bail!("error with code: {error_code}");
+        }
     }
 
     #[cfg(not(windows))]
     unimplemented!();
+
+    Ok(())
 }
 
-pub fn runas_normal(script_path: &str, args: &str) {
-    let _ = std::process::Command::new("wt")
+pub fn runas_normal(script_path: &str, args: &str) -> anyhow::Result<()> {
+    std::process::Command::new("wt")
         .args(
             ["python", "-i", script_path]
                 .as_slice()
                 .iter()
                 .chain(args.split_whitespace().collect::<Vec<&str>>().iter()),
         )
-        .spawn();
+        .spawn()?;
+
+    Ok(())
 }
 
 #[cfg(test)]

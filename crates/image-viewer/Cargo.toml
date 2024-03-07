@@ -1,5 +1,5 @@
 [package]
-name = "script-caller"
+name = "image-viewer"
 version = "0.1.0"
 edition = "2021"
 build = "build.rs"
@@ -11,12 +11,8 @@ log.workspace = true
 eapp-utils.workspace = true
 eframe.workspace = true
 serde.workspace = true
-serde_json.workspace = true
-anyhow.workspace = true
-
-[target.'cfg(windows)'.dependencies.windows-sys]
-version = "0.52"
-features = ["Win32_System_Registry", "Win32_UI_Shell", "Win32_Foundation"]
+image = { version = "0.24", default-features = false, features = ["default"] }
+walkdir = "2.5.0"
 
 [target.'cfg(windows)'.build-dependencies]
 winres = "0.1"
