@@ -122,7 +122,6 @@ pub fn title_bar(ui: &mut egui::Ui, title_bar_rect: eframe::epaint::Rect, title:
                 120.0,
                 title_bar_rect.height() - 1.0,
                 Color32::TRANSPARENT,
-                1.0,
             );
         });
     });
@@ -133,12 +132,10 @@ pub fn close_maximize_minimize(
     width_total: f32,
     height: f32,
     fill_color: impl Into<Color32>,
-    opacity: f32,
 ) {
     let width = width_total / 3.0;
     let f_col: Color32 = fill_color.into();
-
-    let new_button = |str| PlainButton::new(vec2(width, height), str).opacity(opacity);
+    let new_button = |str| PlainButton::new(vec2(width, height), str);
 
     ui.scope(|ui| {
         ui.spacing_mut().item_spacing.x = 0.0;
@@ -156,7 +153,7 @@ pub fn close_maximize_minimize(
                 ne: 8.0,
                 ..egui::Rounding::ZERO
             },
-            f_col.linear_multiply(opacity),
+            f_col,
         );
 
         if ui

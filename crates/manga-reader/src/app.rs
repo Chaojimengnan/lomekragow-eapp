@@ -1,8 +1,6 @@
 use crate::{img_finder::ImgFinder, tex_loader::TexLoader};
 use eapp_utils::widgets::PlainButton;
-use eframe::egui::{
-    self, pos2, vec2, Align2, Color32, FontId, Frame, Id, Rect, RichText, Rounding, Vec2b,
-};
+use eframe::egui::{self, pos2, vec2, Align2, Color32, FontId, Frame, Id, Rect, Rounding, Vec2b};
 use serde::{Deserialize, Serialize};
 use std::ops::Bound;
 
@@ -98,14 +96,18 @@ impl App {
             ui.rect_contains_pointer(interact_rect),
         );
 
+        if opacity == 0.0 {
+            return;
+        }
+
         ui.allocate_ui_at_rect(title_bar_rect, |ui| {
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                ui.set_opacity(opacity);
                 eapp_utils::borderless::close_maximize_minimize(
                     ui,
                     width,
                     height,
                     Color32::from_rgb(40, 40, 40),
-                    opacity,
                 );
             });
         });
@@ -283,15 +285,19 @@ impl App {
             ui.rect_contains_pointer(sense_rect),
         );
 
+        if opacity == 0.0 {
+            return;
+        }
+
         ui.allocate_ui_at_rect(btn_rect, |ui| {
+            ui.set_opacity(opacity);
             if ui
                 .add(
                     PlainButton::new(
                         vec2(btn_rect.width(), btn_rect.height()),
                         btn_text.to_string(),
                     )
-                    .rounding(Rounding::same(9.0))
-                    .opacity(opacity),
+                    .rounding(Rounding::same(9.0)),
                 )
                 .clicked()
             {
@@ -315,6 +321,8 @@ impl App {
             return;
         }
 
+        ui.set_opacity(opacity);
+
         ui.painter().rect_filled(
             {
                 let mut rect = sense_rect;
@@ -327,11 +335,8 @@ impl App {
                 nw: 0.0,
                 ne: 0.0,
             }),
-            Color32::from_black_alpha(180).gamma_multiply(opacity),
+            Color32::from_black_alpha(180),
         );
-
-        let text_color = Color32::WHITE.gamma_multiply(opacity);
-        let opacity_text = |str| RichText::new(str).color(text_color);
 
         let mut name = String::from("None");
         let mut page = String::from("None");
@@ -366,14 +371,14 @@ impl App {
                     .spacing([16.0, 4.0])
                     .max_col_width(rect.width())
                     .show(ui, |ui| {
-                        ui.label(opacity_text(String::from("Name")));
-                        ui.label(opacity_text(name));
+                        ui.label("Name");
+                        ui.label(name);
                         ui.end_row();
-                        ui.label(opacity_text(String::from("Page")));
-                        ui.label(opacity_text(page));
+                        ui.label("Page");
+                        ui.label(page);
                         ui.end_row();
-                        ui.label(opacity_text(String::from("Size")));
-                        ui.label(opacity_text(size));
+                        ui.label("Size");
+                        ui.label(size);
                         ui.end_row();
                     })
             });

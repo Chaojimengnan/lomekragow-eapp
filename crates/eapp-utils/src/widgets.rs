@@ -11,7 +11,6 @@ pub struct PlainButton {
     rounding: Rounding,
     fill: Color32,
     hover: Color32,
-    opacity: f32,
 }
 
 impl PlainButton {
@@ -23,7 +22,6 @@ impl PlainButton {
             rounding: Default::default(),
             fill: Default::default(),
             hover: Color32::DARK_GRAY,
-            opacity: 1.0,
         }
     }
 
@@ -46,12 +44,6 @@ impl PlainButton {
     }
 
     #[inline]
-    pub fn opacity(mut self, opacity: f32) -> Self {
-        self.opacity = opacity;
-        self
-    }
-
-    #[inline]
     pub fn font_size(mut self, font_size: f32) -> Self {
         self.font_size = font_size;
         self
@@ -69,7 +61,7 @@ impl Widget for PlainButton {
             ui.painter().rect_filled(
                 rect,
                 self.rounding,
-                color_lerp(self.fill, self.hover, factor).linear_multiply(self.opacity),
+                color_lerp(self.fill, self.hover, factor),
             );
 
             let text_color = ui.style().visuals.text_color();
@@ -80,7 +72,7 @@ impl Widget for PlainButton {
                 Align2::CENTER_CENTER,
                 self.text.text(),
                 FontId::proportional(self.font_size),
-                color_lerp(text_color, strong_text_color, factor).linear_multiply(self.opacity),
+                color_lerp(text_color, strong_text_color, factor),
             );
         }
 
