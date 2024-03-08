@@ -1,7 +1,7 @@
 use std::{
     collections::{btree_set::Range, BTreeSet},
     ops::Bound,
-    path::{Path, PathBuf},
+    path::Path,
 };
 use walkdir::WalkDir;
 
@@ -44,37 +44,29 @@ impl ImgFinder {
         self.search_dir.as_ref()
     }
 
-    pub fn search_from_new_image(mut self, new_image_path: &str) -> std::io::Result<Self> {
-        let path = PathBuf::from(new_image_path);
-        if !path.is_file()
-            || !path
-                .extension()
-                .is_some_and(|ext| Self::is_supported_ext(ext.to_str().unwrap()))
-        {
-            return Ok(self);
-        }
+    pub fn search_from_cwd(mut self, opt_img: Option<&str>) -> std::io::Result<Self> {
+        let cwd = std::env::current_dir()?;
 
-        let dir = path.parent().unwrap();
-        let dir_str = dir.to_str().unwrap();
-        if !self.cur_dir_set.contains(dir_str) {
+        let cwd_str = cwd.to_string_lossy().into_owned();
+        if self.search_dir.as_ref() != Some(&cwd_str) {
             self = Self::default();
-            self.search_dir = Some(dir.parent().unwrap_or(dir).to_string_lossy().into_owned());
-            if let Some(dir_parent) = dir.parent() {
-                for item in WalkDir::new(dir_parent) {
-                    let item = item?;
-                    let item_path = item.path();
-                    if item_path.is_dir() && Self::is_dir_has_supported_image(item_path)? {
-                        self.cur_dir_set
-                            .insert(item_path.to_string_lossy().into_owned());
-                    }
+            self.search_dir = Some(cwd_str.clone());
+
+            for item in WalkDir::new(&cwd) {
+                let item = item?;
+                let item_path = item.path();
+                if item_path.is_dir() && Self::is_dir_has_supported_image(item_path)? {
+                    self.cur_dir_set
+                        .insert(item_path.to_string_lossy().into_owned());
                 }
-            } else {
-                self.cur_dir_set.insert(dir_str.to_owned());
             }
         }
 
-        self.set_cur_dir(dir_str);
-        self.set_cur_image(new_image_path);
+        self.set_cur_dir(&cwd_str);
+
+        if let Some(img) = opt_img {
+            self.set_cur_image(img);
+        }
 
         Ok(self)
     }

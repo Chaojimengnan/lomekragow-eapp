@@ -46,10 +46,8 @@ impl App {
         };
 
         let mut img_finder = ImgFinder::new();
-        if let Some(image_path) = std::env::args().nth(1) {
-            img_finder = Self::search_from_new_image(img_finder, &image_path);
-            img_finder.consume_dir_changed_flag();
-        }
+        img_finder = Self::search_from_cwd(img_finder, None);
+        img_finder.consume_dir_changed_flag();
 
         let tex_loader = TexLoader::new(&cc.egui_ctx);
 
@@ -60,11 +58,11 @@ impl App {
         }
     }
 
-    fn search_from_new_image(img_finder: ImgFinder, image_path: &str) -> ImgFinder {
-        match img_finder.search_from_new_image(&image_path) {
+    fn search_from_cwd(img_finder: ImgFinder, image_path: Option<&str>) -> ImgFinder {
+        match img_finder.search_from_cwd(image_path) {
             Ok(v) => v,
             Err(err) => {
-                log::error!("load from '{image_path}' fails: {err}");
+                log::error!("load from cmd with arg '{image_path:?}' fails: {err}");
                 ImgFinder::new()
             }
         }
@@ -153,11 +151,12 @@ impl App {
                             };
 
                             for item in list {
-                                ui.selectable_value(
-                                    &mut value,
-                                    Some(item.to_owned()),
-                                    &item[prefix..],
-                                );
+                                let item_str = if item.len() != prefix - 1 {
+                                    &item[prefix..]
+                                } else {
+                                    "current directory"
+                                };
+                                ui.selectable_value(&mut value, Some(item.to_owned()), item_str);
                             }
 
                             if let Some(v) = value {
@@ -261,7 +260,7 @@ impl App {
                 show_center_text("Maiden in Prayer...");
             }
         } else {
-            show_center_text("image-viewer :)");
+            show_center_text("manga-reader :)");
         }
     }
 
@@ -409,9 +408,19 @@ impl App {
         ui.ctx().input(|i| {
             if !i.raw.dropped_files.is_empty() {
                 if let Some(path) = &i.raw.dropped_files.first().unwrap().path {
-                    self.img_finder = Self::search_from_new_image(
+                    let cwd = if path.is_dir() {
+                        path
+                    } else {
+                        path.parent().unwrap()
+                    };
+
+                    if let Err(err) = std::env::set_current_dir(cwd) {
+                        log::error!("set current dir '{cwd:?}' fails: {err}");
+                    }
+
+                    self.img_finder = Self::search_from_cwd(
                         self.img_finder.clone(),
-                        path.to_string_lossy().as_ref(),
+                        Some(path.to_string_lossy().as_ref()),
                     );
                 }
             }

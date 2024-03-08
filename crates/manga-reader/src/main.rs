@@ -6,7 +6,7 @@ pub mod lifo;
 pub mod tex_loader;
 
 fn main() {
-    eapp_utils::setup_loggers("image-viewer.log").unwrap();
+    eapp_utils::setup_loggers("manga-reader.log").unwrap();
 
     let options = eframe::NativeOptions {
         viewport: eframe::egui::ViewportBuilder::default()
@@ -16,7 +16,7 @@ fn main() {
             .with_transparent(true)
             .with_icon(
                 eframe::icon_data::from_png_bytes(include_bytes!(
-                    "../../../assets/image-viewer/icon.png"
+                    "../../../assets/manga-reader/icon.png"
                 ))
                 .unwrap(),
             ),
@@ -24,7 +24,7 @@ fn main() {
     };
 
     if let Err(err) = eframe::run_native(
-        "image-viewer",
+        "manga-reader",
         options,
         Box::new(|cc| Box::new(app::App::new(cc))),
     ) {
