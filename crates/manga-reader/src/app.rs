@@ -45,8 +45,10 @@ impl App {
             State::default()
         };
 
+        let img_path = std::env::args().nth(1);
+
         let mut img_finder = ImgFinder::new();
-        img_finder = Self::search_from_cwd(img_finder, None);
+        img_finder = Self::search_from_cwd(img_finder, img_path.as_ref().map(|str| str.as_str()));
         img_finder.consume_dir_changed_flag();
 
         let tex_loader = TexLoader::new(&cc.egui_ctx);

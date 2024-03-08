@@ -177,6 +177,11 @@ impl ImgFinder {
             {
                 self.set_cur_dir(&next_dir.to_owned());
             }
+            return;
+        }
+
+        if let Some(dir) = self.cur_dir_set.first() {
+            self.set_cur_dir(&dir.to_owned());
         }
     }
 
@@ -189,6 +194,11 @@ impl ImgFinder {
             {
                 self.set_cur_dir(&prev_dir.to_owned());
             }
+            return;
+        }
+
+        if let Some(dir) = self.cur_dir_set.first() {
+            self.set_cur_dir(&dir.to_owned());
         }
     }
 }
