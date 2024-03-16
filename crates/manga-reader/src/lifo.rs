@@ -18,7 +18,7 @@ pub struct Sender<T> {
 
 impl<T> Sender<T> {
     pub fn send(&self, t: T) -> Result<(), DisconnectError> {
-        if self.inner.disconnect.load(Ordering::SeqCst) {
+        if self.inner.disconnect.load(Ordering::Acquire) {
             return Err(DisconnectError);
         }
 
@@ -31,7 +31,7 @@ impl<T> Sender<T> {
 
 impl<T> Drop for Sender<T> {
     fn drop(&mut self) {
-        self.inner.disconnect.store(true, Ordering::SeqCst);
+        self.inner.disconnect.store(true, Ordering::Release);
     }
 }
 
@@ -41,7 +41,7 @@ pub struct Receiver<T> {
 
 impl<T> Receiver<T> {
     pub fn recv(&self) -> Result<T, DisconnectError> {
-        if self.inner.disconnect.load(Ordering::SeqCst) {
+        if self.inner.disconnect.load(Ordering::Acquire) {
             return Err(DisconnectError);
         }
 
@@ -56,7 +56,7 @@ impl<T> Receiver<T> {
 
 impl<T> Drop for Receiver<T> {
     fn drop(&mut self) {
-        self.inner.disconnect.store(true, Ordering::SeqCst);
+        self.inner.disconnect.store(true, Ordering::Release);
     }
 }
 

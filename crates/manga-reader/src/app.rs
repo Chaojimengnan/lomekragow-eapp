@@ -77,42 +77,6 @@ impl App {
         rounding
     }
 
-    fn ui_title_bar(ui: &mut egui::Ui, title_bar_rect: eframe::epaint::Rect) {
-        eapp_utils::borderless::title_bar_behavior(ui, title_bar_rect);
-
-        let width = 120.0;
-        let height = title_bar_rect.height();
-
-        let interact_rect = {
-            let mut rect = title_bar_rect;
-            rect.set_left(rect.right() - width * 3.0);
-            rect.set_bottom(rect.top() + height * 8.0);
-            rect
-        };
-
-        // cmm : shortcut for close_maximize_minimize
-        let opacity = ui.ctx().animate_bool(
-            Id::new("cmm_btns_hover_area"),
-            ui.rect_contains_pointer(interact_rect),
-        );
-
-        if opacity == 0.0 {
-            return;
-        }
-
-        ui.allocate_ui_at_rect(title_bar_rect, |ui| {
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                ui.set_opacity(opacity);
-                eapp_utils::borderless::close_maximize_minimize(
-                    ui,
-                    width,
-                    height,
-                    Color32::from_rgb(40, 40, 40),
-                );
-            });
-        });
-    }
-
     fn ui_left_panel(&mut self, ui: &mut egui::Ui) {
         let max_width = ui.available_width() * 0.5;
 
@@ -191,7 +155,7 @@ impl App {
                     rect.max.y = rect.min.y + title_bar_height;
                     rect
                 };
-                Self::ui_title_bar(ui, title_bar_rect);
+                eapp_utils::borderless::title_bar_animated(ui, title_bar_rect);
 
                 let size = 20.0;
                 let left_panel_button_rect = Rect::from_center_size(
@@ -282,7 +246,7 @@ impl App {
 
         let opacity = ui.ctx().animate_bool(
             Id::new("left_panel_button_hover_area"),
-            ui.rect_contains_pointer(sense_rect),
+            eapp_utils::borderless::rect_contains_pointer(ui, sense_rect),
         );
 
         if opacity == 0.0 {
@@ -314,7 +278,7 @@ impl App {
     ) {
         let opacity = ui.ctx().animate_bool(
             Id::new("info_hover_area"),
-            ui.rect_contains_pointer(sense_rect),
+            eapp_utils::borderless::rect_contains_pointer(ui, sense_rect),
         );
 
         if opacity == 0.0 {
@@ -371,6 +335,7 @@ impl App {
                     .spacing([16.0, 4.0])
                     .max_col_width(rect.width())
                     .show(ui, |ui| {
+                        ui.visuals_mut().override_text_color = Some(Color32::WHITE);
                         ui.label("Name");
                         ui.label(name);
                         ui.end_row();
@@ -380,6 +345,7 @@ impl App {
                         ui.label("Size");
                         ui.label(size);
                         ui.end_row();
+                        ui.visuals_mut().override_text_color = None;
                     })
             });
         });
@@ -449,7 +415,7 @@ impl eframe::App for App {
     }
 
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
-        eapp_utils::borderless::window_frame(ctx).show(ctx, |ui| {
+        eapp_utils::borderless::window_frame(ctx, None).show(ctx, |ui| {
             eapp_utils::borderless::handle_resize(ui);
 
             self.tex_loader.update(ctx, self.img_finder.cur_image());

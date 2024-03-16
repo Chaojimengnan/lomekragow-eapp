@@ -315,7 +315,7 @@ impl eframe::App for App {
     }
 
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
-        eapp_utils::borderless::window_frame(ctx).show(ctx, |ui| {
+        eapp_utils::borderless::window_frame(ctx, None).show(ctx, |ui| {
             eapp_utils::borderless::handle_resize(ui);
 
             let app_rect = ui.max_rect();

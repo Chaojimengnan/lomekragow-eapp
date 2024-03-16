@@ -1,6 +1,11 @@
 [workspace]
 
-members = ["crates/eapp-utils", "crates/manga-reader", "crates/script-caller"]
+members = [
+    "crates/eapp-utils",
+    "crates/manga-reader",
+    "crates/script-caller",
+    "crates/your-player",
+]
 resolver = "2"
 
 [workspace.dependencies]
@@ -13,3 +18,6 @@ simplelog = { version = "0.12.2", default-features = false, features = [
 ] }
 log = "*"
 anyhow = "1.0"
+
+[patch.crates-io]
+eframe = { git = "https://github.com/Chaojimengnan/egui", branch = "self-use" }

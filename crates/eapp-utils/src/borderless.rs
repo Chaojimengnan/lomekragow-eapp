@@ -61,10 +61,19 @@ pub fn handle_resize(ui: &mut egui::Ui) -> bool {
     }
 }
 
-pub fn window_frame(ctx: &egui::Context) -> egui::containers::panel::CentralPanel {
+pub fn window_frame(
+    ctx: &egui::Context,
+    fill: Option<Color32>,
+) -> egui::containers::panel::CentralPanel {
+    let rounding = if !ctx.input(|i| i.viewport().fullscreen.unwrap_or(false)) {
+        8.0.into()
+    } else {
+        0.0.into()
+    };
+
     let frame = egui::Frame {
-        fill: ctx.style().visuals.window_fill(),
-        rounding: 8.0.into(),
+        fill: fill.unwrap_or(ctx.style().visuals.window_fill()),
+        rounding,
         stroke: ctx.style().visuals.widgets.noninteractive.bg_stroke,
         outer_margin: 0.5.into(),
         ..Default::default()
@@ -127,12 +136,56 @@ pub fn title_bar(ui: &mut egui::Ui, title_bar_rect: eframe::epaint::Rect, title:
     });
 }
 
+/// Ignore all everything, just check pointer if in this rect
+pub fn rect_contains_pointer(ui: &egui::Ui, rect: eframe::epaint::Rect) -> bool {
+    let ptr_pos = ui.input(|i| i.pointer.interact_pos());
+    let Some(ptr_pos) = ptr_pos else {
+        return false;
+    };
+    rect.contains(ptr_pos)
+}
+
+pub fn title_bar_animated(ui: &mut egui::Ui, title_bar_rect: eframe::epaint::Rect) {
+    title_bar_behavior(ui, title_bar_rect);
+
+    let width = 120.0;
+    let height = title_bar_rect.height();
+
+    let interact_rect = {
+        let mut rect = title_bar_rect;
+        rect.set_left(rect.right() - width * 3.0);
+        rect.set_bottom(rect.top() + height * 8.0);
+        rect
+    };
+
+    // cmm : shortcut for close_maximize_minimize
+    let opacity = ui.ctx().animate_bool(
+        egui::Id::new("cmm_btns_hover_area"),
+        rect_contains_pointer(ui, interact_rect),
+    );
+
+    if opacity == 0.0 {
+        return;
+    }
+
+    ui.allocate_ui_at_rect(title_bar_rect, |ui| {
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            ui.set_opacity(opacity);
+            close_maximize_minimize(ui, width, height, Color32::from_rgb(40, 40, 40));
+        });
+    });
+}
+
 pub fn close_maximize_minimize(
     ui: &mut egui::Ui,
     width_total: f32,
     height: f32,
     fill_color: impl Into<Color32>,
 ) {
+    if ui.input(|i| i.viewport().fullscreen.unwrap_or(false)) {
+        return;
+    }
+
     let width = width_total / 3.0;
     let f_col: Color32 = fill_color.into();
     let new_button = |str| PlainButton::new(vec2(width, height), str);

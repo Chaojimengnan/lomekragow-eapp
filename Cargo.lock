@@ -55,6 +55,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "aho-corasick"
+version = "1.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b2969dcb958b36655471fc61f7e416fa76033bdd4bfed0678d8fee1e2d07a1f0"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
 name = "android-activity"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -512,8 +521,7 @@ dependencies = [
 [[package]]
 name = "ecolor"
 version = "0.26.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "03cfe80b1890e1a8cdbffc6044d6872e814aaf6011835a2a5e2db0e5c5c4ef4e"
+source = "git+https://github.com/Chaojimengnan/egui?branch=self-use#a17ab00238a5d37daae9ffbc799a4a7f713f1356"
 dependencies = [
  "bytemuck",
  "serde",
@@ -522,8 +530,7 @@ dependencies = [
 [[package]]
 name = "eframe"
 version = "0.26.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c456c1bb6d13bf68b780257484703d750c70a23ff891ba35f4d6e23a4dbdf26f"
+source = "git+https://github.com/Chaojimengnan/egui?branch=self-use#a17ab00238a5d37daae9ffbc799a4a7f713f1356"
 dependencies = [
  "bytemuck",
  "cocoa",
@@ -558,8 +565,7 @@ dependencies = [
 [[package]]
 name = "egui"
 version = "0.26.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "180f595432a5b615fc6b74afef3955249b86cfea72607b40740a4cd60d5297d0"
+source = "git+https://github.com/Chaojimengnan/egui?branch=self-use#a17ab00238a5d37daae9ffbc799a4a7f713f1356"
 dependencies = [
  "accesskit",
  "ahash",
@@ -573,8 +579,7 @@ dependencies = [
 [[package]]
 name = "egui-winit"
 version = "0.26.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa4d44f8d89f70d4480545eb2346b76ea88c3022e9f4706cebc799dbe8b004a2"
+source = "git+https://github.com/Chaojimengnan/egui?branch=self-use#a17ab00238a5d37daae9ffbc799a4a7f713f1356"
 dependencies = [
  "arboard",
  "egui",
@@ -590,8 +595,7 @@ dependencies = [
 [[package]]
 name = "egui_glow"
 version = "0.26.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a08e3be8728b4c59493dbfec041c657e6725bdeafdbd49aef3f1dbb9e551fa01"
+source = "git+https://github.com/Chaojimengnan/egui?branch=self-use#a17ab00238a5d37daae9ffbc799a4a7f713f1356"
 dependencies = [
  "bytemuck",
  "egui",
@@ -611,8 +615,7 @@ checksum = "11157ac094ffbdde99aa67b23417ebdd801842852b500e395a45a9c0aac03e4a"
 [[package]]
 name = "emath"
 version = "0.26.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6916301ecf80448f786cdf3eb51d9dbdd831538732229d49119e2d4312eaaf09"
+source = "git+https://github.com/Chaojimengnan/egui?branch=self-use#a17ab00238a5d37daae9ffbc799a4a7f713f1356"
 dependencies = [
  "bytemuck",
  "serde",
@@ -632,8 +635,7 @@ dependencies = [
 [[package]]
 name = "epaint"
 version = "0.26.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77b9fdf617dd7f58b0c8e6e9e4a1281f730cde0831d40547da446b2bb76a47af"
+source = "git+https://github.com/Chaojimengnan/egui?branch=self-use#a17ab00238a5d37daae9ffbc799a4a7f713f1356"
 dependencies = [
  "ab_glyph",
  "ahash",
@@ -711,6 +713,12 @@ checksum = "55ac459de2512911e4b674ce33cf20befaba382d05b62b008afc1c8b57cbf181"
 dependencies = [
  "spin",
 ]
+
+[[package]]
+name = "font-types"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5b7f6040d337bd44434ab21fc6509154edf2cece88b23758d9d64654c4e7730b"
 
 [[package]]
 name = "foreign-types"
@@ -1087,6 +1095,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "libmpv"
+version = "2.0.1"
+source = "git+https://github.com/Chaojimengnan/libmpv-rs?branch=self-use#b266ba10e04f39cae9a458411462fc85349794e6"
+dependencies = [
+ "libmpv-sys",
+]
+
+[[package]]
+name = "libmpv-sys"
+version = "3.1.0"
+source = "git+https://github.com/Chaojimengnan/libmpv-rs?branch=self-use#b266ba10e04f39cae9a458411462fc85349794e6"
+
+[[package]]
 name = "libredox"
 version = "0.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1341,6 +1362,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ordered-float"
+version = "4.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a76df7075c7d4d01fdcb46c912dd17fba5b60c78ea480b475f2b6ab6f666584e"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "owned_ttf_parser"
 version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1501,6 +1531,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "read-fonts"
+version = "0.15.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "17ea23eedb4d938031b6d4343222444608727a6aa68ec355e13588d9947ffe92"
+dependencies = [
+ "font-types",
+]
+
+[[package]]
 name = "redox_syscall"
 version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1528,6 +1567,35 @@ dependencies = [
  "libredox 0.0.1",
  "thiserror",
 ]
+
+[[package]]
+name = "regex"
+version = "1.10.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b62dbe01f0b06f9d8dc7d49e05a0785f153b00b2c227856282f671e0318c9b15"
+dependencies = [
+ "aho-corasick",
+ "memchr",
+ "regex-automata",
+ "regex-syntax",
+]
+
+[[package]]
+name = "regex-automata"
+version = "0.4.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "86b83b8b9847f9bf95ef68afb0b8e6cdb80f498442f5179a29fad448fcc1eaea"
+dependencies = [
+ "aho-corasick",
+ "memchr",
+ "regex-syntax",
+]
+
+[[package]]
+name = "regex-syntax"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c08c74e62047bb2de4ff487b251e4a92e24f48745648451635cec7d591162d9f"
 
 [[package]]
 name = "rle-decode-fast"
@@ -1731,6 +1799,17 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "swash"
+version = "0.1.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d06ff4664af8923625604261c645f5c4cc610cc83c84bec74b50d76237089de7"
+dependencies = [
+ "read-fonts",
+ "yazi",
+ "zeno",
+]
 
 [[package]]
 name = "syn"
@@ -2505,6 +2584,35 @@ name = "xml-rs"
 version = "0.8.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0fcb9cbac069e033553e8bb871be2fbdffcab578eb25bd0f7c508cedc6dcd75a"
+
+[[package]]
+name = "yazi"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c94451ac9513335b5e23d7a8a2b61a7102398b8cca5160829d313e84c9d98be1"
+
+[[package]]
+name = "your-player"
+version = "0.1.0"
+dependencies = [
+ "eapp-utils",
+ "eframe",
+ "libmpv",
+ "log",
+ "ordered-float",
+ "regex",
+ "serde",
+ "serde_json",
+ "swash",
+ "walkdir",
+ "winres",
+]
+
+[[package]]
+name = "zeno"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd15f8e0dbb966fd9245e7498c7e9e5055d9e5c8b676b95bd67091cd11a1e697"
 
 [[package]]
 name = "zerocopy"

@@ -31,7 +31,7 @@ impl ImgFinder {
             if item.is_file()
                 && item
                     .extension()
-                    .is_some_and(|ext| Self::is_supported_ext(ext.to_str().unwrap()))
+                    .is_some_and(|ext| Self::is_supported_ext(ext.to_str().unwrap_or("")))
             {
                 return Ok(true);
             }
