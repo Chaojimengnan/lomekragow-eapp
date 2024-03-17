@@ -635,7 +635,7 @@ impl Manager {
                 lifetime: self.state.lifetime,
                 speed: (self.state.rolling_speed * width / 160.0).clamp(
                     self.state.rolling_speed * 0.75,
-                    self.state.rolling_speed * 1.50,
+                    self.state.rolling_speed * 1.25,
                 ),
                 state: DanmuEmittedDataState::Ready,
             })
