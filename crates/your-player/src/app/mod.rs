@@ -207,14 +207,23 @@ impl App {
             };
         }
 
-        Self {
+        let mut this = Self {
             state,
             playlist,
             player,
             preview,
             tex_register,
             danmu,
+        };
+
+        if let Some(path_str) = std::env::args().nth(1) {
+            if std::path::Path::new(&path_str).is_file() {
+                this.set_media(&path_str);
+                this.playlist.set_current_play(None);
+            }
         }
+
+        this
     }
 
     /// set media to player and preview, regardless playlist
