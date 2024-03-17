@@ -171,44 +171,46 @@ impl super::App {
             };
 
             if let Some(pointer) = response.hover_pos() {
-                let hover_playback_time = map_into_playback_time(pointer.x);
-                if let Some(tex) = self.preview.get_preview(hover_playback_time) {
-                    if let Some(tex_id) = self.tex_register.get(*tex) {
-                        let size = self.preview.size();
+                if self.player.state().play_state != PlayState::Stop {
+                    let hover_playback_time = map_into_playback_time(pointer.x);
+                    if let Some(tex) = self.preview.get_preview(hover_playback_time) {
+                        if let Some(tex_id) = self.tex_register.get(*tex) {
+                            let size = self.preview.size();
 
-                        egui::Area::new("preview_area".into())
-                            .order(egui::Order::Tooltip)
-                            .constrain(true)
-                            .fixed_pos(pointer)
-                            .pivot(Align2::CENTER_BOTTOM)
-                            .show(ui.ctx(), |ui| {
-                                let pos = ui.cursor().min;
-                                let galley = ui.painter().layout(
-                                    mpv::make_time_string(hover_playback_time),
-                                    FontId::proportional(16.0),
-                                    Color32::WHITE,
-                                    size.0 as _,
-                                );
-                                ui.add(
-                                    egui::Image::from_texture(SizedTexture::new(
-                                        tex_id,
-                                        vec2(size.0 as _, size.1 as _),
-                                    ))
-                                    .rounding(4.0),
-                                );
+                            egui::Area::new("preview_area".into())
+                                .order(egui::Order::Tooltip)
+                                .constrain(true)
+                                .fixed_pos(pointer)
+                                .pivot(Align2::CENTER_BOTTOM)
+                                .show(ui.ctx(), |ui| {
+                                    let pos = ui.cursor().min;
+                                    let galley = ui.painter().layout(
+                                        mpv::make_time_string(hover_playback_time),
+                                        FontId::proportional(16.0),
+                                        Color32::WHITE,
+                                        size.0 as _,
+                                    );
+                                    ui.add(
+                                        egui::Image::from_texture(SizedTexture::new(
+                                            tex_id,
+                                            vec2(size.0 as _, size.1 as _),
+                                        ))
+                                        .rounding(4.0),
+                                    );
 
-                                ui.painter().rect_filled(
-                                    Rect::from_min_max(pos, pos + galley.size()),
-                                    Rounding {
-                                        nw: 4.0,
-                                        ne: 0.0,
-                                        sw: 0.0,
-                                        se: 0.0,
-                                    },
-                                    Color32::from_black_alpha(160),
-                                );
-                                ui.painter().galley(pos, galley, Color32::WHITE);
-                            });
+                                    ui.painter().rect_filled(
+                                        Rect::from_min_max(pos, pos + galley.size()),
+                                        Rounding {
+                                            nw: 4.0,
+                                            ne: 0.0,
+                                            sw: 0.0,
+                                            se: 0.0,
+                                        },
+                                        Color32::from_black_alpha(160),
+                                    );
+                                    ui.painter().galley(pos, galley, Color32::WHITE);
+                                });
+                        }
                     }
                 }
             }

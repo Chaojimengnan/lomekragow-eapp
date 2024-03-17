@@ -80,8 +80,11 @@ impl super::App {
             egui::CollapsingHeader::new(list_filename)
                 .default_open(false)
                 .show(ui, |ui| {
-                    ui.with_layout(egui::Layout::top_down_justified(egui::Align::LEFT), |ui| {
-                        for media_name in list {
+                    let text_style = egui::TextStyle::Body;
+                    let row_height = ui.text_style_height(&text_style);
+                    ui.style_mut().wrap = Some(false);
+                    egui::ScrollArea::both().show_rows(ui, row_height, list.len(), |ui, range| {
+                        for media_name in list.iter().skip(range.start).take(range.end) {
                             let media_filename =
                                 Path::new(media_name).file_name().unwrap().to_str().unwrap();
                             if key_empty || media_filename.to_ascii_lowercase().contains(&key) {

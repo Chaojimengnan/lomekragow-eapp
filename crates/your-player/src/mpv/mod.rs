@@ -11,8 +11,9 @@ use std::sync::{
 pub mod player;
 pub mod preview;
 
-pub const DEFAULT_OPTS: &str = r#"
-# Make sure the danmu is smooth
+pub const DEFAULT_OPTS: &str = r#"# Make danmu and gui more smooth
+# If you don't use danmu
+# try: video-timing-offset=0
 vf=lavfi="fps=fps=60:round=down"
 hwdec=auto
 "#;
