@@ -1,7 +1,9 @@
 use crate::danmu::font_def::{FontData, FontDef};
-use eframe::epaint::{TextureAtlas, Vec2};
+use eframe::{
+    egui::ahash::HashMap,
+    epaint::{TextureAtlas, Vec2},
+};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use swash::{
     scale::{Render, Source},
     zeno::Style,

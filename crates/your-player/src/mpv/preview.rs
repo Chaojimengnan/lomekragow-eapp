@@ -1,7 +1,9 @@
 use crate::mpv::get_texture;
-use eframe::glow::{self, HasContext};
+use eframe::{
+    egui::ahash::{HashMap, HashMapExt},
+    glow::{self, HasContext},
+};
 use libmpv::Format;
-use std::collections::HashMap;
 
 pub struct Preview {
     mpv: super::BasicMpvWrapper,

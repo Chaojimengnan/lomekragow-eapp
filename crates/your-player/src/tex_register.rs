@@ -1,8 +1,8 @@
-use eframe::{egui, glow};
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
+use eframe::{
+    egui::{self, ahash::HashMap},
+    glow,
 };
+use std::sync::{Arc, Mutex};
 
 /// Do not use glow function delete any `glow::Texture` in this struct,
 /// otherwise result in UB!

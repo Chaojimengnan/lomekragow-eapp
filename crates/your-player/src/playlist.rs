@@ -1,9 +1,7 @@
 use crate::mpv;
+use eframe::egui::ahash::HashMap;
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::{BTreeSet, HashMap},
-    ops::Bound,
-};
+use std::{collections::BTreeSet, ops::Bound};
 use walkdir::WalkDir;
 
 #[derive(Deserialize, Serialize, Default, Debug)]
