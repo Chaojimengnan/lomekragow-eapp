@@ -466,7 +466,7 @@ impl Player {
         match self
             .mpv
             .handle
-            .set_property("video-aspect", VIDEO_ASPECT_LIST[video_aspect].1)
+            .set_property("video-params/aspect", VIDEO_ASPECT_LIST[video_aspect].1)
         {
             Ok(_) => self.state.video_aspect = video_aspect,
             Err(err) => log::error!("set video aspect fails: {err}"),
