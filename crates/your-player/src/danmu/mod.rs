@@ -577,8 +577,8 @@ impl Manager {
                         );
                         let cur_distance = rect.right() - cur_danmu_emitted.rect.right();
 
-                        // if the danmu to be inserted does not exceed current danmu
-                        // then it can be inserted
+                        // if the danmu to be emitted does not exceed current danmu
+                        // then it can be emitted at same line
                         if cur_distance >= shortened_distance_before_cur_danmu_over {
                             danmu_top = Some(cur_danmu_top);
                             break;
@@ -625,6 +625,8 @@ impl Manager {
                 width += glyph.stroke.advance;
                 baseline = baseline.max(glyph.stroke.top);
             }
+            // important: it's necessary to keep all danmus have the same height
+            // to ensure emit properly
             let height: f32 = self.state.atlas.font_size() + self.state.atlas.stroke_size() * 2.0;
 
             danmu_ref.emitted_data = Some(DanmuEmittedData {
