@@ -198,11 +198,16 @@ impl super::App {
         ui.end_row();
 
         ui.label("danmu delay");
-        ui.add(
-            egui::DragValue::new(&mut self.danmu.state_mut().delay)
-                .speed(1.0)
-                .suffix("s"),
-        );
+        if ui
+            .add(
+                egui::DragValue::new(&mut self.danmu.state_mut().delay)
+                    .speed(1.0)
+                    .suffix("s"),
+            )
+            .changed()
+        {
+            self.danmu.delay_danmu(self.danmu.state().delay);
+        }
         ui.end_row();
 
         ui.label("danmu font size");
