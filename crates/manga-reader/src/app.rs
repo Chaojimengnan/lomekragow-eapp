@@ -14,20 +14,15 @@ pub struct App {
 #[serde(default)]
 pub struct State {
     left_panel_open: bool,
-    show: Show,
-}
-
-#[derive(Deserialize, Serialize, PartialEq)]
-enum Show {
-    Image,
-    Dir,
+    #[serde(skip)]
+    last_cur_dir: Option<String>,
 }
 
 impl Default for State {
     fn default() -> Self {
         Self {
             left_panel_open: true,
-            show: Show::Image,
+            last_cur_dir: None,
         }
     }
 }
@@ -90,50 +85,80 @@ impl App {
             }))
             .width_range(200.0..=max_width)
             .show_animated_inside(ui, self.state.left_panel_open, |ui| {
-                ui.horizontal(|ui| {
-                    ui.selectable_value(&mut self.state.show, Show::Image, "Image");
-                    ui.selectable_value(&mut self.state.show, Show::Dir, "Dir");
-                });
-
-                egui::ScrollArea::vertical()
+                egui::ScrollArea::both()
                     .auto_shrink(Vec2b::new(false, true))
                     .show(ui, |ui| {
-                        ui.with_layout(egui::Layout::top_down_justified(egui::Align::LEFT), |ui| {
-                            let (mut value, list, prefix) = match self.state.show {
-                                Show::Image => (
-                                    self.img_finder.cur_image().cloned(),
-                                    self.img_finder.cur_image_set(),
-                                    self.img_finder
-                                        .cur_dir()
-                                        .map(|str| str.len() + 1)
-                                        .unwrap_or(0),
-                                ),
-                                Show::Dir => (
-                                    self.img_finder.cur_dir().cloned(),
-                                    self.img_finder.cur_dir_set(),
-                                    self.img_finder
-                                        .search_dir()
-                                        .map(|str| str.len() + 1)
-                                        .unwrap_or(0),
-                                ),
+                        ui.style_mut().wrap = Some(false);
+
+                        let dir_prefix = self
+                            .img_finder
+                            .search_dir()
+                            .map(|str| str.len() + 1)
+                            .unwrap_or(0);
+                        let prefix = self
+                            .img_finder
+                            .cur_dir()
+                            .map(|str| str.len() + 1)
+                            .unwrap_or(0);
+                        let mut cur_dir = self.img_finder.cur_dir().cloned();
+                        let mut cur_image = self.img_finder.cur_image().cloned();
+                        const ACTIVE_COL: Color32 =
+                            Color32::from_rgba_premultiplied(80, 138, 214, 160);
+
+                        let dir_changed = if self.state.last_cur_dir != cur_dir {
+                            self.state.last_cur_dir = cur_dir.clone();
+                            true
+                        } else {
+                            false
+                        };
+
+                        for dir in self.img_finder.cur_dir_set() {
+                            let dir_str = if dir.len() != dir_prefix - 1 {
+                                &dir[dir_prefix..]
+                            } else {
+                                "current directory"
                             };
 
-                            for item in list {
-                                let item_str = if item.len() != prefix - 1 {
-                                    &item[prefix..]
-                                } else {
-                                    "current directory"
-                                };
-                                ui.selectable_value(&mut value, Some(item.to_owned()), item_str);
-                            }
+                            let is_cur_dir = cur_dir.as_ref() == Some(dir);
+                            let (str, open) = if is_cur_dir {
+                                (
+                                    egui::RichText::new(dir_str).color(ACTIVE_COL),
+                                    if dir_changed { Some(true) } else { None },
+                                )
+                            } else {
+                                (egui::RichText::new(dir_str), Some(false))
+                            };
 
-                            if let Some(v) = value {
-                                match self.state.show {
-                                    Show::Image => self.img_finder.set_cur_image(&v),
-                                    Show::Dir => self.img_finder.set_cur_dir(&v),
-                                }
-                            }
-                        })
+                            if egui::CollapsingHeader::new(str)
+                                .open(open)
+                                .show(ui, |ui| {
+                                    for img in self.img_finder.cur_image_set().iter() {
+                                        if ui
+                                            .selectable_label(
+                                                cur_image.as_ref() == Some(img),
+                                                &img[prefix..],
+                                            )
+                                            .clicked()
+                                        {
+                                            cur_image = Some(img.to_owned());
+                                        }
+                                    }
+                                })
+                                .header_response
+                                .on_hover_text(dir_str)
+                                .clicked()
+                            {
+                                cur_dir = Some(dir.to_owned());
+                            };
+                        }
+
+                        if let Some(v) = cur_dir {
+                            self.img_finder.set_cur_dir(&v);
+                        }
+
+                        if let Some(v) = cur_image {
+                            self.img_finder.set_cur_image(&v);
+                        }
                     });
             });
     }
