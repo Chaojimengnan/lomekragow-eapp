@@ -1,8 +1,5 @@
 use crate::danmu::font_def::{FontData, FontDef};
-use eframe::{
-    egui::ahash::HashMap,
-    epaint::{TextureAtlas, Vec2},
-};
+use eframe::{egui::ahash::HashMap, epaint::TextureAtlas};
 use serde::{Deserialize, Serialize};
 use swash::{
     scale::{Render, Source},
@@ -11,10 +8,10 @@ use swash::{
 
 #[derive(Debug)]
 pub struct Glyph {
-    pub size: Vec2,
+    pub size: [u32; 2],
     pub advance: f32,
-    pub left: f32,
-    pub top: f32,
+    pub left: i32,
+    pub top: i32,
     pub uv_min: [u16; 2],
     pub uv_max: [u16; 2],
 }
@@ -141,10 +138,10 @@ impl FontAtlas {
                         }
 
                         let $name = Glyph {
-                            size: [img.placement.width as f32, img.placement.height as f32].into(),
+                            size: [img.placement.width, img.placement.height],
                             advance: font.metrics.advance_width(glyph_id),
-                            left: img.placement.left as _,
-                            top: img.placement.top as _,
+                            left: img.placement.left,
+                            top: img.placement.top,
                             uv_min: [pos.0 as _, pos.1 as _],
                             uv_max: [
                                 (pos.0 + img.placement.width as usize) as _,

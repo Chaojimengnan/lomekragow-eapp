@@ -61,7 +61,7 @@ pub struct DanmuEmittedData {
     pub rect: eframe::egui::Rect,
 
     /// the distance from rect.top(), used for put glphy
-    pub baseline: f32,
+    pub baseline: i32,
 
     /// for `DanmuType::Top` and `DanmuType::Bottom`
     pub lifetime: f64,
@@ -76,7 +76,7 @@ impl Default for DanmuEmittedData {
     fn default() -> Self {
         Self {
             rect: egui::Rect::ZERO,
-            baseline: 0.0,
+            baseline: 0,
             lifetime: 0.0,
             speed: 0.0,
             state: DanmuEmittedDataState::NotInit,
@@ -337,10 +337,8 @@ impl Manager {
         }
 
         let mut remove = Vec::new();
-        let mut stroked_mesh = eframe::egui::Mesh::default();
-        let mut mesh = eframe::egui::Mesh::default();
-        stroked_mesh.texture_id = tex;
-        mesh.texture_id = tex;
+        let mut stroked_mesh = eframe::egui::Mesh::with_texture(tex);
+        let mut mesh = eframe::egui::Mesh::with_texture(tex);
 
         for danmu in &self.emitted {
             let danmu_ref = unsafe { &mut **danmu };
@@ -377,14 +375,14 @@ impl Manager {
                     .atlas
                     .get_glyphs_into(&danmu_ref.text, &mut glyphs);
 
-                let mut px = emitted.rect.left() - glyphs[0].stroke.left;
-                let py = emitted.rect.top() + emitted.baseline;
+                let mut px = emitted.rect.left().round() as i32 - glyphs[0].stroke.left;
+                let py = emitted.rect.top().round() as i32 + emitted.baseline;
 
                 macro_rules! add_glyph {
                     ($expr:expr, $mesh:ident,$color:expr) => {
                         let rect = egui::Rect::from_min_size(
-                            pos2(px + $expr.left, py - $expr.top),
-                            $expr.size,
+                            pos2((px + $expr.left) as _, (py - $expr.top) as _),
+                            [$expr.size[0] as _, $expr.size[1] as _].into(),
                         );
                         let uv = egui::Rect::from_min_max(
                             pos2(
@@ -427,7 +425,7 @@ impl Manager {
                             self.state.alpha
                         )
                     );
-                    px += glyph.stroke.advance;
+                    px += glyph.stroke.advance.round() as i32;
                 }
             }
         }
@@ -619,21 +617,22 @@ impl Manager {
             .get_glyphs_into(&danmu_ref.text, &mut glyphs);
 
         if !glyphs.is_empty() {
-            let mut width: f32 = -glyphs[0].stroke.left;
-            let mut baseline: f32 = 0.0;
+            let mut width = -glyphs[0].stroke.left;
+            let mut baseline = 0;
             for glyph in &glyphs {
-                width += glyph.stroke.advance;
+                width += glyph.stroke.advance.round() as i32;
                 baseline = baseline.max(glyph.stroke.top);
             }
             // important: it's necessary to keep all danmus have the same height
             // to ensure emit properly
-            let height: f32 = self.state.atlas.font_size() + self.state.atlas.stroke_size() * 2.0;
+            let height =
+                (self.state.atlas.font_size() + self.state.atlas.stroke_size() * 2.0).ceil() as i32;
 
             danmu_ref.emitted_data = Some(DanmuEmittedData {
-                rect: egui::Rect::from_min_size(pos2(0.0, 0.0), vec2(width, height)),
+                rect: egui::Rect::from_min_size(pos2(0.0, 0.0), vec2(width as _, height as _)),
                 baseline,
                 lifetime: self.state.lifetime,
-                speed: (self.state.rolling_speed * width / 160.0).clamp(
+                speed: (self.state.rolling_speed * width as f32 / 160.0).clamp(
                     self.state.rolling_speed * 0.75,
                     self.state.rolling_speed * 1.25,
                 ),
