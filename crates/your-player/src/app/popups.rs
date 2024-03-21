@@ -1,6 +1,9 @@
 use std::process::Command;
 
-use crate::{app::END_REACHED_LIST, mpv};
+use crate::{
+    app::{opts_highlight, END_REACHED_LIST},
+    mpv,
+};
 use eframe::egui::{self, Vec2b};
 
 impl super::App {
@@ -259,7 +262,12 @@ impl super::App {
         match self.state.long_setting_type {
             MpvOptions => {
                 egui::ScrollArea::both().show(ui, |ui| {
-                    ui.add(egui::TextEdit::multiline(&mut self.state.options).desired_rows(8));
+                    ui.add(
+                        egui::TextEdit::multiline(&mut self.state.options)
+                            .desired_rows(8)
+                            .code_editor()
+                            .layouter(&mut opts_highlight::highlight),
+                    );
                 });
             }
             DanmuFonts => {

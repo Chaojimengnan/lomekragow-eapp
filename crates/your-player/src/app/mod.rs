@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 
 mod background;
 mod contents;
+mod opts_highlight;
 mod playlist;
 mod popups;
 

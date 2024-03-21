@@ -234,7 +234,7 @@ impl super::App {
                 let painter = ui.painter().with_clip_rect(rect);
 
                 painter.text(
-                    pos2(rect.left(), rect.top()),
+                    pos2(rect.left(), rect.top() + 1.0),
                     Align2::LEFT_TOP,
                     &self.player.state().media_title,
                     FontId::proportional(16.0),
