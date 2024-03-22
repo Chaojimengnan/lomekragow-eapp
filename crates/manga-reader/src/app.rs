@@ -377,7 +377,7 @@ impl App {
     }
 
     fn process_inputs(&mut self, ui: &mut egui::Ui) {
-        if ui.memory(|mem| mem.focus().is_none()) {
+        if ui.memory(|mem| mem.focused().is_none()) {
             if ui.input(|i| i.key_pressed(egui::Key::ArrowLeft)) {
                 self.img_finder.prev_dir();
             }

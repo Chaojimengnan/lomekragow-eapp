@@ -160,7 +160,7 @@ impl App {
         let mut t_changed = false; // tag
         let mut s_changed = false; // script
 
-        if ui.memory(|mem| mem.focus().is_none()) {
+        if ui.memory(|mem| mem.focused().is_none()) {
             if ui.input(|i| i.key_pressed(egui::Key::ArrowLeft)) {
                 t_changed = true;
                 self.prev_tag();
