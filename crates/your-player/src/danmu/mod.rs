@@ -663,7 +663,7 @@ impl Manager {
         &mut self.state
     }
 
-    /// this function should be called if font or stroke size is changed
+    /// this function should be called if font or stroke size or embolden is changed
     pub fn clear_emitted(&mut self) {
         for ptr in self
             .emitted

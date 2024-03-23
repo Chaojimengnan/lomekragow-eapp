@@ -38,6 +38,7 @@ pub struct FontAtlas {
     fonts: FontDef,
     font_size: f32,
     stroke_size: f32,
+    embolden: f32,
 }
 
 impl Default for FontAtlas {
@@ -51,6 +52,7 @@ impl Default for FontAtlas {
             fonts: Default::default(),
             font_size: 28.0,
             stroke_size: 1.0,
+            embolden: 0.0,
         }
     }
 }
@@ -187,6 +189,7 @@ impl FontAtlas {
 
         self.recrate_atlas(max_texture_size);
         self.renderer = Some(Render::new(&RENDER_SOURCE));
+        self.renderer.as_mut().unwrap().embolden(self.embolden);
 
         for (path, file) in &mut self.fonts.0 {
             assert!(file.is_none());
@@ -228,6 +231,10 @@ impl FontAtlas {
         self.stroke_size
     }
 
+    pub fn embolden(&self) -> f32 {
+        self.embolden
+    }
+
     pub fn fonts(&self) -> &FontDef {
         &self.fonts
     }
@@ -253,6 +260,17 @@ impl FontAtlas {
             return false;
         }
         self.stroke_size = stroke_size;
+        self.need_recrate_atlas = true;
+        return true;
+    }
+
+    pub fn set_embolden(&mut self, embolden: f32) -> bool {
+        assert!(embolden >= 0.0 && embolden <= 0.5);
+        if embolden == self.embolden {
+            return false;
+        }
+        self.embolden = embolden;
+        self.renderer.as_mut().unwrap().embolden(self.embolden);
         self.need_recrate_atlas = true;
         return true;
     }

@@ -236,6 +236,18 @@ impl super::App {
             }
         }
         ui.end_row();
+
+        ui.label("danmu embolden");
+        let mut embolden = self.danmu.state().atlas.embolden();
+        if ui
+            .add(egui::Slider::new(&mut embolden, 0.0..=0.5))
+            .changed()
+        {
+            if self.danmu.state_mut().atlas.set_embolden(embolden) {
+                self.danmu.clear_emitted();
+            }
+        }
+        ui.end_row();
     }
 
     pub fn ui_long_setting_popup(&mut self, ui: &mut egui::Ui) {
