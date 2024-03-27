@@ -373,7 +373,7 @@ impl eframe::App for App {
 
             self.process_inputs(ui);
 
-            self.tex_register.register_native_tex_if_any(ui);
+            self.tex_register.register_native_tex_if_any(frame);
         });
     }
 }
