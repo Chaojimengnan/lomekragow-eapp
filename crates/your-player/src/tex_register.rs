@@ -30,7 +30,7 @@ impl TexRegister {
         if !self.pending.is_empty() {
             self.pending
                 .iter()
-                .map(|tex| (*tex, frame.register_native_texture(*tex)))
+                .map(|tex| (*tex, frame.register_native_glow_texture(*tex)))
                 .collect::<Vec<_>>()
                 .into_iter()
                 .for_each(|(tex, egui_tex)| {

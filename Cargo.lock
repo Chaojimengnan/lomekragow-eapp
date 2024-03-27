@@ -521,7 +521,7 @@ dependencies = [
 [[package]]
 name = "ecolor"
 version = "0.27.0"
-source = "git+https://github.com/Chaojimengnan/egui?branch=self-use#a39a4fe8f57e6d152f680b7999523603c5e9e633"
+source = "git+https://github.com/Chaojimengnan/egui?branch=self-use#58a27882b0d6d86168dde9c952d2b9b5025a3c68"
 dependencies = [
  "bytemuck",
  "serde",
@@ -530,7 +530,7 @@ dependencies = [
 [[package]]
 name = "eframe"
 version = "0.27.0"
-source = "git+https://github.com/Chaojimengnan/egui?branch=self-use#a39a4fe8f57e6d152f680b7999523603c5e9e633"
+source = "git+https://github.com/Chaojimengnan/egui?branch=self-use#58a27882b0d6d86168dde9c952d2b9b5025a3c68"
 dependencies = [
  "bytemuck",
  "cocoa",
@@ -565,7 +565,7 @@ dependencies = [
 [[package]]
 name = "egui"
 version = "0.27.0"
-source = "git+https://github.com/Chaojimengnan/egui?branch=self-use#a39a4fe8f57e6d152f680b7999523603c5e9e633"
+source = "git+https://github.com/Chaojimengnan/egui?branch=self-use#58a27882b0d6d86168dde9c952d2b9b5025a3c68"
 dependencies = [
  "accesskit",
  "ahash",
@@ -579,7 +579,7 @@ dependencies = [
 [[package]]
 name = "egui-winit"
 version = "0.27.0"
-source = "git+https://github.com/Chaojimengnan/egui?branch=self-use#a39a4fe8f57e6d152f680b7999523603c5e9e633"
+source = "git+https://github.com/Chaojimengnan/egui?branch=self-use#58a27882b0d6d86168dde9c952d2b9b5025a3c68"
 dependencies = [
  "arboard",
  "egui",
@@ -595,7 +595,7 @@ dependencies = [
 [[package]]
 name = "egui_glow"
 version = "0.27.0"
-source = "git+https://github.com/Chaojimengnan/egui?branch=self-use#a39a4fe8f57e6d152f680b7999523603c5e9e633"
+source = "git+https://github.com/Chaojimengnan/egui?branch=self-use#58a27882b0d6d86168dde9c952d2b9b5025a3c68"
 dependencies = [
  "bytemuck",
  "egui",
@@ -615,7 +615,7 @@ checksum = "11157ac094ffbdde99aa67b23417ebdd801842852b500e395a45a9c0aac03e4a"
 [[package]]
 name = "emath"
 version = "0.27.0"
-source = "git+https://github.com/Chaojimengnan/egui?branch=self-use#a39a4fe8f57e6d152f680b7999523603c5e9e633"
+source = "git+https://github.com/Chaojimengnan/egui?branch=self-use#58a27882b0d6d86168dde9c952d2b9b5025a3c68"
 dependencies = [
  "bytemuck",
  "serde",
@@ -635,7 +635,7 @@ dependencies = [
 [[package]]
 name = "epaint"
 version = "0.27.0"
-source = "git+https://github.com/Chaojimengnan/egui?branch=self-use#a39a4fe8f57e6d152f680b7999523603c5e9e633"
+source = "git+https://github.com/Chaojimengnan/egui?branch=self-use#58a27882b0d6d86168dde9c952d2b9b5025a3c68"
 dependencies = [
  "ab_glyph",
  "ahash",
