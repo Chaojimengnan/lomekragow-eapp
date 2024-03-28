@@ -63,10 +63,10 @@ pub struct DanmuEmittedData {
     /// the distance from rect.top(), used for put glphy
     pub baseline: i32,
 
-    /// for `DanmuType::Top` and `DanmuType::Bottom`
+    /// for [`DanmuType::Top`] and [`DanmuType::Bottom`]
     pub lifetime: f64,
 
-    /// for `DanmuType::Rolling`
+    /// for [`DanmuType::Rolling`]
     pub speed: f32,
 
     pub state: DanmuEmittedDataState,
@@ -101,14 +101,14 @@ pub struct Manager {
     /// rolling danmu pending list
     rolling_pending: VecDeque<*mut DanmuData>,
 
-    /// centered emitted danmu map. used for `try_emit_pending_danmu`.
+    /// centered emitted danmu map. used for [`Manager::try_emit_pending_danmu`].
     ///
     /// `key`: current emitted danmu top (distance from `rect::top()`)
     ///
     /// `value`: (current danmu height)
     centered_emitted_map: BTreeMap<NotNan<f32>, f32>,
 
-    /// rolling emitted danmu map. used for `try_emit_pending_danmu`.
+    /// rolling emitted danmu map. used for [`Manager::try_emit_pending_danmu`].
     ///
     /// `key`: current emitted danmu top (distance from `rect::top()`)
     ///

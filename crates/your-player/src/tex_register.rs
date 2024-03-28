@@ -3,7 +3,7 @@ use eframe::{
     glow,
 };
 
-/// Do not use glow function delete any `glow::Texture` in this struct,
+/// Do not use glow function delete any [`glow::Texture`] in this struct,
 /// otherwise result in UB!
 #[derive(Default, Debug)]
 pub struct TexRegister {
@@ -25,7 +25,7 @@ impl TexRegister {
         None
     }
 
-    /// This function should be called after all place that call `get`
+    /// This function should be called after all place that call [`TexRegister::get`]
     pub fn register_native_tex_if_any(&mut self, frame: &mut eframe::Frame) {
         if !self.pending.is_empty() {
             self.pending

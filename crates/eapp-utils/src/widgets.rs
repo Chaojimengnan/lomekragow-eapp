@@ -80,7 +80,7 @@ impl Widget for PlainButton {
     }
 }
 
-/// same as `egui::popup::popup_above_or_below_widget`
+/// same as [`egui::popup::popup_above_or_below_widget`]
 /// but with animation
 pub fn popup_animated(
     ui: &mut egui::Ui,
