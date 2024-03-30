@@ -1,11 +1,6 @@
 [workspace]
 
-members = [
-    "crates/eapp-utils",
-    "crates/manga-reader",
-    "crates/script-caller",
-    "crates/your-player",
-]
+members = ["crates/*"]
 resolver = "2"
 
 [workspace.dependencies]
