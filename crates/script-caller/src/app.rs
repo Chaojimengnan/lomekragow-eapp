@@ -156,6 +156,18 @@ impl App {
             .show_inside(ui, |ui| self.ui_right_panel(ui));
     }
 
+    fn ui_title_bar(&mut self, ui: &mut egui::Ui, title_bar_rect: egui::Rect) {
+        eapp_utils::borderless::title_bar(ui, title_bar_rect, |ui| {
+            ui.painter().text(
+                title_bar_rect.center(),
+                egui::Align2::CENTER_CENTER,
+                "script-caller",
+                egui::FontId::proportional(16.0),
+                ui.style().visuals.text_color(),
+            );
+        });
+    }
+
     fn ui_left_panel(&mut self, ui: &mut egui::Ui) {
         let mut t_changed = false; // tag
         let mut s_changed = false; // script
@@ -326,7 +338,8 @@ impl eframe::App for App {
                 rect.max.y = rect.min.y + title_bar_height;
                 rect
             };
-            eapp_utils::borderless::title_bar(ui, title_bar_rect, "script-caller");
+
+            self.ui_title_bar(ui, title_bar_rect);
 
             let content_rect = {
                 let mut rect = app_rect;

@@ -102,19 +102,16 @@ pub fn title_bar_behavior(ui: &egui::Ui, title_bar_rect: eframe::epaint::Rect) {
     }
 }
 
-pub fn title_bar(ui: &mut egui::Ui, title_bar_rect: eframe::epaint::Rect, title: &str) {
+pub fn title_bar(
+    ui: &mut egui::Ui,
+    title_bar_rect: eframe::epaint::Rect,
+    add_contents: impl FnOnce(&mut egui::Ui),
+) {
     use egui::*;
 
     title_bar_behavior(ui, title_bar_rect);
 
     let painter = ui.painter();
-    painter.text(
-        title_bar_rect.center(),
-        Align2::CENTER_CENTER,
-        title,
-        FontId::proportional(16.0),
-        ui.style().visuals.text_color(),
-    );
 
     painter.line_segment(
         [
@@ -133,6 +130,10 @@ pub fn title_bar(ui: &mut egui::Ui, title_bar_rect: eframe::epaint::Rect, title:
                 Color32::TRANSPARENT,
             );
         });
+
+        ui.set_clip_rect(title_bar_rect.with_max_x(title_bar_rect.right() - 120.0));
+
+        add_contents(ui);
     });
 }
 

@@ -59,8 +59,14 @@ impl BasicMpvWrapper {
             }
         });
 
-        let event_ctx = handle.create_event_context();
+        let mut event_ctx = handle.create_event_context();
         event_ctx.disable_deprecated_events()?;
+        event_ctx.set_wakeup_callback({
+            let egui_ctx = cc.egui_ctx.clone();
+            move || {
+                egui_ctx.request_repaint();
+            }
+        });
 
         Ok(Self {
             handle,

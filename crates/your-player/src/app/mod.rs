@@ -306,19 +306,24 @@ impl App {
                     .send_viewport_cmd(ViewportCommand::Fullscreen(false));
             }
 
+            let mut opt_path = None;
             ui.ctx().input(|i| {
                 if !i.raw.dropped_files.is_empty() {
                     if let Some(path) = &i.raw.dropped_files.first().unwrap().path {
-                        let path_str = path.to_string_lossy().into_owned();
-                        if path.is_file() {
-                            self.set_media(&path_str);
-                            self.playlist.set_current_play(None);
-                        } else {
-                            self.playlist.add_list(&path_str);
-                        }
+                        opt_path = Some(path.to_string_lossy().into_owned());
                     }
                 }
             });
+
+            // we should be careful for deadlock
+            if let Some(path) = opt_path {
+                if std::path::Path::new(&path).is_file() {
+                    self.set_media(&path);
+                    self.playlist.set_current_play(None);
+                } else {
+                    self.playlist.add_list(&path);
+                }
+            }
         }
     }
 
