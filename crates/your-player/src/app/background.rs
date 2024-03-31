@@ -49,6 +49,7 @@ impl super::App {
 
             let elapsed_time = if self.player.state().play_state.is_playing()
                 && playback_time == self.state.last_real_playback_time
+                && playback_time >= 0.05
             {
                 // using `last_instant` when real playback time
                 // doesn't changes at current frame
