@@ -14,3 +14,7 @@ eframe = { workspace = true, features = ["glow", "persistence"] }
 simplelog.workspace = true
 log.workspace = true
 include-flate = "0.3.0"
+
+[target.'cfg(windows)'.dependencies.windows-sys]
+version = "0.52"
+features = ["Win32_System_Power"]

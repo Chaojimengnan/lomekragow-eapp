@@ -4,6 +4,7 @@ pub mod animation;
 pub mod borderless;
 pub mod codicons;
 pub mod easy_mark;
+pub mod platform;
 pub mod widgets;
 
 #[macro_export]

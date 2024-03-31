@@ -6,6 +6,7 @@ use crate::{
 };
 use eframe::egui::{self, Color32, Rounding, TextBuffer, ViewportCommand};
 use serde::{Deserialize, Serialize};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 mod background;
 mod contents;
@@ -82,6 +83,9 @@ pub struct State {
 
     /// used for adding danmu font
     pub danmu_font_path: String,
+
+    #[serde(skip)]
+    pub last_prevert_sleep_call: Duration,
 }
 
 #[derive(PartialEq)]
@@ -138,6 +142,7 @@ impl Default for State {
             content_rect: egui::Rect::ZERO,
             enable_danmu: true,
             danmu_font_path: String::default(),
+            last_prevert_sleep_call: Duration::default(),
         }
     }
 }
@@ -332,6 +337,18 @@ impl App {
             }
         }
     }
+
+    fn prevent_sleep_if_media_playing(&mut self) {
+        if self.player.state().play_state != PlayState::Play {
+            return;
+        }
+
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+        if now - self.state.last_prevert_sleep_call >= Duration::from_secs(120) {
+            self.state.last_prevert_sleep_call = now;
+            eapp_utils::platform::prevent_sleep();
+        }
+    }
 }
 
 impl eframe::App for App {
@@ -349,6 +366,8 @@ impl eframe::App for App {
     fn update(&mut self, ctx: &eframe::egui::Context, frame: &mut eframe::Frame) {
         eapp_utils::borderless::window_frame(ctx, Some(Color32::BLACK)).show(ctx, |ui| {
             eapp_utils::borderless::handle_resize(ui);
+
+            self.prevent_sleep_if_media_playing();
 
             let gl = frame.gl().unwrap();
 
