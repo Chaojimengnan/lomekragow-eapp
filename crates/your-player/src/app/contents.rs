@@ -326,7 +326,7 @@ impl super::App {
                         }
                     }
 
-                    let is_pause = self.player.state().play_state != PlayState::Play;
+                    let is_pause = !self.player.state().play_state.is_playing();
                     let icon = if is_pause {
                         ICON_PLAY_CIRCLE
                     } else {

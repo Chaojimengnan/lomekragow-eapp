@@ -46,9 +46,22 @@ impl super::App {
     fn ui_show_danmu(&mut self, ui: &mut egui::Ui, rect: egui::Rect) {
         if let Some(tex) = self.tex_register.get(*self.danmu.texture()) {
             let playback_time = self.player.state().playback_time;
-            self.danmu
-                .render(ui, tex, rect, playback_time - self.state.last_playback_time);
-            self.state.last_playback_time = playback_time;
+
+            let elapsed_time = if self.player.state().play_state.is_playing()
+                && playback_time == self.state.last_real_playback_time
+            {
+                // using `last_instant` when real playback time
+                // doesn't changes at current frame
+                self.state.last_instant.elapsed().as_secs_f64() * self.player.state().speed
+            } else {
+                playback_time - self.state.last_playback_time
+            };
+
+            self.danmu.render(ui, tex, rect, elapsed_time);
+
+            self.state.last_playback_time += elapsed_time;
+            self.state.last_real_playback_time = playback_time;
+            self.state.last_instant = std::time::Instant::now();
         }
     }
 }

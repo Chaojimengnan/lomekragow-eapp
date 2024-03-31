@@ -71,9 +71,19 @@ pub struct State {
     /// how to do when media end reached
     pub end_reached: EndReached,
 
-    /// used for danmu to calculate elapsed time
+    /// playback time of the simulation, for smoother danmu movement
     #[serde(skip)]
     pub last_playback_time: f64,
+
+    /// last [`mpv::player::State::playback_time`],
+    /// used to check if the playback time of the mpv changes at current frame
+    #[serde(skip)]
+    pub last_real_playback_time: f64,
+
+    /// for calculating [`State::last_playback_time`]
+    /// when real playback time doesn't changes at current frame
+    #[serde(skip)]
+    pub last_instant: std::time::Instant,
 
     /// the content rect of last frame, used by video frame
     #[serde(skip)]
@@ -139,6 +149,8 @@ impl Default for State {
             playlist_cur_sel: None,
             end_reached: EndReached::Idle,
             last_playback_time: 0.0,
+            last_real_playback_time: 0.0,
+            last_instant: std::time::Instant::now(),
             content_rect: egui::Rect::ZERO,
             enable_danmu: true,
             danmu_font_path: String::default(),
@@ -291,7 +303,7 @@ impl App {
 
             if ui.input(|i| i.key_pressed(egui::Key::Space)) {
                 self.player
-                    .set_play_state(if self.player.state().play_state == PlayState::Play {
+                    .set_play_state(if self.player.state().play_state.is_playing() {
                         PlayState::Pause
                     } else {
                         PlayState::Play
@@ -344,7 +356,7 @@ impl App {
     }
 
     fn prevent_sleep_if_media_playing(&mut self) {
-        if self.player.state().play_state != PlayState::Play {
+        if !self.player.state().play_state.is_playing() {
             return;
         }
 
@@ -381,7 +393,9 @@ impl eframe::App for App {
 
             self.ui_background(ui);
 
-            if self.state.enable_danmu {
+            if self.player.state().play_state.is_playing() && self.state.enable_danmu {
+                ctx.request_repaint();
+
                 let playback_time = self.player.state().playback_time;
                 self.danmu.emit(
                     playback_time..(playback_time + 0.1),

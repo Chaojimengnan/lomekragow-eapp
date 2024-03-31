@@ -22,6 +22,12 @@ pub enum PlayState {
     EndReached,
 }
 
+impl PlayState {
+    pub fn is_playing(&self) -> bool {
+        matches!(self, PlayState::Play)
+    }
+}
+
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(default)]
 pub struct State {
@@ -207,6 +213,7 @@ impl Player {
 
         handle.set_property("terminal", "no")?;
         handle.set_property("keep-open", "yes")?;
+        handle.set_property("video-timing-offset", 0)?;
         handle.request_log_messages("v")?;
 
         let mpv = super::BasicMpvWrapper::new(handle, cc)?;
