@@ -393,7 +393,10 @@ impl eframe::App for App {
 
             self.ui_background(ui);
 
-            if self.player.state().play_state.is_playing() && self.state.enable_danmu {
+            if self.player.state().play_state.is_playing()
+                && self.state.enable_danmu
+                && !self.danmu.danmu().is_empty()
+            {
                 ctx.request_repaint();
 
                 let playback_time = self.player.state().playback_time;
