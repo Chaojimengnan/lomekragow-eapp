@@ -58,7 +58,7 @@ impl Default for FontAtlas {
 }
 
 impl FontAtlas {
-    pub fn get_glyphs_into<'this>(
+    pub fn get_glyphs_from_text<'this>(
         &'this mut self,
         text: &str,
         list: &mut Vec<&'this StrokedGlyph>,

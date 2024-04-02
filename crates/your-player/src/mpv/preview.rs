@@ -193,7 +193,7 @@ impl Preview {
         self.size
     }
 
-    pub fn get_preview(&mut self, playback_time: f64) -> Option<&glow::Texture> {
+    pub fn get(&mut self, playback_time: f64) -> Option<&glow::Texture> {
         let idx = (playback_time / self.interval) as u64;
 
         if let Some((ready, tex)) = self.preview.get(&idx) {

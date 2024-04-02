@@ -173,7 +173,7 @@ impl super::App {
             if let Some(pointer) = response.hover_pos() {
                 if self.player.state().play_state != PlayState::Stop {
                     let hover_playback_time = map_into_playback_time(pointer.x);
-                    if let Some(tex) = self.preview.get_preview(hover_playback_time) {
+                    if let Some(tex) = self.preview.get(hover_playback_time) {
                         if let Some(tex_id) = self.tex_register.get(*tex) {
                             let size = self.preview.size();
 

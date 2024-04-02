@@ -373,7 +373,7 @@ impl Manager {
 
                 self.state
                     .atlas
-                    .get_glyphs_into(&danmu_ref.text, &mut glyphs);
+                    .get_glyphs_from_text(&danmu_ref.text, &mut glyphs);
 
                 let mut px = emitted.rect.left().round() as i32 - glyphs[0].stroke.left;
                 let py = emitted.rect.top().round() as i32 + emitted.baseline;
@@ -614,7 +614,7 @@ impl Manager {
         let mut glyphs = Vec::new();
         self.state
             .atlas
-            .get_glyphs_into(&danmu_ref.text, &mut glyphs);
+            .get_glyphs_from_text(&danmu_ref.text, &mut glyphs);
 
         if !glyphs.is_empty() {
             let mut width = -glyphs[0].stroke.left;
