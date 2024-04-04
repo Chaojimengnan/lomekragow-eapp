@@ -115,74 +115,6 @@ impl State {
         self.cur_audio_idx = 0;
         self.cur_subtitle_idx = 0;
     }
-
-    pub fn change_property(&mut self, name: &str, change: &libmpv::events::PropertyData<'_>) {
-        use libmpv::events::PropertyData::*;
-        match name {
-            "duration" => {
-                if let Double(value) = change {
-                    self.duration = *value;
-                }
-            }
-            "playback-time" => {
-                if let Double(value) = change {
-                    self.playback_time = *value;
-                }
-            }
-            "eof-reached" => {
-                if let Flag(end_reached) = change {
-                    if *end_reached {
-                        self.play_state = PlayState::EndReached;
-                    }
-                }
-            }
-            "track-list" => {
-                if let Node(node) = change {
-                    self.audio_tracks.clear();
-                    self.subtitle_tracks.clear();
-
-                    || -> Option<()> {
-                        for item in node.to_array()? {
-                            let map: HashMap<&str, libmpv::MpvNode> = item.to_map()?.collect();
-                            let mut title = "Unknown";
-                            if let Some(str) = map.get("title") {
-                                title = str.to_str()?;
-                            }
-                            let track_type = map.get("type")?.to_str()?;
-                            let id = map.get("id")?.to_i64()?;
-
-                            if track_type == "audio" {
-                                self.audio_tracks.push((title.to_owned(), id));
-                            }
-                            if track_type == "sub" {
-                                self.subtitle_tracks.push((title.to_owned(), id));
-                            }
-                        }
-                        Some(())
-                    }();
-                }
-            }
-            "chapter-list" => {
-                if let Node(node) = change {
-                    self.chapters.clear();
-
-                    || -> Option<()> {
-                        for item in node.to_array()? {
-                            let map: HashMap<&str, libmpv::MpvNode> = item.to_map()?.collect();
-                            let mut title = "Unknown";
-                            if let Some(str) = map.get("title") {
-                                title = str.to_str()?;
-                            }
-                            let time = map.get("time")?.to_f64()?;
-                            self.chapters.push((title.to_owned(), time));
-                        }
-                        Some(())
-                    }();
-                }
-            }
-            _ => (),
-        }
-    }
 }
 
 pub struct Player {
@@ -268,8 +200,6 @@ impl Player {
                             err,
                             { log::error!("mpv get property fails: {err}") },
                             {
-                                self.state.cur_audio_idx = 0;
-                                self.state.cur_subtitle_idx = 0;
                                 self.state.media_title =
                                     self.mpv.handle.get_property("media-title")?;
                                 self.state.media_size.0 = self.mpv.handle.get_property("width")?;
@@ -298,7 +228,90 @@ impl Player {
                         name,
                         change,
                         reply_userdata: _,
-                    } => self.state.change_property(name, &change),
+                    } => {
+                        use libmpv::events::PropertyData::*;
+                        match name {
+                            "duration" => {
+                                if let Double(value) = change {
+                                    self.state.duration = value;
+                                }
+                            }
+                            "playback-time" => {
+                                if let Double(value) = change {
+                                    self.state.playback_time = value;
+                                }
+                            }
+                            "eof-reached" => {
+                                if let Flag(end_reached) = change {
+                                    if end_reached {
+                                        self.state.play_state = PlayState::EndReached;
+                                    }
+                                }
+                            }
+                            "track-list" => {
+                                if let Node(node) = change {
+                                    self.state.audio_tracks.clear();
+                                    self.state.subtitle_tracks.clear();
+
+                                    || -> Option<()> {
+                                        for item in node.to_array()? {
+                                            let map: HashMap<&str, libmpv::MpvNode> =
+                                                item.to_map()?.collect();
+                                            let mut title = "Unknown";
+                                            if let Some(str) = map.get("title") {
+                                                title = str.to_str()?;
+                                            }
+                                            let track_type = map.get("type")?.to_str()?;
+                                            let id = map.get("id")?.to_i64()?;
+
+                                            if track_type == "audio" {
+                                                self.state
+                                                    .audio_tracks
+                                                    .push((title.to_owned(), id));
+                                            }
+                                            if track_type == "sub" {
+                                                self.state
+                                                    .subtitle_tracks
+                                                    .push((title.to_owned(), id));
+                                            }
+                                        }
+                                        Some(())
+                                    }();
+
+                                    self.state.cur_audio_idx = self
+                                        .state
+                                        .cur_audio_idx
+                                        .clamp(0, self.state.audio_tracks.len());
+                                    self.state.cur_subtitle_idx = self
+                                        .state
+                                        .cur_subtitle_idx
+                                        .clamp(0, self.state.subtitle_tracks.len());
+                                    self.set_cur_audio_idx(self.state.cur_audio_idx);
+                                    self.set_cur_subtitle_idx(self.state.cur_subtitle_idx);
+                                }
+                            }
+                            "chapter-list" => {
+                                if let Node(node) = change {
+                                    self.state.chapters.clear();
+
+                                    || -> Option<()> {
+                                        for item in node.to_array()? {
+                                            let map: HashMap<&str, libmpv::MpvNode> =
+                                                item.to_map()?.collect();
+                                            let mut title = "Unknown";
+                                            if let Some(str) = map.get("title") {
+                                                title = str.to_str()?;
+                                            }
+                                            let time = map.get("time")?.to_f64()?;
+                                            self.state.chapters.push((title.to_owned(), time));
+                                        }
+                                        Some(())
+                                    }();
+                                }
+                            }
+                            _ => (),
+                        }
+                    }
                     _ => (),
                 },
             }
@@ -501,6 +514,10 @@ impl Player {
     simple_setter!(set_sharpen, sharpen, "sharpen", f64);
 
     pub fn set_cur_audio_idx(&mut self, cur_audio_idx: usize) {
+        if self.state.audio_tracks.is_empty() {
+            return;
+        }
+
         let cur_audio_idx = cur_audio_idx.clamp(0, self.state.audio_tracks.len());
         match self
             .mpv
@@ -513,6 +530,10 @@ impl Player {
     }
 
     pub fn set_cur_subtitle_idx(&mut self, cur_subtitle_idx: usize) {
+        if self.state.subtitle_tracks.is_empty() {
+            return;
+        }
+
         let cur_subtitle_idx = cur_subtitle_idx.clamp(0, self.state.subtitle_tracks.len());
         match self
             .mpv
