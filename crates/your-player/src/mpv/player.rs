@@ -205,6 +205,9 @@ impl Player {
                                 self.state.media_size.0 = self.mpv.handle.get_property("width")?;
                                 self.state.media_size.1 = self.mpv.handle.get_property("height")?;
 
+                                self.set_cur_audio_idx(self.state.cur_audio_idx);
+                                self.set_cur_subtitle_idx(self.state.cur_subtitle_idx);
+
                                 unsafe {
                                     gl.bind_texture(glow::TEXTURE_2D, Some(self.tex));
                                     gl.tex_image_2d(
