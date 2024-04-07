@@ -129,11 +129,13 @@ pub fn title_bar(
                 title_bar_rect.height() - 1.0,
                 Color32::TRANSPARENT,
             );
+
+            ui.set_clip_rect(title_bar_rect.with_max_x(title_bar_rect.right() - 120.0));
+
+            ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                add_contents(ui)
+            });
         });
-
-        ui.set_clip_rect(title_bar_rect.with_max_x(title_bar_rect.right() - 120.0));
-
-        add_contents(ui);
     });
 }
 

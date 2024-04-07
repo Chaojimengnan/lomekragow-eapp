@@ -1,0 +1,19 @@
+[package]
+name = "lonote"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+log.workspace = true
+eapp-utils.workspace = true
+eframe.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+encoding_rs = "0.8.33"
+rfd = "0.13"
+
+[target.'cfg(windows)'.build-dependencies]
+winres = "0.1"
