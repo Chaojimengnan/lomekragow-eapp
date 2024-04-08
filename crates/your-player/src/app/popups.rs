@@ -218,10 +218,9 @@ impl super::App {
         if ui
             .add(egui::Slider::new(&mut font_size, 16.0..=32.0))
             .changed()
+            && self.danmu.state_mut().atlas.set_font_size(font_size)
         {
-            if self.danmu.state_mut().atlas.set_font_size(font_size) {
-                self.danmu.clear_emitted();
-            }
+            self.danmu.clear_emitted();
         }
         ui.end_row();
 
@@ -230,10 +229,9 @@ impl super::App {
         if ui
             .add(egui::Slider::new(&mut stroke_size, 0.1..=4.0))
             .changed()
+            && self.danmu.state_mut().atlas.set_stroke_size(stroke_size)
         {
-            if self.danmu.state_mut().atlas.set_stroke_size(stroke_size) {
-                self.danmu.clear_emitted();
-            }
+            self.danmu.clear_emitted();
         }
         ui.end_row();
 
@@ -242,10 +240,9 @@ impl super::App {
         if ui
             .add(egui::Slider::new(&mut embolden, 0.0..=0.5))
             .changed()
+            && self.danmu.state_mut().atlas.set_embolden(embolden)
         {
-            if self.danmu.state_mut().atlas.set_embolden(embolden) {
-                self.danmu.clear_emitted();
-            }
+            self.danmu.clear_emitted();
         }
         ui.end_row();
     }

@@ -82,16 +82,13 @@ impl BasicMpvWrapper {
     }
 
     pub fn consume_need_update_flag(&self) -> bool {
-        match self
-            .need_update
+        self.need_update
             .compare_exchange(true, false, Ordering::AcqRel, Ordering::Acquire)
-        {
-            Ok(_) => true,
-            Err(_) => false,
-        }
+            .is_ok()
     }
 }
 
+#[allow(clippy::missing_safety_doc)]
 pub unsafe fn get_texture(
     gl: &eframe::glow::Context,
 ) -> Result<eframe::glow::Texture, Box<dyn std::error::Error>> {
@@ -116,6 +113,7 @@ pub unsafe fn get_texture(
     Ok(tex)
 }
 
+#[allow(clippy::missing_safety_doc)]
 pub unsafe fn get_frame_buffer_with_texture(
     gl: &eframe::glow::Context,
 ) -> Result<(eframe::glow::Framebuffer, eframe::glow::Texture), Box<dyn std::error::Error>> {

@@ -201,13 +201,7 @@ impl FontAtlas {
     }
 
     pub fn add_font(&mut self, font_path: &str) {
-        if self
-            .fonts
-            .0
-            .iter()
-            .find(|(key, _)| key == font_path)
-            .is_some()
-        {
+        if self.fonts.0.iter().any(|(key, _)| key == font_path) {
             return;
         }
 
@@ -240,7 +234,7 @@ impl FontAtlas {
     }
 
     pub fn set_font_size(&mut self, font_size: f32) -> bool {
-        assert!(font_size >= 16.0 && font_size <= 32.0);
+        assert!((16.0..=32.0).contains(&font_size));
         if font_size == self.font_size {
             return false;
         }
@@ -251,7 +245,7 @@ impl FontAtlas {
             }
         });
         self.need_recrate_atlas = true;
-        return true;
+        true
     }
 
     pub fn set_stroke_size(&mut self, stroke_size: f32) -> bool {
@@ -261,18 +255,18 @@ impl FontAtlas {
         }
         self.stroke_size = stroke_size;
         self.need_recrate_atlas = true;
-        return true;
+        true
     }
 
     pub fn set_embolden(&mut self, embolden: f32) -> bool {
-        assert!(embolden >= 0.0 && embolden <= 0.5);
+        assert!((0.0..=0.5).contains(&embolden));
         if embolden == self.embolden {
             return false;
         }
         self.embolden = embolden;
         self.renderer.as_mut().unwrap().embolden(self.embolden);
         self.need_recrate_atlas = true;
-        return true;
+        true
     }
 
     pub fn need_recrate_atlas(&self) -> bool {

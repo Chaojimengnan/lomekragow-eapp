@@ -320,16 +320,14 @@ impl Player {
             }
         }
 
-        if self.mpv.consume_need_update_flag() {
-            if self.state.media_size != (0, 0) {
-                if let Err(err) = self.mpv.render_ctx.render::<glow::Context>(
-                    self.fbo.0.get() as _,
-                    self.state.media_size.0 as _,
-                    self.state.media_size.1 as _,
-                    false,
-                ) {
-                    log::error!("mpv render fbo fails: {err}");
-                }
+        if self.mpv.consume_need_update_flag() && self.state.media_size != (0, 0) {
+            if let Err(err) = self.mpv.render_ctx.render::<glow::Context>(
+                self.fbo.0.get() as _,
+                self.state.media_size.0 as _,
+                self.state.media_size.1 as _,
+                false,
+            ) {
+                log::error!("mpv render fbo fails: {err}");
             }
         }
     }

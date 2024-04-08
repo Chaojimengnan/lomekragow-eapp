@@ -9,9 +9,11 @@ use std::{
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
+type DialogCb = Option<(String, Box<dyn FnOnce(bool) -> Result<()>>)>;
+
 pub struct App {
     note: Rc<RefCell<Note>>,
-    dialog_cb: Option<(String, Box<dyn FnOnce(bool) -> Result<()>>)>,
+    dialog_cb: DialogCb,
 }
 
 struct Note {
@@ -140,21 +142,22 @@ impl App {
 
     fn process_close_request(&mut self, ui: &mut egui::Ui) {
         let ctx = ui.ctx();
-        if ctx.input(|i| i.viewport().close_requested()) {
-            if self.note.borrow().modified && !self.note.borrow().allow_to_close {
-                ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
-                self.set_confirm_dialog(Self::FILE_UNSAVED.to_owned(), {
-                    let note = self.note.clone();
-                    let ctx = ctx.clone();
-                    move |yes| {
-                        if yes {
-                            note.borrow_mut().allow_to_close = true;
-                            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
-                        }
-                        Ok(())
+        if ctx.input(|i| i.viewport().close_requested())
+            && self.note.borrow().modified
+            && !self.note.borrow().allow_to_close
+        {
+            ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+            self.set_confirm_dialog(Self::FILE_UNSAVED.to_owned(), {
+                let note = self.note.clone();
+                let ctx = ctx.clone();
+                move |yes| {
+                    if yes {
+                        note.borrow_mut().allow_to_close = true;
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                     }
-                });
-            }
+                    Ok(())
+                }
+            });
         }
     }
 
@@ -359,8 +362,8 @@ impl App {
         confirm_dialog_or_calling!(self, note, {
             let note = &mut *note.borrow_mut();
             let path = note.get_path().unwrap();
-            let last_modified_time = Note::get_modified_time(&path)?;
-            note.contents = note.read_from_file(&path)?;
+            let last_modified_time = Note::get_modified_time(path)?;
+            note.contents = note.read_from_file(path)?;
             note.cur_file.as_mut().unwrap().last_modified_time = last_modified_time;
             note.modified = false;
             note.update_title();
@@ -397,9 +400,9 @@ impl App {
                 if yes {
                     let note = &mut *note.borrow_mut();
                     let path = note.get_path().unwrap();
-                    note.write_to_file(&path)?;
+                    note.write_to_file(path)?;
                     note.cur_file.as_mut().unwrap().last_modified_time =
-                        Note::get_modified_time(&path)?;
+                        Note::get_modified_time(path)?;
                     note.modified = false;
                     note.update_title();
                     note.state_msg = "Save successfully".to_owned();

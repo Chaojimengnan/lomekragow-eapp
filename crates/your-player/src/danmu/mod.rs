@@ -175,7 +175,7 @@ impl Manager {
 
         let json: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(path)?)?;
 
-        if let None = || -> Option<()> {
+        let mut get_danmu = || -> Option<()> {
             for value in json.as_array()? {
                 let text = value.get("text")?.as_str()?.to_owned();
                 let playback_time_raw = value.get("pos")?.as_str()?.parse().ok()?;
@@ -204,7 +204,9 @@ impl Manager {
                 });
             }
             Some(())
-        }() {
+        };
+
+        if get_danmu().is_none() {
             return Err("fail to load danmu json".into());
         }
 
@@ -367,7 +369,7 @@ impl Manager {
                 }
             }
 
-            if !remove.contains(&danmu) {
+            if !remove.contains(danmu) {
                 let mut glyphs = Vec::new();
                 let [tex_w, tex_h] = self.state.atlas.atlas().size();
 
@@ -462,13 +464,13 @@ impl Manager {
             .centered_pending
             .iter()
             .rev()
-            .map(|v| *v)
+            .copied()
             .take_while(danmu_not_initlize)
             .chain(
                 self.rolling_pending
                     .iter()
                     .rev()
-                    .map(|v| *v)
+                    .copied()
                     .take_while(danmu_not_initlize),
             )
             .collect();

@@ -83,7 +83,7 @@ impl Arg {
                 }
             }
             ArgType::Normal(value) => {
-                let value = value.clone().replace("\n", " ").replace("\r", " ");
+                let value = value.clone().replace(['\n', '\r'], " ");
                 value_string = format!("{} {}", self.name, value);
             }
             ArgType::OneLine(value) => {
@@ -100,7 +100,7 @@ impl Arg {
     }
 
     pub fn initialize_value(&mut self) {
-        if self.optional == false {
+        if !self.optional {
             self.enabled = true;
         }
 
@@ -119,7 +119,7 @@ impl Arg {
                 *value = default;
             }
             ArgType::Normal(value) | ArgType::OneLine(value) => {
-                let default = self.default.clone().unwrap_or(String::default());
+                let default = self.default.clone().unwrap_or_default();
                 *value = default;
             }
             ArgType::StoreTrue(value) => {

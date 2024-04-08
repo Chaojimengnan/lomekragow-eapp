@@ -82,6 +82,7 @@ impl Widget for PlainButton {
 
 /// same as [`egui::popup::popup_above_or_below_widget`]
 /// but with animation
+#[allow(clippy::too_many_arguments)]
 pub fn popup_animated(
     ui: &mut egui::Ui,
     mut open: bool,

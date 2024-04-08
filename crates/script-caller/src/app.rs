@@ -101,15 +101,12 @@ impl App {
     }
 
     fn prev_tag(&mut self) {
-        match self.cur_sel_tag {
-            Some(ref mut i) => {
-                if *i == 0 {
-                    self.cur_sel_tag = None;
-                } else {
-                    *i -= 1
-                }
+        if let Some(ref mut i) = self.cur_sel_tag {
+            if *i == 0 {
+                self.cur_sel_tag = None;
+            } else {
+                *i -= 1
             }
-            None => (),
         }
     }
 
@@ -194,21 +191,16 @@ impl App {
             }
 
             ui.input(|i| {
-                if let Some(key) = i.events.iter().find(|event| {
+                if let Some(Event::Key { key, .. }) = i.events.iter().find(|event| {
                     matches!(
                         event,
                         Event::Key { key, pressed: true, .. }
                         if *key >= Key::A && *key <= Key::Z
                     )
                 }) {
-                    match key {
-                        Event::Key { key, .. } => {
-                            let i = *key as u8 - Key::A as u8;
-                            let letter = ('a' as u8 + i) as char;
-                            s_changed = s_changed || self.select_script_by_letter(letter)
-                        }
-                        _ => (),
-                    };
+                    let i = *key as u8 - Key::A as u8;
+                    let letter = (b'a' + i) as char;
+                    s_changed = s_changed || self.select_script_by_letter(letter)
                 }
             });
         }

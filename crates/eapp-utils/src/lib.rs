@@ -48,7 +48,7 @@ pub fn setup_fonts(ctx: &egui::Context) {
     ctx.set_fonts(fonts);
 
     let mut style = ctx.style().as_ref().clone();
-    for (_, id) in &mut style.text_styles {
+    for id in &mut style.text_styles.values_mut() {
         id.size = 16.0;
     }
     ctx.set_style(style);

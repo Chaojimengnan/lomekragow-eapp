@@ -321,7 +321,7 @@ impl super::App {
                         .add(new_button(28.0, ICON_ARROW_CIRCLE_LEFT.to_string()))
                         .clicked()
                     {
-                        if let Some(new_media) = self.playlist.prev() {
+                        if let Some(new_media) = self.playlist.prev_item() {
                             self.set_media(&new_media);
                         }
                     }
@@ -345,7 +345,7 @@ impl super::App {
                         .add(new_button(28.0, ICON_ARROW_CIRCLE_RIGHT.to_string()))
                         .clicked()
                     {
-                        if let Some(new_media) = self.playlist.next() {
+                        if let Some(new_media) = self.playlist.next_item() {
                             self.set_media(&new_media);
                         }
                     }

@@ -202,7 +202,7 @@ impl App {
                 Err(err) => {
                     log::error!("create mpv player fails: {err}");
 
-                    if &state.options == mpv::DEFAULT_OPTS {
+                    if state.options == mpv::DEFAULT_OPTS {
                         panic!("create mpv player fails");
                     }
 
@@ -348,7 +348,7 @@ impl App {
             EndReached::Idle => (),
             EndReached::Repeat => self.player.set_play_state(PlayState::Play),
             EndReached::Next => {
-                if let Some(next) = self.playlist.next() {
+                if let Some(next) = self.playlist.next_item() {
                     self.set_media(&next);
                 }
             }

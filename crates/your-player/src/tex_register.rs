@@ -16,7 +16,7 @@ impl TexRegister {
     /// if not found, return `None` and pending the glow texture
     pub fn get(&mut self, tex: glow::Texture) -> Option<egui::TextureId> {
         if let Some(egui_tex_opt) = self.map.get(&tex) {
-            return egui_tex_opt.clone();
+            return *egui_tex_opt;
         }
 
         self.map.insert(tex, None);

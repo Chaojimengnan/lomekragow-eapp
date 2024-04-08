@@ -124,60 +124,57 @@ impl Preview {
             }
         }
 
-        if self.mpv.consume_need_update_flag() {
-            if self.size != (0, 0) {
-                if let Err(err) = self.mpv.render_ctx.render::<glow::Context>(
-                    self.fbo.0.get() as _,
+        if self.mpv.consume_need_update_flag() && self.size != (0, 0) {
+            if let Err(err) = self.mpv.render_ctx.render::<glow::Context>(
+                self.fbo.0.get() as _,
+                self.size.0 as _,
+                self.size.1 as _,
+                false,
+            ) {
+                log::error!("preview mpv render fbo fails: {err}");
+            }
+
+            if self.update_idx == 0 {
+                return;
+            }
+
+            let idx = self.update_idx - 1;
+
+            self.preview
+                .entry(idx)
+                .or_insert_with(|| (false, unsafe { get_texture(gl).unwrap() }));
+
+            let (ready, tex) = self.preview.get_mut(&idx).unwrap();
+
+            unsafe {
+                gl.bind_texture(glow::TEXTURE_2D, Some(*tex));
+                gl.tex_image_2d(
+                    glow::TEXTURE_2D,
+                    0,
+                    glow::SRGB8_ALPHA8 as _,
                     self.size.0 as _,
                     self.size.1 as _,
-                    false,
-                ) {
-                    log::error!("preview mpv render fbo fails: {err}");
-                }
-
-                if self.update_idx == 0 {
-                    return;
-                }
-
-                let idx = self.update_idx - 1;
-
-                if !self.preview.contains_key(&idx) {
-                    self.preview
-                        .insert(idx, (false, unsafe { get_texture(gl).unwrap() }));
-                }
-
-                let (ready, tex) = self.preview.get_mut(&idx).unwrap();
-
-                unsafe {
-                    gl.bind_texture(glow::TEXTURE_2D, Some(*tex));
-                    gl.tex_image_2d(
-                        glow::TEXTURE_2D,
-                        0,
-                        glow::SRGB8_ALPHA8 as _,
-                        self.size.0 as _,
-                        self.size.1 as _,
-                        0,
-                        glow::RGBA,
-                        glow::UNSIGNED_BYTE,
-                        None,
-                    );
-                    gl.bind_framebuffer(glow::FRAMEBUFFER, Some(self.fbo));
-                    gl.copy_tex_image_2d(
-                        glow::TEXTURE_2D,
-                        0,
-                        glow::SRGB8_ALPHA8 as _,
-                        0,
-                        0,
-                        self.size.0 as _,
-                        self.size.1 as _,
-                        0,
-                    );
-                    gl.bind_framebuffer(glow::FRAMEBUFFER, None);
-                    gl.bind_texture(glow::TEXTURE_2D, None);
-                }
-
-                *ready = true;
+                    0,
+                    glow::RGBA,
+                    glow::UNSIGNED_BYTE,
+                    None,
+                );
+                gl.bind_framebuffer(glow::FRAMEBUFFER, Some(self.fbo));
+                gl.copy_tex_image_2d(
+                    glow::TEXTURE_2D,
+                    0,
+                    glow::SRGB8_ALPHA8 as _,
+                    0,
+                    0,
+                    self.size.0 as _,
+                    self.size.1 as _,
+                    0,
+                );
+                gl.bind_framebuffer(glow::FRAMEBUFFER, None);
+                gl.bind_texture(glow::TEXTURE_2D, None);
             }
+
+            *ready = true;
         }
     }
 

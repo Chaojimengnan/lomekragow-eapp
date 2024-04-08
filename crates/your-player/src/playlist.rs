@@ -23,15 +23,15 @@ impl Playlist {
             err,
             { log::error!("playlist add list '{list}' fails: {err}") },
             {
-                for item in WalkDir::new(&list) {
+                for item in WalkDir::new(list) {
                     let item = item?;
                     let item_path = item.path();
-                    if item_path.is_file()
+                    let is_valid = item_path.is_file()
                         && item_path.extension().is_some_and(|ext| {
                             let ext = ext.to_str().unwrap_or("").to_ascii_lowercase();
                             mpv::VIDEO_FORMAT.contains(&ext.as_str())
-                        })
-                    {
+                        });
+                    if is_valid {
                         set.insert(item_path.to_string_lossy().into_owned());
                     }
                 }
@@ -67,16 +67,13 @@ impl Playlist {
     }
 
     pub fn current_play(&self) -> Option<(&str, &str)> {
-        match &self.current_play {
-            Some((list, media)) => Some((list.as_str(), media.as_str())),
-            None => None,
-        }
+        self.current_play
+            .as_ref()
+            .map(|(list, media)| (list.as_str(), media.as_str()))
     }
 
-    pub fn next(&mut self) -> Option<String> {
-        if self.current_play.is_none() {
-            return None;
-        }
+    pub fn next_item(&mut self) -> Option<String> {
+        self.current_play.as_ref()?;
 
         let (list, media) = self.current_play.clone().unwrap();
         let media_set = &self.map[&list];
@@ -90,10 +87,8 @@ impl Playlist {
         Some(next)
     }
 
-    pub fn prev(&mut self) -> Option<String> {
-        if self.current_play.is_none() {
-            return None;
-        }
+    pub fn prev_item(&mut self) -> Option<String> {
+        self.current_play.as_ref()?;
 
         let (list, media) = self.current_play.clone().unwrap();
         let list_c = &self.map[&list];
