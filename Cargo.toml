@@ -13,3 +13,10 @@ simplelog = { version = "0.12.2", default-features = false, features = [
 ] }
 log = "*"
 anyhow = "1.0"
+
+[profile.release]
+lto = true
+strip = true      # Automatically strip symbols from the binary.
+opt-level = "z"   # Optimize for size.
+codegen-units = 1
+panic = "abort"
