@@ -10,8 +10,6 @@ build = "build.rs"
 log.workspace = true
 eapp-utils.workspace = true
 eframe.workspace = true
-serde.workspace = true
-serde_json.workspace = true
 encoding_rs = "0.8.33"
 rfd = "0.13"
 
