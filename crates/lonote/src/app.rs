@@ -114,25 +114,40 @@ impl App {
         this
     }
 
+    const NEW: egui::KeyboardShortcut =
+        egui::KeyboardShortcut::new(egui::Modifiers::COMMAND, egui::Key::N);
+
+    const OPEN: egui::KeyboardShortcut =
+        egui::KeyboardShortcut::new(egui::Modifiers::COMMAND, egui::Key::O);
+
+    const REOPEN: egui::KeyboardShortcut =
+        egui::KeyboardShortcut::new(egui::Modifiers::COMMAND, egui::Key::R);
+
+    const SAVE: egui::KeyboardShortcut =
+        egui::KeyboardShortcut::new(egui::Modifiers::COMMAND, egui::Key::S);
+
+    const SAVE_AS: egui::KeyboardShortcut =
+        egui::KeyboardShortcut::new(egui::Modifiers::ALT, egui::Key::S);
+
     fn process_inputs(&mut self, ui: &mut egui::Ui) {
         if self.dialog_cb.is_none() {
-            if ui.input(|i| i.key_pressed(egui::Key::N) && i.modifiers.ctrl) {
+            if ui.input_mut(|i| i.consume_shortcut(&Self::NEW)) {
                 self.new_note();
             }
 
-            if ui.input(|i| i.key_pressed(egui::Key::O) && i.modifiers.ctrl) {
+            if ui.input_mut(|i| i.consume_shortcut(&Self::OPEN)) {
                 self.open(None);
             }
 
-            if ui.input(|i| i.key_pressed(egui::Key::R) && i.modifiers.ctrl) {
+            if ui.input_mut(|i| i.consume_shortcut(&Self::REOPEN)) {
                 self.reopen();
             }
 
-            if ui.input(|i| i.key_pressed(egui::Key::S) && i.modifiers.ctrl) {
+            if ui.input_mut(|i| i.consume_shortcut(&Self::SAVE)) {
                 self.save();
             }
 
-            if ui.input(|i| i.key_pressed(egui::Key::S) && i.modifiers.alt) {
+            if ui.input_mut(|i| i.consume_shortcut(&Self::SAVE_AS)) {
                 if let Err(err) = self.save_as() {
                     self.note.borrow_mut().state_msg = err.to_string();
                 }
@@ -199,19 +214,23 @@ impl App {
 
             ui.menu_button("File", |ui| {
                 macro_rules! btn {
-                    ($name:literal, $stmt:stmt) => {
-                        if ui.button($name).clicked() {
+                    ($name:literal, $shortcut:expr, $stmt:stmt) => {
+                        let btn = egui::Button::new($name)
+                            .shortcut_text(ui.ctx().format_shortcut($shortcut));
+                        if ui.add(btn).clicked() {
                             $stmt
                             ui.close_menu();
                         }
                     };
                 }
-                btn!("New...     Ctrl+N", self.new_note());
-                btn!("Open...    Ctrl+O", self.open(None));
-                btn!("ReOpen     Ctrl+R", self.reopen());
-                btn!("Save       Ctrl+S", self.save());
+
+                btn!("New...", &Self::NEW, self.new_note());
+                btn!("Open...", &Self::OPEN, self.open(None));
+                btn!("ReOpen", &Self::REOPEN, self.reopen());
+                btn!("Save", &Self::SAVE, self.save());
                 btn!(
-                    "Save as...  Alt+S",
+                    "Save as...",
+                    &Self::SAVE_AS,
                     if let Err(err) = self.save_as() {
                         self.note.borrow_mut().state_msg = err.to_string();
                     }
