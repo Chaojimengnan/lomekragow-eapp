@@ -1296,8 +1296,6 @@ dependencies = [
  "encoding_rs",
  "log",
  "rfd",
- "serde",
- "serde_json",
  "winres",
 ]
 
@@ -2008,6 +2006,19 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
+]
+
+[[package]]
+name = "syncer"
+version = "0.1.0"
+dependencies = [
+ "eapp-utils",
+ "eframe",
+ "log",
+ "rfd",
+ "serde",
+ "walkdir",
+ "winres",
 ]
 
 [[package]]
