@@ -1,5 +1,3 @@
-use std::process::Command;
-
 use crate::{
     app::{opts_highlight, END_REACHED_LIST},
     mpv,
@@ -317,15 +315,7 @@ impl super::App {
         };
 
         if ui.selectable_label(false, "Show in explorer").clicked() {
-            // https://github.com/tauri-apps/plugins-workspace/issues/999
-            #[cfg(target_os = "windows")]
-            Command::new("explorer")
-                .args(["/select,", &media])
-                .spawn()
-                .unwrap();
-
-            #[cfg(target_os = "macos")]
-            Command::new("open").args(["-R", &path]).spawn().unwrap();
+            eapp_utils::open_in_explorer(media);
         }
 
         ui.visuals_mut().override_text_color = Some(egui::Color32::from_rgb(189, 21, 21));

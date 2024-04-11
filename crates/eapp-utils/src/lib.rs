@@ -80,3 +80,18 @@ pub fn setup_loggers(log_filename: &str) -> Result<(), Box<dyn std::error::Error
 
     Ok(())
 }
+
+pub fn open_in_explorer(path: &str) {
+    // https://github.com/tauri-apps/plugins-workspace/issues/999
+    #[cfg(target_os = "windows")]
+    std::process::Command::new("explorer")
+        .args(["/select,", path])
+        .spawn()
+        .unwrap();
+
+    #[cfg(target_os = "macos")]
+    std::process::Command::new("open")
+        .args(["-R", path])
+        .spawn()
+        .unwrap();
+}
