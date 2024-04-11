@@ -271,8 +271,6 @@ impl App {
                             |ui| {
                                 let output =
                                     egui::TextEdit::multiline(&mut self.note.borrow_mut().contents)
-                                        .id_source("text_edit")
-                                        .code_editor()
                                         .frame(false)
                                         .margin(Margin::ZERO)
                                         .show(ui);
