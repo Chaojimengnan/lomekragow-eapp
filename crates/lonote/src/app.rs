@@ -1,6 +1,13 @@
 use crate::codec;
-use eframe::egui::{self, vec2, Color32, Margin, Vec2};
+use eframe::egui::{
+    self,
+    text::{CCursor, CCursorRange},
+    text_edit::TextEditOutput,
+    text_selection::text_cursor_state::{byte_index_from_char_index, cursor_rect},
+    vec2, Color32, Margin, Vec2,
+};
 use std::{
+    borrow::Cow,
     cell::RefCell,
     path::{Path, PathBuf},
     rc::Rc,
@@ -14,6 +21,10 @@ type DialogCb = Option<(String, Box<dyn FnOnce(bool) -> Result<()>>)>;
 pub struct App {
     note: Rc<RefCell<Note>>,
     dialog_cb: DialogCb,
+    show_search_box: bool,
+    case_sense: bool,
+    search_words: String,
+    search_down: Option<bool>,
 }
 
 struct Note {
@@ -105,6 +116,10 @@ impl App {
         let mut this = Self {
             note: Rc::new(RefCell::new(Note::default())),
             dialog_cb: None,
+            show_search_box: false,
+            case_sense: true,
+            search_words: String::default(),
+            search_down: None,
         };
 
         if let Some(file) = std::env::args().nth(1) {
@@ -129,6 +144,15 @@ impl App {
     const SAVE_AS: egui::KeyboardShortcut =
         egui::KeyboardShortcut::new(egui::Modifiers::ALT, egui::Key::S);
 
+    const SEARCH: egui::KeyboardShortcut =
+        egui::KeyboardShortcut::new(egui::Modifiers::COMMAND, egui::Key::F);
+
+    const SEARCH_DOWN: egui::KeyboardShortcut =
+        egui::KeyboardShortcut::new(egui::Modifiers::COMMAND, egui::Key::Num1);
+
+    const SEARCH_UP: egui::KeyboardShortcut =
+        egui::KeyboardShortcut::new(egui::Modifiers::COMMAND, egui::Key::Num2);
+
     fn process_inputs(&mut self, ui: &mut egui::Ui) {
         if self.dialog_cb.is_none() {
             if ui.input_mut(|i| i.consume_shortcut(&Self::NEW)) {
@@ -151,6 +175,18 @@ impl App {
                 if let Err(err) = self.save_as() {
                     self.note.borrow_mut().state_msg = err.to_string();
                 }
+            }
+
+            if ui.input_mut(|i| i.consume_shortcut(&Self::SEARCH)) {
+                self.show_search_box = true;
+            }
+
+            if ui.input_mut(|i| i.consume_shortcut(&Self::SEARCH_DOWN)) {
+                self.search_down = Some(true);
+            }
+
+            if ui.input_mut(|i| i.consume_shortcut(&Self::SEARCH_UP)) {
+                self.search_down = Some(false);
             }
         }
     }
@@ -179,6 +215,71 @@ impl App {
     fn set_confirm_dialog<F: FnOnce(bool) -> Result<()> + 'static>(&mut self, msg: String, cb: F) {
         assert!(self.dialog_cb.is_none());
         self.dialog_cb = Some((msg, Box::new(cb)));
+    }
+
+    fn try_search(&mut self, ui: &mut egui::Ui, id: egui::Id, mut output: TextEditOutput) {
+        if let Some(down) = self.search_down.take() {
+            if !self.search_words.is_empty() {
+                let range = output
+                    .cursor_range
+                    .unwrap_or_default()
+                    .as_sorted_char_range();
+
+                let search_result = {
+                    let contents = &self.note.borrow().contents;
+                    let down_offset = byte_index_from_char_index(contents, range.end);
+                    let contents = if down {
+                        &contents[down_offset..]
+                    } else {
+                        &contents[..byte_index_from_char_index(contents, range.start)]
+                    };
+                    let contents = if self.case_sense {
+                        Cow::Borrowed(contents)
+                    } else {
+                        Cow::Owned(contents.to_ascii_lowercase())
+                    };
+                    if down {
+                        contents.find(&self.search_words).map(|v| v + down_offset)
+                    } else {
+                        contents.rfind(&self.search_words)
+                    }
+                };
+
+                match search_result {
+                    Some(new_bi) => {
+                        let mut new_ci = None;
+                        for (ci, (bi, _)) in self.note.borrow().contents.char_indices().enumerate()
+                        {
+                            if new_bi == bi {
+                                new_ci = Some(ci);
+                                break;
+                            }
+                        }
+
+                        if let Some(new_ci_start) = new_ci {
+                            let new_ci_end = new_ci_start + self.search_words.chars().count();
+                            output.state.cursor.set_char_range(Some(CCursorRange::two(
+                                CCursor::new(new_ci_start),
+                                CCursor::new(new_ci_end),
+                            )));
+                            let primary_cursor_rect = cursor_rect(
+                                output.galley_pos,
+                                &output.galley,
+                                &output.state.cursor.range(&output.galley).unwrap().primary,
+                                16.0,
+                            );
+                            ui.scroll_to_rect(primary_cursor_rect, None);
+                            output.state.store(ui.ctx(), id);
+
+                            self.note.borrow_mut().state_msg = "Found".to_owned();
+                        }
+                    }
+                    None => {
+                        self.note.borrow_mut().state_msg = "Search finished".to_owned();
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -235,6 +336,7 @@ impl App {
                         self.note.borrow_mut().state_msg = err.to_string();
                     }
                 );
+                btn!("Search", &Self::SEARCH, self.show_search_box = true);
             });
 
             ui.painter().text(
@@ -269,16 +371,20 @@ impl App {
                         ui.with_layout(
                             egui::Layout::centered_and_justified(egui::Direction::LeftToRight),
                             |ui| {
+                                let id = ui.make_persistent_id("text_edit");
                                 let output =
                                     egui::TextEdit::multiline(&mut self.note.borrow_mut().contents)
                                         .frame(false)
                                         .margin(Margin::ZERO)
+                                        .id(id)
                                         .show(ui);
 
                                 if output.response.changed() && !self.note.borrow().modified {
                                     self.note.borrow_mut().modified = true;
                                     self.note.borrow_mut().update_title();
                                 }
+
+                                self.try_search(ui, id, output);
                             },
                         );
                     });
@@ -302,6 +408,28 @@ impl App {
                 ui.label(&self.note.borrow().state_msg);
             });
         });
+    }
+
+    fn ui_show_search_box(&mut self, ui: &mut egui::Ui) {
+        egui::Window::new("Search Box")
+            .auto_sized()
+            .open(&mut self.show_search_box)
+            .show(ui.ctx(), |ui| {
+                ui.add_enabled_ui(self.dialog_cb.is_none(), |ui| {
+                    ui.text_edit_singleline(&mut self.search_words);
+                    ui.horizontal(|ui| {
+                        ui.checkbox(&mut self.case_sense, "case sense");
+
+                        ui.label(format!(
+                            " {}[{}] {}[{}]",
+                            eapp_utils::codicons::ICON_TRIANGLE_DOWN,
+                            ui.ctx().format_shortcut(&Self::SEARCH_DOWN),
+                            eapp_utils::codicons::ICON_TRIANGLE_UP,
+                            ui.ctx().format_shortcut(&Self::SEARCH_UP)
+                        ));
+                    });
+                });
+            });
     }
 }
 
@@ -495,6 +623,7 @@ impl eframe::App for App {
                 self.ui_contents(&mut ui.child_ui(content_rect, *ui.layout()));
             });
 
+            self.ui_show_search_box(ui);
             self.ui_show_confirm_dialog(ui, app_rect.center());
 
             self.process_inputs(ui);
