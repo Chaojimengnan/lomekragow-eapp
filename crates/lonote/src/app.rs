@@ -269,6 +269,7 @@ impl App {
                                 16.0,
                             );
                             ui.scroll_to_rect(primary_cursor_rect, None);
+                            ui.ctx().request_repaint();
                             output.state.store(ui.ctx(), id);
 
                             self.note.borrow_mut().state_msg = "Found".to_owned();
@@ -617,6 +618,7 @@ impl eframe::App for App {
             .shrink2(Vec2::new(1.5, 1.0));
 
             self.process_close_request(ui);
+            self.process_inputs(ui);
 
             ui.add_enabled_ui(self.dialog_cb.is_none(), |ui| {
                 self.ui_title_bar(ui, title_bar_rect);
@@ -625,8 +627,6 @@ impl eframe::App for App {
 
             self.ui_show_search_box(ui);
             self.ui_show_confirm_dialog(ui, app_rect.center());
-
-            self.process_inputs(ui);
         });
     }
 }
