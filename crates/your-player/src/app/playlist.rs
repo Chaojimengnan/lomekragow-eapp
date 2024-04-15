@@ -34,6 +34,8 @@ impl super::App {
                     }
                 });
 
+                let max_width = ui.available_width();
+
                 match self.state.playlist_type {
                     PlaylistType::Playlist => {
                         ui.add(
@@ -44,7 +46,7 @@ impl super::App {
                         egui::ScrollArea::both()
                             .auto_shrink([false, true])
                             .show(ui, |ui| {
-                                self.ui_playlist_playlist(ui);
+                                self.ui_playlist_playlist(ui, max_width);
                             });
                     }
                     PlaylistType::Danmu => {
@@ -54,7 +56,7 @@ impl super::App {
             });
     }
 
-    fn ui_playlist_playlist(&mut self, ui: &mut egui::Ui) {
+    fn ui_playlist_playlist(&mut self, ui: &mut egui::Ui, max_width: f32) {
         let key_empty = self.state.playlist_key.is_empty();
         let key = self.state.playlist_key.to_ascii_lowercase();
 
@@ -141,6 +143,9 @@ impl super::App {
         }
 
         if let Some(res) = popup_res {
+            let max_x = max_width.min(res.rect.right()).max(170.0);
+            let rect = res.rect.with_max_x(max_x);
+            let res = res.with_new_rect(rect);
             egui::popup_above_or_below_widget(
                 ui,
                 popup_id,

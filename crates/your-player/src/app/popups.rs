@@ -309,7 +309,6 @@ impl super::App {
     }
 
     pub fn ui_playlist_popup(&mut self, ui: &mut egui::Ui) {
-        ui.set_width(140.0);
         let Some((list, media)) = self.state.playlist_cur_sel.as_ref() else {
             return;
         };
