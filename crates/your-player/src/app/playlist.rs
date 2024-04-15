@@ -143,7 +143,7 @@ impl super::App {
         }
 
         if let Some(res) = popup_res {
-            let max_x = max_width.min(res.rect.right()).max(170.0);
+            let max_x = max_width.min(res.rect.right()).max(175.0);
             let rect = res.rect.with_max_x(max_x);
             let res = res.with_new_rect(rect);
             egui::popup_above_or_below_widget(
