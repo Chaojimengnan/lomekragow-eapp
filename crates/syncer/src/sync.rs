@@ -234,6 +234,7 @@ pub fn get_items(
     source: &str,
     target: &str,
     items: &mut Vec<Item>,
+    only_sync: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     items.clear();
 
@@ -292,6 +293,10 @@ pub fn get_items(
         } else {
             ItemCmd::Create
         };
+
+        if matches!(cmd, ItemCmd::Keep) && only_sync {
+            continue;
+        }
 
         items.push(Item {
             cmd,

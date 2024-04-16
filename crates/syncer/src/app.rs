@@ -20,6 +20,9 @@ pub struct State {
     /// All new versions of files in the [`State::source`] are synchronized to [`State::target`]
     pub target: String,
 
+    /// Only get items that need to be synchronized (Likes [`ItemCmd::Create`] and [`ItemCmd::Replace`])
+    pub only_sync: bool,
+
     /// Items from source directory for synchronization
     #[serde(skip)]
     pub items: Vec<sync::Item>,
@@ -31,7 +34,9 @@ pub struct State {
 
 impl State {
     pub fn get_items(&mut self) {
-        if let Err(err) = sync::get_items(&self.source, &self.target, &mut self.items) {
+        if let Err(err) =
+            sync::get_items(&self.source, &self.target, &mut self.items, self.only_sync)
+        {
             self.msg = err.to_string();
             self.items.clear();
         }
@@ -75,6 +80,13 @@ impl App {
 impl App {
     fn ui_title_bar(&mut self, ui: &mut egui::Ui, title_bar_rect: egui::Rect) {
         eapp_utils::borderless::title_bar(ui, title_bar_rect, |ui| {
+            ui.add_space(8.0);
+            ui.visuals_mut().button_frame = false;
+
+            ui.menu_button("Setting", |ui| {
+                ui.checkbox(&mut self.state.only_sync, "Only sync items");
+            });
+
             ui.painter().text(
                 title_bar_rect.center(),
                 egui::Align2::CENTER_CENTER,
@@ -88,92 +100,106 @@ impl App {
     fn ui_contents(&mut self, ui: &mut egui::Ui) {
         ui.set_clip_rect(ui.max_rect());
 
+        let rounding = egui::Rounding {
+            nw: 0.0,
+            ne: 0.0,
+            sw: 8.0,
+            se: 8.0,
+        };
+
         egui::TopBottomPanel::bottom("bottom_panel")
             .exact_height(32.0)
-            .frame(egui::Frame::default().rounding(egui::Rounding {
-                nw: 0.0,
-                ne: 0.0,
-                sw: 8.0,
-                se: 8.0,
-            }))
-            .show_inside(ui, |ui| {
-                ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                    ui.set_clip_rect(ui.max_rect());
+            .frame(egui::Frame::default().rounding(rounding))
+            .show_animated_inside(ui, !self.state.msg.is_empty(), |ui| {
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     ui.add_space(8.0);
-                    ui.label(&self.state.msg);
+
+                    if ui.button("Clear").clicked() {
+                        self.state.msg.clear();
+                    }
+
+                    ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                        ui.set_clip_rect(ui.max_rect());
+                        ui.add_space(8.0);
+                        ui.label(&self.state.msg);
+                    });
                 });
             });
 
-        egui::CentralPanel::default().show_inside(ui, |ui| {
-            fn directory_line(ui: &mut egui::Ui, path: &mut String, label: &str) {
-                ui.horizontal(|ui| {
-                    ui.label(label);
-                    if ui.button("...").clicked() {
-                        if let Some(dir_path) = rfd::FileDialog::new().pick_folder() {
-                            *path = dir_path.to_string_lossy().into_owned();
-                        }
-                    }
-                    egui::TextEdit::singleline(path)
-                        .desired_width(f32::INFINITY)
-                        .show(ui);
-                });
-            }
-
-            directory_line(ui, &mut self.state.source, "source directory");
-            directory_line(ui, &mut self.state.target, "target directory");
-
-            ui.columns(3, |ui| {
-                macro_rules! btn {
-                    ($i:literal, $name:literal, $condition:expr, $expr:expr) => {
-                        ui[$i].vertical_centered_justified(|ui| {
-                            if ui
-                                .add_enabled($condition, egui::Button::new($name))
-                                .clicked()
-                            {
-                                $expr;
+        egui::CentralPanel::default()
+            .frame(egui::Frame::central_panel(ui.style()).rounding(rounding))
+            .show_inside(ui, |ui| {
+                fn directory_line(ui: &mut egui::Ui, path: &mut String, label: &str) {
+                    ui.horizontal(|ui| {
+                        ui.label(label);
+                        if ui.button("...").clicked() {
+                            if let Some(dir_path) = rfd::FileDialog::new().pick_folder() {
+                                *path = dir_path.to_string_lossy().into_owned();
                             }
-                        });
-                    };
+                        }
+                        egui::TextEdit::singleline(path)
+                            .desired_width(f32::INFINITY)
+                            .show(ui);
+                    });
                 }
 
-                let syncer = self.syncer.as_mut().unwrap();
-                let synchronizing = syncer.synchronizing();
+                directory_line(ui, &mut self.state.source, "source directory");
+                directory_line(ui, &mut self.state.target, "target directory");
 
-                btn!(0, "refresh", !synchronizing, self.state.get_items());
-                btn!(1, "sync", !synchronizing, syncer.sync(&self.state.items));
+                ui.columns(3, |ui| {
+                    macro_rules! btn {
+                        ($i:literal, $name:literal, $condition:expr, $expr:expr) => {
+                            ui[$i].vertical_centered_justified(|ui| {
+                                if ui
+                                    .add_enabled($condition, egui::Button::new($name))
+                                    .clicked()
+                                {
+                                    $expr;
+                                }
+                            });
+                        };
+                    }
 
-                let synchronizing = syncer.synchronizing();
-                btn!(2, "cancel", synchronizing, syncer.cancel());
+                    let syncer = self.syncer.as_mut().unwrap();
+                    let synchronizing = syncer.synchronizing();
+
+                    btn!(0, "refresh", !synchronizing, self.state.get_items());
+                    btn!(1, "sync", !synchronizing, syncer.sync(&self.state.items));
+
+                    let synchronizing = syncer.synchronizing();
+                    btn!(2, "cancel", synchronizing, syncer.cancel());
+                });
+
+                ui.separator();
+
+                let synchronizing = self.syncer.as_ref().unwrap().synchronizing();
+                if synchronizing {
+                    ui.label(format!(
+                        "Synchronizing: {} / {}",
+                        self.state
+                            .items
+                            .iter()
+                            .filter(|item| item.progress == 1.0)
+                            .count(),
+                        self.state
+                            .items
+                            .iter()
+                            .filter(|item| item.should_sync())
+                            .count()
+                    ));
+                }
+
+                egui::ScrollArea::both()
+                    .auto_shrink([false, false])
+                    .show_rows(
+                        ui,
+                        ui.spacing().interact_size.y,
+                        self.state.items.len(),
+                        |ui, range| {
+                            ui.add_enabled_ui(!synchronizing, |ui| self.ui_items(ui, range))
+                        },
+                    )
             });
-
-            ui.separator();
-
-            let synchronizing = self.syncer.as_ref().unwrap().synchronizing();
-            if synchronizing {
-                ui.label(format!(
-                    "Synchronizing: {} / {}",
-                    self.state
-                        .items
-                        .iter()
-                        .filter(|item| item.progress == 1.0)
-                        .count(),
-                    self.state
-                        .items
-                        .iter()
-                        .filter(|item| item.should_sync())
-                        .count()
-                ));
-            }
-
-            egui::ScrollArea::both()
-                .auto_shrink([false, false])
-                .show_rows(
-                    ui,
-                    ui.spacing().interact_size.y,
-                    self.state.items.len(),
-                    |ui, range| ui.add_enabled_ui(!synchronizing, |ui| self.ui_items(ui, range)),
-                )
-        });
     }
 
     fn ui_items(&mut self, ui: &mut egui::Ui, range: std::ops::Range<usize>) {
