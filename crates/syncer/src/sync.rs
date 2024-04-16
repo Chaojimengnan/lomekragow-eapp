@@ -7,10 +7,11 @@ use std::{
 };
 use walkdir::WalkDir;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ItemCmd {
     Create,
     Replace,
+    Delete,
     Keep,
 }
 
@@ -37,7 +38,15 @@ pub struct Item {
 
 impl Item {
     pub fn should_sync(&self) -> bool {
-        matches!(self.cmd, ItemCmd::Create | ItemCmd::Replace) && !self.ignore
+        self.cmd != ItemCmd::Keep && !self.ignore
+    }
+
+    pub fn get_path(&self) -> &Path {
+        if self.cmd == ItemCmd::Delete {
+            &self.target_path
+        } else {
+            &self.source_path
+        }
     }
 }
 
@@ -57,6 +66,7 @@ impl Default for Item {
 pub struct SyncItem {
     pub source_path: PathBuf,
     pub target_path: PathBuf,
+    pub cmd: ItemCmd,
 }
 
 impl From<&Item> for Option<SyncItem> {
@@ -65,6 +75,7 @@ impl From<&Item> for Option<SyncItem> {
             return Some(SyncItem {
                 source_path: value.source_path.clone(),
                 target_path: value.target_path.clone(),
+                cmd: value.cmd,
             });
         }
 
@@ -112,6 +123,11 @@ impl Syncer {
                         let mut do_sync = || -> Result<bool, Box<dyn std::error::Error>> {
                             let source = item.source_path.as_path();
                             let target = item.target_path.as_path();
+
+                            if item.cmd == ItemCmd::Delete {
+                                std::fs::remove_file(target)?;
+                                return Ok(false);
+                            }
 
                             if let Some(target_dir) = target.parent() {
                                 std::fs::create_dir_all(target_dir)?;
@@ -235,6 +251,7 @@ pub fn get_items(
     target: &str,
     items: &mut Vec<Item>,
     only_sync: bool,
+    allow_delete: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     items.clear();
 
@@ -257,10 +274,6 @@ pub fn get_items(
             .into());
         }
 
-        let source_meta = source_path.metadata()?;
-        let source_mod_time = source_meta
-            .modified()?
-            .duration_since(std::time::UNIX_EPOCH)?;
         let filename = source_path
             .file_name()
             .unwrap()
@@ -274,6 +287,11 @@ pub fn get_items(
                     .modified()?
                     .duration_since(std::time::UNIX_EPOCH)?,
             );
+
+            let source_meta = source_path.metadata()?;
+            let source_mod_time = source_meta
+                .modified()?
+                .duration_since(std::time::UNIX_EPOCH)?;
 
             match source_mod_time.cmp(target_mod_time.as_ref().unwrap()) {
                 Ordering::Less => ItemCmd::Keep,
@@ -305,6 +323,53 @@ pub fn get_items(
             target_path,
             ..Default::default()
         });
+    }
+
+    if allow_delete {
+        for item in WalkDir::new(target_dir_path) {
+            let item = item?;
+            let target_path = item.path().to_owned();
+            if !target_path.is_file() {
+                continue;
+            }
+
+            if source_dir_path
+                .join(target_path.strip_prefix(target_dir_path)?)
+                .is_file()
+            {
+                continue;
+            }
+
+            let filename = target_path
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+                .into_owned();
+            let cmd = ItemCmd::Delete;
+            let source_path = PathBuf::default();
+
+            items.push(Item {
+                cmd,
+                filename,
+                source_path,
+                target_path,
+                ..Default::default()
+            });
+        }
+    }
+
+    Ok(())
+}
+
+pub fn remove_empty_dirs(path: impl AsRef<Path>) -> std::io::Result<()> {
+    for item in std::fs::read_dir(path)? {
+        let path = item?.path();
+        if path.is_dir() {
+            remove_empty_dirs(&path)?;
+            if std::fs::read_dir(&path)?.next().is_none() {
+                std::fs::remove_dir(&path)?;
+            }
+        }
     }
 
     Ok(())

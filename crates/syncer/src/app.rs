@@ -20,8 +20,11 @@ pub struct State {
     /// All new versions of files in the [`State::source`] are synchronized to [`State::target`]
     pub target: String,
 
-    /// Only get items that need to be synchronized (Likes [`ItemCmd::Create`] and [`ItemCmd::Replace`])
+    /// Only get items that need to be synchronized (Not [`ItemCmd::Keep`])
     pub only_sync: bool,
+
+    /// Allow delete [`State::target`] items that do not exist in [`State::source`]
+    pub allow_delete: bool,
 
     /// Items from source directory for synchronization
     #[serde(skip)]
@@ -34,9 +37,13 @@ pub struct State {
 
 impl State {
     pub fn get_items(&mut self) {
-        if let Err(err) =
-            sync::get_items(&self.source, &self.target, &mut self.items, self.only_sync)
-        {
+        if let Err(err) = sync::get_items(
+            &self.source,
+            &self.target,
+            &mut self.items,
+            self.only_sync,
+            self.allow_delete,
+        ) {
             self.msg = err.to_string();
             self.items.clear();
         }
@@ -69,7 +76,14 @@ impl App {
         let syncer = self.syncer.as_mut().unwrap();
         while let Some(result) = syncer.update_once(&mut self.state.items) {
             match result {
-                Ok(true) => self.state.get_items(),
+                Ok(true) => {
+                    if self.state.allow_delete {
+                        if let Err(err) = sync::remove_empty_dirs(&self.state.target) {
+                            self.state.msg = err.to_string();
+                        }
+                    }
+                    self.state.get_items();
+                }
                 Ok(false) => (),
                 Err(err) => self.state.msg = err,
             }
@@ -83,8 +97,13 @@ impl App {
             ui.add_space(8.0);
             ui.visuals_mut().button_frame = false;
 
-            ui.menu_button("Setting", |ui| {
-                ui.checkbox(&mut self.state.only_sync, "Only sync items");
+            let synchronizing = self.syncer.as_ref().unwrap().synchronizing();
+
+            ui.add_enabled_ui(!synchronizing, |ui| {
+                ui.menu_button("Setting", |ui| {
+                    ui.checkbox(&mut self.state.only_sync, "Only sync");
+                    ui.checkbox(&mut self.state.allow_delete, "Allow delete");
+                });
             });
 
             ui.painter().text(
@@ -143,8 +162,12 @@ impl App {
                     });
                 }
 
-                directory_line(ui, &mut self.state.source, "source directory");
-                directory_line(ui, &mut self.state.target, "target directory");
+                let synchronizing = self.syncer.as_ref().unwrap().synchronizing();
+
+                ui.add_enabled_ui(!synchronizing, |ui| {
+                    directory_line(ui, &mut self.state.source, "source directory");
+                    directory_line(ui, &mut self.state.target, "target directory");
+                });
 
                 ui.columns(3, |ui| {
                     macro_rules! btn {
@@ -212,7 +235,7 @@ impl App {
                 let item = &self.state.items[i];
 
                 if ui.button("show").clicked() {
-                    eapp_utils::open_in_explorer(item.source_path.to_string_lossy().as_ref());
+                    eapp_utils::open_in_explorer(item.get_path().to_string_lossy().as_ref());
                 }
 
                 if synchronizing && item.should_sync() {
@@ -227,6 +250,7 @@ impl App {
                     let bg_col = match item.cmd {
                         ItemCmd::Create => Color32::from_rgb(0, 80, 0),
                         ItemCmd::Replace => Color32::from_rgb(80, 80, 0),
+                        ItemCmd::Delete => Color32::from_rgb(80, 0, 0),
                         ItemCmd::Keep => ui.visuals().window_fill,
                     };
                     let col = if bg_col != ui.visuals().window_fill {
@@ -244,7 +268,7 @@ impl App {
                     }
 
                     ui.label(text)
-                        .on_hover_text(item.source_path.to_string_lossy());
+                        .on_hover_text(item.get_path().to_string_lossy());
                 }
             });
         }
