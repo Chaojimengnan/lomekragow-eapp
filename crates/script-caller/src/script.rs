@@ -198,7 +198,11 @@ impl Loader {
     const INFO_FILENAME: &'static str = "info.json";
 
     pub fn load() -> std::io::Result<Self> {
-        let path = std::env::current_exe()?.join(format!("../{}", Self::FILENAME));
+        let path = std::env::current_exe()?
+            .parent()
+            .unwrap()
+            .join(Self::FILENAME);
+
         let script_path = serde_json::from_str::<Value>(&std::fs::read_to_string(path)?)?
             ["python_path"]
             .as_str()

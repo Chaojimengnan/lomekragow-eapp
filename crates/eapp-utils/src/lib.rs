@@ -66,7 +66,12 @@ pub fn setup_loggers(log_filename: &str) -> Result<(), Box<dyn std::error::Error
             WriteLogger::new(
                 LevelFilter::Warn,
                 Config::default(),
-                File::create(std::env::current_exe()?.join(format!("../{log_filename}")))?,
+                File::create(
+                    std::env::current_exe()?
+                        .parent()
+                        .unwrap()
+                        .join(log_filename),
+                )?,
             ),
         ])?;
     }
@@ -75,7 +80,12 @@ pub fn setup_loggers(log_filename: &str) -> Result<(), Box<dyn std::error::Error
     WriteLogger::init(
         LevelFilter::Warn,
         Config::default(),
-        File::create(std::env::current_exe()?.join(format!("../{log_filename}")))?,
+        File::create(
+            std::env::current_exe()?
+                .parent()
+                .unwrap()
+                .join(log_filename),
+        )?,
     )?;
 
     Ok(())
