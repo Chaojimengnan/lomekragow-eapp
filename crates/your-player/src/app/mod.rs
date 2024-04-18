@@ -333,7 +333,7 @@ impl App {
                     self.set_media(&path);
                     self.playlist.set_current_play(None);
                 } else {
-                    self.playlist.add_list(&path);
+                    self.playlist.add_list(path);
                 }
             }
         }

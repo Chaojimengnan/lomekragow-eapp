@@ -78,18 +78,36 @@ impl super::App {
         }
 
         for (list_name, list) in self.playlist.inner_map() {
+            let (iter, len): (Box<dyn Iterator<Item = &String>>, usize) = if key_empty {
+                (Box::new(list.iter()), list.len())
+            } else {
+                let iter = list.iter().filter(|v| {
+                    Path::new(v)
+                        .file_name()
+                        .unwrap()
+                        .to_str()
+                        .unwrap()
+                        .to_ascii_lowercase()
+                        .contains(&key)
+                });
+                (Box::new(iter.clone()), iter.count())
+            };
+
             let list_filename = Path::new(list_name).file_name().unwrap().to_str().unwrap();
+
             egui::CollapsingHeader::new(list_filename)
                 .default_open(false)
                 .show(ui, |ui| {
-                    let text_style = egui::TextStyle::Body;
-                    let row_height = ui.text_style_height(&text_style);
+                    let row_height = ui.text_style_height(&egui::TextStyle::Body);
                     ui.style_mut().wrap = Some(false);
-                    egui::ScrollArea::both().show_rows(ui, row_height, list.len(), |ui, range| {
-                        for media_name in list.iter().skip(range.start).take(range.end) {
-                            let media_filename =
-                                Path::new(media_name).file_name().unwrap().to_str().unwrap();
-                            if key_empty || media_filename.to_ascii_lowercase().contains(&key) {
+
+                    egui::ScrollArea::both()
+                        .auto_shrink([false, true])
+                        .show_rows(ui, row_height, len, |ui, range| {
+                            for media_name in iter.skip(range.start).take(range.end) {
+                                let media_filename =
+                                    Path::new(media_name).file_name().unwrap().to_str().unwrap();
+
                                 ui.scope(|ui| {
                                     if tuple_as_ref!(current_play) == Some((list_name, media_name))
                                     {
@@ -130,16 +148,15 @@ impl super::App {
                                     }
                                 });
                             }
-                        }
-                    });
+                        });
                 });
         }
 
         if self.playlist.current_play() != tuple_as_ref!(current_play) {
-            self.playlist.set_current_play(tuple_as_ref!(current_play));
-            if let Some((_, media)) = current_play {
-                self.set_media(&media);
+            if let Some((_, media)) = current_play.as_ref() {
+                self.set_media(media);
             }
+            self.playlist.set_current_play(current_play);
         }
 
         if let Some(res) = popup_res {

@@ -12,8 +12,8 @@ pub struct Playlist {
 }
 
 impl Playlist {
-    pub fn add_list(&mut self, list: &str) {
-        if self.map.contains_key(list) {
+    pub fn add_list(&mut self, list: String) {
+        if self.map.contains_key(&list) {
             return;
         }
 
@@ -23,7 +23,7 @@ impl Playlist {
             err,
             { log::error!("playlist add list '{list}' fails: {err}") },
             {
-                for item in WalkDir::new(list) {
+                for item in WalkDir::new(&list) {
                     let item = item?;
                     let item_path = item.path();
                     let is_valid = item_path.is_file()
@@ -38,7 +38,7 @@ impl Playlist {
             }
         );
 
-        self.map.insert(list.to_owned(), set);
+        self.map.insert(list, set);
     }
 
     pub fn remove_list(&mut self, list: &str) {
@@ -53,12 +53,11 @@ impl Playlist {
         self.map.remove(list);
     }
 
-    pub fn set_current_play(&mut self, list_and_media: Option<(&str, &str)>) {
+    pub fn set_current_play(&mut self, list_and_media: Option<(String, String)>) {
         if let Some((list, media)) = list_and_media {
-            if let Some(media_set) = self.map.get(list) {
-                if media_set.contains(media) {
-                    self.current_play =
-                        list_and_media.map(|(list, media)| (list.to_owned(), media.to_owned()));
+            if let Some(media_set) = self.map.get(&list) {
+                if media_set.contains(&media) {
+                    self.current_play = Some((list, media));
                 }
             }
         } else {
@@ -83,7 +82,7 @@ impl Playlist {
             .unwrap_or(media_set.first().unwrap())
             .to_owned();
 
-        self.set_current_play(Some((&list, &next)));
+        self.set_current_play(Some((list, next.clone())));
         Some(next)
     }
 
@@ -98,7 +97,7 @@ impl Playlist {
             .unwrap_or(list_c.last().unwrap())
             .to_owned();
 
-        self.set_current_play(Some((&list, &prev)));
+        self.set_current_play(Some((list, prev.clone())));
         Some(prev)
     }
 
