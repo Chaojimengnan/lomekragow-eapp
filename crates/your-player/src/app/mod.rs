@@ -75,15 +75,13 @@ pub struct State {
     #[serde(skip)]
     pub last_playback_time: f64,
 
-    /// last [`mpv::player::State::playback_time`],
-    /// used to check if the playback time of the mpv changes at current frame
-    #[serde(skip)]
-    pub last_real_playback_time: f64,
-
     /// for calculating [`State::last_playback_time`]
     /// when real playback time doesn't changes at current frame
     #[serde(skip)]
     pub last_instant: std::time::Instant,
+
+    /// for calculating [`mpv::player::State::playback_time`]
+    pub factor: f64,
 
     /// the content rect of last frame, used by video frame
     #[serde(skip)]
@@ -149,8 +147,8 @@ impl Default for State {
             playlist_cur_sel: None,
             end_reached: EndReached::Idle,
             last_playback_time: 0.0,
-            last_real_playback_time: 0.0,
             last_instant: std::time::Instant::now(),
+            factor: 1.0,
             content_rect: egui::Rect::ZERO,
             enable_danmu: true,
             danmu_font_path: String::default(),

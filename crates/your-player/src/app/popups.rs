@@ -243,6 +243,9 @@ impl super::App {
             self.danmu.clear_emitted();
         }
         ui.end_row();
+
+        ui.label("danmu factor");
+        ui.label(format!("{:.4}", self.state.factor));
     }
 
     pub fn ui_long_setting_popup(&mut self, ui: &mut egui::Ui) {
