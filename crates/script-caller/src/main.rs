@@ -6,7 +6,7 @@ pub mod script;
 fn main() {
     eapp_utils::setup_loggers("script-caller.log").unwrap();
 
-    eapp_utils::capture_error!(err, { log::error!("run native fails: {err}") }, {
+    eapp_utils::capture_error!(err => log::error!("run native fails: {err}"), {
         let options = eframe::NativeOptions {
             viewport: eframe::egui::ViewportBuilder::default()
                 .with_decorations(false)

@@ -73,8 +73,7 @@ impl Preview {
                 Ok(event) => match event {
                     Event::FileLoaded => {
                         eapp_utils::capture_error!(
-                            err,
-                            { log::error!("preview mpv get property fails: {err}") },
+                            err => log::error!("preview mpv get property fails: {err}"),
                             {
                                 self.size.0 = self.mpv.handle.get_property("width")?;
                                 self.size.1 = self.mpv.handle.get_property("height")?;

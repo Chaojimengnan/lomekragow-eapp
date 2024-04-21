@@ -72,6 +72,16 @@ impl App {
         rounding
     }
 
+    fn spawn(&self) {
+        eapp_utils::capture_error!(err => log::error!("spawn error: {err}"), {
+            let mut cmd = std::process::Command::new(std::env::current_exe()?);
+            if let Some(cur_image) = self.img_finder.cur_image() {
+                cmd.arg(cur_image);
+            }
+            cmd.spawn()?;
+        });
+    }
+
     fn ui_left_panel(&mut self, ui: &mut egui::Ui) {
         let max_width = ui.available_width() * 0.5;
 
@@ -369,6 +379,12 @@ impl App {
                         ui.end_row();
                         ui.label("Size");
                         ui.label(size);
+                        ui.end_row();
+
+                        ui.label("Action");
+                        if ui.button("Spawn from this").clicked() {
+                            self.spawn();
+                        }
                         ui.end_row();
                         ui.visuals_mut().override_text_color = None;
                     })

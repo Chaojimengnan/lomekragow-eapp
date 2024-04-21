@@ -65,6 +65,13 @@ impl ImgFinder {
         self.set_cur_dir(&cwd_str);
 
         if let Some(img) = opt_img {
+            self.set_cur_dir(
+                std::path::Path::new(img)
+                    .parent()
+                    .unwrap()
+                    .to_str()
+                    .unwrap(),
+            );
             self.set_cur_image(img);
         }
 

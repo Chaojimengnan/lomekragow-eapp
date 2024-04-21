@@ -20,8 +20,7 @@ impl Playlist {
         let mut set = BTreeSet::new();
 
         eapp_utils::capture_error!(
-            err,
-            { log::error!("playlist add list '{list}' fails: {err}") },
+            err => log::error!("playlist add list '{list}' fails: {err}"),
             {
                 for item in WalkDir::new(&list) {
                     let item = item?;

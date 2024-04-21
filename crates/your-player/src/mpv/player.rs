@@ -197,8 +197,7 @@ impl Player {
                     }
                     Event::FileLoaded => {
                         eapp_utils::capture_error!(
-                            err,
-                            { log::error!("mpv get property fails: {err}") },
+                            err => log::error!("mpv get property fails: {err}"),
                             {
                                 self.state.media_title =
                                     self.mpv.handle.get_property("media-title")?;
@@ -430,7 +429,7 @@ impl Player {
 
         self.state.play_state = play_state;
 
-        eapp_utils::capture_error!(err, { log::error!("error when set play state: {err}") }, {
+        eapp_utils::capture_error!(err => log::error!("error when set play state: {err}"), {
             match self.state.play_state {
                 PlayState::Play => self.mpv.handle.set_property("pause", false)?,
                 PlayState::Pause => self.mpv.handle.set_property("pause", true)?,

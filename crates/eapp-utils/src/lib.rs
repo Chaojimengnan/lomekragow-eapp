@@ -9,7 +9,7 @@ pub mod widgets;
 
 #[macro_export]
 macro_rules! capture_error {
-    ($i:ident, $handler:block, $block_to_capture:block) => {
+    ($i:ident => $handler:expr, $block_to_capture:expr) => {
         if let Err($i) = || -> ::core::result::Result<(), Box<dyn ::std::error::Error>> {
             $block_to_capture;
             Ok(())

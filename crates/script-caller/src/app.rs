@@ -291,7 +291,7 @@ impl App {
             .clicked()
         {
             let script_base_path = self.loader.script_path.clone();
-            eapp_utils::capture_error!(error, { log::error!("error when run script: {error}") }, {
+            eapp_utils::capture_error!(error => log::error!("error when run script: {error}"), {
                 if let Some(script) = self.get_cur_script() {
                     let args = script.generate_args_string();
                     let script_path = format!("{}/{}", script_base_path, script.name);

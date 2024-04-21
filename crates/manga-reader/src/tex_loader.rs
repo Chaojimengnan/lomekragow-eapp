@@ -50,8 +50,7 @@ impl TexLoader {
             match cmd_receiver.recv() {
                 Ok(cmd) => match cmd {
                     LoadCommand::Load(image_path) => eapp_utils::capture_error!(
-                        error,
-                        { log::warn!("error when load image '{image_path}': {error}") },
+                        error => log::warn!("error when load image '{image_path}': {error}"),
                         {
                             let stream = std::io::BufReader::new(std::fs::File::open(&image_path)?);
                             match image::ImageFormat::from_path(&image_path)? {

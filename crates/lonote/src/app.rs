@@ -519,24 +519,18 @@ impl App {
 
     fn save(&mut self) {
         if self.note.borrow().cur_file.is_none() {
-            eapp_utils::capture_error!(
-                err,
-                {
-                    self.note.borrow_mut().state_msg = err.to_string();
-                },
-                {
-                    let path = self.save_as()?;
-                    let note = &mut *self.note.borrow_mut();
-                    let last_modified_time = Note::get_modified_time(&path)?;
-                    note.cur_file = Some(File {
-                        path,
-                        last_modified_time,
-                    });
-                    note.modified = false;
-                    note.update_title();
-                    note.state_msg = "Save successfully".to_owned();
-                }
-            );
+            eapp_utils::capture_error!(err => self.note.borrow_mut().state_msg = err.to_string(), {
+                let path = self.save_as()?;
+                let note = &mut *self.note.borrow_mut();
+                let last_modified_time = Note::get_modified_time(&path)?;
+                note.cur_file = Some(File {
+                    path,
+                    last_modified_time,
+                });
+                note.modified = false;
+                note.update_title();
+                note.state_msg = "Save successfully".to_owned();
+            });
             return;
         }
 
