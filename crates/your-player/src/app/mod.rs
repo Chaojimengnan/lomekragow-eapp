@@ -83,6 +83,9 @@ pub struct State {
     /// for calculating [`mpv::player::State::playback_time`]
     pub factor: f64,
 
+    /// for calculating [`Self::factor`]
+    pub factor_increment: f64,
+
     /// the content rect of last frame, used by video frame
     #[serde(skip)]
     pub content_rect: egui::Rect,
@@ -149,6 +152,7 @@ impl Default for State {
             last_playback_time: 0.0,
             last_instant: std::time::Instant::now(),
             factor: 1.0,
+            factor_increment: 0.0005,
             content_rect: egui::Rect::ZERO,
             enable_danmu: true,
             danmu_font_path: String::default(),

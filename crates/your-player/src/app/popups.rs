@@ -244,8 +244,15 @@ impl super::App {
         }
         ui.end_row();
 
-        ui.label("danmu factor");
+        ui.label("factor");
         ui.label(format!("{:.4}", self.state.factor));
+        ui.end_row();
+
+        ui.label("factor increment");
+        ui.add(egui::Slider::new(
+            &mut self.state.factor_increment,
+            0.00001..=0.01,
+        ));
     }
 
     pub fn ui_long_setting_popup(&mut self, ui: &mut egui::Ui) {

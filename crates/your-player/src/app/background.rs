@@ -58,8 +58,8 @@ impl super::App {
             } else {
                 use std::cmp::Ordering;
                 match diff.partial_cmp(&0.0).unwrap() {
-                    Ordering::Less => self.state.factor -= 0.0001,
-                    Ordering::Greater => self.state.factor += 0.0001,
+                    Ordering::Less => self.state.factor -= self.state.factor_increment,
+                    Ordering::Greater => self.state.factor += self.state.factor_increment,
                     Ordering::Equal => (),
                 }
 
