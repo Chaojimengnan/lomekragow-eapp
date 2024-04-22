@@ -52,13 +52,13 @@ impl TexLoader {
                     LoadCommand::Load(image_path) => eapp_utils::capture_error!(
                         error => log::warn!("error when load image '{image_path}': {error}"),
                         {
-                            let stream = std::io::BufReader::new(std::fs::File::open(&image_path)?);
-                            match image::ImageFormat::from_path(&image_path)? {
+                            let content = std::fs::read(&image_path)?;
+                            match image::guess_format(&content)? {
                                 image::ImageFormat::Gif => {
                                     let frames = (
                                         image_path.clone(),
                                         Image::Animated(
-                                            image::codecs::gif::GifDecoder::new(stream)?
+                                            image::codecs::gif::GifDecoder::new(std::io::Cursor::new(content))?
                                                 .into_frames()
                                                 .collect_frames()?
                                                 .into_iter()
@@ -82,7 +82,7 @@ impl TexLoader {
                                 }
                                 // image::ImageFormat::WebP => todo!(),
                                 fmt => {
-                                    let img = image::load(stream, fmt)?;
+                                    let img = image::load_from_memory_with_format(&content, fmt)?;
                                     let size = [img.width() as _, img.height() as _];
                                     let image_buffer = img.to_rgba8();
                                     let pixels = image_buffer.as_flat_samples();
