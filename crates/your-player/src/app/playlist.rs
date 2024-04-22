@@ -104,7 +104,7 @@ impl super::App {
                     egui::ScrollArea::both()
                         .auto_shrink([false, true])
                         .show_rows(ui, row_height, len, |ui, range| {
-                            for media_name in iter.skip(range.start).take(range.end) {
+                            for media_name in iter.skip(range.start).take(range.len()) {
                                 let media_filename =
                                     Path::new(media_name).file_name().unwrap().to_str().unwrap();
 

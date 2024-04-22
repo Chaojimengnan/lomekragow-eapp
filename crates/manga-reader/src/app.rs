@@ -95,9 +95,11 @@ impl App {
             }))
             .width_range(200.0..=max_width)
             .show_animated_inside(ui, self.state.left_panel_open, |ui| {
+                let row_h = ui.text_style_height(&egui::TextStyle::Body);
+                let len = self.img_finder.cur_dir_set().len();
                 egui::ScrollArea::both()
                     .auto_shrink(Vec2b::new(false, true))
-                    .show(ui, |ui| {
+                    .show_rows(ui, row_h, len, |ui, range| {
                         ui.style_mut().wrap = Some(false);
 
                         let dir_prefix = self
@@ -122,7 +124,13 @@ impl App {
                             false
                         };
 
-                        for dir in self.img_finder.cur_dir_set() {
+                        for dir in self
+                            .img_finder
+                            .cur_dir_set()
+                            .iter()
+                            .skip(range.start)
+                            .take(range.len())
+                        {
                             let dir_str = if dir.len() != dir_prefix - 1 {
                                 &dir[dir_prefix..]
                             } else {
