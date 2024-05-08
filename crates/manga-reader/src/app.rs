@@ -16,6 +16,7 @@ pub struct State {
     left_panel_open: bool,
     #[serde(skip)]
     last_cur_dir: Option<String>,
+    search_key: String,
 }
 
 impl Default for State {
@@ -23,6 +24,7 @@ impl Default for State {
         Self {
             left_panel_open: true,
             last_cur_dir: None,
+            search_key: String::default(),
         }
     }
 }
@@ -95,11 +97,15 @@ impl App {
             }))
             .width_range(200.0..=max_width)
             .show_animated_inside(ui, self.state.left_panel_open, |ui| {
-                let row_h = ui.text_style_height(&egui::TextStyle::Body);
-                let len = self.img_finder.cur_dir_set().len();
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.state.search_key)
+                        .desired_width(f32::INFINITY)
+                        .hint_text("Search keywords"),
+                );
+
                 egui::ScrollArea::both()
                     .auto_shrink(Vec2b::new(false, true))
-                    .show_rows(ui, row_h, len, |ui, range| {
+                    .show(ui, |ui| {
                         ui.style_mut().wrap = Some(false);
 
                         let dir_prefix = self
@@ -124,18 +130,20 @@ impl App {
                             false
                         };
 
-                        for dir in self
-                            .img_finder
-                            .cur_dir_set()
-                            .iter()
-                            .skip(range.start)
-                            .take(range.len())
-                        {
+                        for dir in self.img_finder.cur_dir_set() {
                             let dir_str = if dir.len() != dir_prefix - 1 {
                                 &dir[dir_prefix..]
                             } else {
                                 "current directory"
                             };
+
+                            if !self.state.search_key.is_empty()
+                                && !dir_str
+                                    .to_ascii_lowercase()
+                                    .contains(&self.state.search_key)
+                            {
+                                continue;
+                            }
 
                             let is_cur_dir = cur_dir.as_ref() == Some(dir);
                             let (str, open) = if is_cur_dir {
