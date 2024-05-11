@@ -222,6 +222,7 @@ impl super::App {
                 if (self.player.state().playback_time - playback_time).abs() < 0.05 {
                     self.player.set_play_state(PlayState::Pause);
                 } else {
+                    self.state.playback_changed = true;
                     self.player.seek(playback_time, false);
                 }
             }

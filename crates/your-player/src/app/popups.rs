@@ -30,6 +30,7 @@ impl super::App {
                 }
 
                 if let Some(clicked_time) = clicked {
+                    self.state.playback_changed = true;
                     self.player.seek(*clicked_time, false);
                 };
             });
@@ -243,16 +244,6 @@ impl super::App {
             self.danmu.clear_emitted();
         }
         ui.end_row();
-
-        ui.label("factor");
-        ui.label(format!("{:.4}", self.state.factor));
-        ui.end_row();
-
-        ui.label("factor increment");
-        ui.add(egui::Slider::new(
-            &mut self.state.factor_increment,
-            0.00001..=0.01,
-        ));
     }
 
     pub fn ui_long_setting_popup(&mut self, ui: &mut egui::Ui) {

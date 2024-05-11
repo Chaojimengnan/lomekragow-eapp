@@ -80,11 +80,8 @@ pub struct State {
     #[serde(skip)]
     pub last_instant: std::time::Instant,
 
-    /// for calculating [`mpv::player::State::playback_time`]
-    pub factor: f64,
-
-    /// for calculating [`Self::factor`]
-    pub factor_increment: f64,
+    /// Marks the playback time as changed and is used to calculate the correct danmu elapsed time
+    pub playback_changed: bool,
 
     /// the content rect of last frame, used by video frame
     #[serde(skip)]
@@ -151,8 +148,7 @@ impl Default for State {
             end_reached: EndReached::Idle,
             last_playback_time: 0.0,
             last_instant: std::time::Instant::now(),
-            factor: 1.0,
-            factor_increment: 0.0005,
+            playback_changed: false,
             content_rect: egui::Rect::ZERO,
             enable_danmu: true,
             danmu_font_path: String::default(),
@@ -284,10 +280,12 @@ impl App {
     fn process_inputs(&mut self, ui: &mut egui::Ui) {
         if ui.memory(|mem| mem.focused().is_none()) {
             if ui.input(|i| i.key_pressed(egui::Key::ArrowLeft)) {
+                self.state.playback_changed = true;
                 self.player.seek(-0.5, true);
             }
 
             if ui.input(|i| i.key_pressed(egui::Key::ArrowRight)) {
+                self.state.playback_changed = true;
                 self.player.seek(0.5, true);
             }
 
