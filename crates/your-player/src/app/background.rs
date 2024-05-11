@@ -56,15 +56,15 @@ impl super::App {
                     * self.player.state().speed
                     * self.state.factor
             } else {
-                use std::cmp::Ordering;
-                match diff.partial_cmp(&0.0).unwrap() {
-                    Ordering::Less => self.state.factor -= self.state.factor_increment,
-                    Ordering::Greater => self.state.factor += self.state.factor_increment,
-                    Ordering::Equal => (),
-                }
-
                 diff
             };
+
+            use std::cmp::Ordering;
+            match diff.partial_cmp(&0.0).unwrap() {
+                Ordering::Less => self.state.factor -= self.state.factor_increment,
+                Ordering::Greater => self.state.factor += self.state.factor_increment,
+                Ordering::Equal => (),
+            }
 
             self.danmu.render(ui, tex, rect, elapsed_time);
 
