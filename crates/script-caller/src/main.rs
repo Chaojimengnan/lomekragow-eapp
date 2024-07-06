@@ -27,7 +27,7 @@ fn main() {
         eframe::run_native(
             "script-caller",
             options,
-            Box::new(|cc| Box::new(app::App::new(cc, loader))),
+            Box::new(|cc| Ok(Box::new(app::App::new(cc, loader)))),
         )?;
     });
 }

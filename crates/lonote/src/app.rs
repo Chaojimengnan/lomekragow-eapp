@@ -616,7 +616,7 @@ impl eframe::App for App {
 
             ui.add_enabled_ui(self.dialog_cb.is_none(), |ui| {
                 self.ui_title_bar(ui, title_bar_rect);
-                self.ui_contents(&mut ui.child_ui(content_rect, *ui.layout()));
+                self.ui_contents(&mut ui.child_ui(content_rect, *ui.layout(), None));
             });
 
             self.ui_show_search_box(ui);

@@ -106,7 +106,7 @@ impl App {
                 egui::ScrollArea::both()
                     .auto_shrink(Vec2b::new(false, true))
                     .show(ui, |ui| {
-                        ui.style_mut().wrap = Some(false);
+                        ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
 
                         let dir_prefix = self
                             .img_finder

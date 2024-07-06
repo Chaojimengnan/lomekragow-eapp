@@ -340,7 +340,7 @@ impl eframe::App for App {
             }
             .shrink2(Vec2::new(0.5, 6.0));
 
-            self.ui_contents(&mut ui.child_ui(content_rect, *ui.layout()));
+            self.ui_contents(&mut ui.child_ui(content_rect, *ui.layout(), None));
         });
     }
 }

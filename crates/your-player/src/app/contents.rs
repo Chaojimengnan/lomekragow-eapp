@@ -173,45 +173,44 @@ impl super::App {
             if let Some(pointer) = response.hover_pos() {
                 if self.player.state().play_state != PlayState::Stop {
                     let hover_playback_time = map_into_playback_time(pointer.x);
-                    if let Some(tex) = self.preview.get(hover_playback_time) {
-                        if let Some(tex_id) = self.tex_register.get(*tex) {
-                            let size = self.preview.size();
+                    let size = self.preview.size();
+                    let size = vec2(size.0 as _, size.1 as _);
 
-                            egui::Area::new("preview_area".into())
-                                .order(egui::Order::Tooltip)
-                                .constrain(true)
-                                .fixed_pos(pointer)
-                                .pivot(Align2::CENTER_BOTTOM)
-                                .show(ui.ctx(), |ui| {
-                                    let pos = ui.cursor().min;
-                                    let galley = ui.painter().layout(
-                                        mpv::make_time_string(hover_playback_time),
-                                        FontId::proportional(16.0),
-                                        Color32::WHITE,
-                                        size.0 as _,
-                                    );
-                                    ui.add(
-                                        egui::Image::from_texture(SizedTexture::new(
-                                            tex_id,
-                                            vec2(size.0 as _, size.1 as _),
-                                        ))
-                                        .rounding(4.0),
-                                    );
+                    egui::Area::new("preview_area".into())
+                        .order(egui::Order::Tooltip)
+                        .constrain(true)
+                        .fixed_pos(pointer + vec2(0.0, -5.0))
+                        .pivot(Align2::CENTER_BOTTOM)
+                        .show(ui.ctx(), |ui| {
+                            let (_, rect) = ui.allocate_space(size);
 
-                                    ui.painter().rect_filled(
-                                        Rect::from_min_max(pos, pos + galley.size()),
-                                        Rounding {
-                                            nw: 4.0,
-                                            ne: 0.0,
-                                            sw: 0.0,
-                                            se: 0.0,
-                                        },
-                                        Color32::from_black_alpha(160),
-                                    );
-                                    ui.painter().galley(pos, galley, Color32::WHITE);
-                                });
-                        }
-                    }
+                            if let Some(tex) = self.preview.get(hover_playback_time) {
+                                if let Some(tex_id) = self.tex_register.get(*tex) {
+                                    egui::Image::from_texture(SizedTexture::new(tex_id, size))
+                                        .rounding(4.0)
+                                        .paint_at(ui, rect);
+                                }
+                            }
+
+                            let galley = ui.painter().layout(
+                                mpv::make_time_string(hover_playback_time),
+                                FontId::proportional(16.0),
+                                Color32::WHITE,
+                                size.x,
+                            );
+
+                            let pos = {
+                                let pos = rect.center_bottom();
+                                pos2(pos.x - galley.size().x / 2.0, pos.y - galley.size().y)
+                            };
+
+                            ui.painter().rect_filled(
+                                Rect::from_min_max(pos, pos + galley.size()),
+                                Rounding::ZERO,
+                                Color32::from_black_alpha(160),
+                            );
+                            ui.painter().galley(pos, galley, Color32::WHITE);
+                        });
                 }
             }
 
@@ -316,6 +315,7 @@ impl super::App {
                         .clicked()
                     {
                         self.player.set_play_state(PlayState::Stop);
+                        self.danmu.clear();
                     }
 
                     if ui

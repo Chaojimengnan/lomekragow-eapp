@@ -254,7 +254,7 @@ impl eframe::App for App {
 
             self.ui_title_bar(ui, title_bar_rect);
 
-            self.ui_contents(&mut ui.child_ui(content_rect, *ui.layout()));
+            self.ui_contents(&mut ui.child_ui(content_rect, *ui.layout(), None));
         });
     }
 

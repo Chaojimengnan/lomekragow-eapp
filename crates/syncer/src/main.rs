@@ -24,7 +24,7 @@ fn main() {
     if let Err(err) = eframe::run_native(
         "syncer",
         options,
-        Box::new(|cc| Box::new(app::App::new(cc))),
+        Box::new(|cc| Ok(Box::new(app::App::new(cc)))),
     ) {
         log::error!("run native fails: {err}");
     }

@@ -99,7 +99,7 @@ impl super::App {
                 .default_open(false)
                 .show(ui, |ui| {
                     let row_height = ui.text_style_height(&egui::TextStyle::Body);
-                    ui.style_mut().wrap = Some(false);
+                    ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
 
                     egui::ScrollArea::both()
                         .auto_shrink([false, true])
@@ -168,6 +168,7 @@ impl super::App {
                 popup_id,
                 &res,
                 egui::AboveOrBelow::Below,
+                egui::PopupCloseBehavior::CloseOnClick,
                 |ui| self.ui_playlist_popup(ui),
             );
         }
