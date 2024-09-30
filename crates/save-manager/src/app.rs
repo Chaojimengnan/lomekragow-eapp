@@ -1,5 +1,5 @@
 use crate::save_manager::SaveManager;
-use eframe::egui::{self, collapsing_header::CollapsingState, Color32, Vec2};
+use eframe::egui::{self, collapsing_header::CollapsingState, Color32, UiBuilder, Vec2};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Default)]
@@ -170,7 +170,7 @@ impl App {
 
                 ui.columns(2, |ui| {
                     egui::ScrollArea::both()
-                        .id_source("scroll_left")
+                        .id_salt("scroll_left")
                         .auto_shrink([false, false])
                         .show(&mut ui[0], |ui| {
                             for (dir, items) in self.manager.save_dirs.iter() {
@@ -199,7 +199,7 @@ impl App {
 
                     let row_height = ui[1].text_style_height(&egui::TextStyle::Body);
                     egui::ScrollArea::vertical()
-                        .id_source("scroll_right")
+                        .id_salt("scroll_right")
                         .auto_shrink([false, false])
                         .show_rows(
                             &mut ui[1],
@@ -254,7 +254,9 @@ impl eframe::App for App {
 
             self.ui_title_bar(ui, title_bar_rect);
 
-            self.ui_contents(&mut ui.child_ui(content_rect, *ui.layout(), None));
+            self.ui_contents(
+                &mut ui.new_child(UiBuilder::new().layout(*ui.layout()).max_rect(content_rect)),
+            );
         });
     }
 

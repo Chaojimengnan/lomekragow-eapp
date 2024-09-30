@@ -76,7 +76,7 @@ impl super::App {
             ($name:literal, $value:ident, $setter:ident, $array:expr) => {
                 ui.label($name);
                 let mut $value = self.player.state().$value;
-                if egui::ComboBox::from_id_source(stringify!($name, "combo"))
+                if egui::ComboBox::from_id_salt(stringify!($name, "combo"))
                     .height(80.0)
                     .show_index(ui, &mut $value, $array.len(), |idx| {
                         if $array.len() == 0 {
@@ -140,7 +140,7 @@ impl super::App {
                 );
 
                 ui.label("end reached");
-                egui::ComboBox::from_id_source("end_reached_combo")
+                egui::ComboBox::from_id_salt("end_reached_combo")
                     .height(80.0)
                     .selected_text(END_REACHED_LIST[self.state.end_reached as usize].1)
                     .show_ui(ui, |ui| {

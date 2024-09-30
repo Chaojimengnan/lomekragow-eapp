@@ -1,6 +1,8 @@
 use crate::{img_finder::ImgFinder, tex_loader::TexLoader};
 use eapp_utils::widgets::PlainButton;
-use eframe::egui::{self, pos2, vec2, Align2, Color32, FontId, Frame, Id, Rect, Rounding, Vec2b};
+use eframe::egui::{
+    self, pos2, vec2, Align2, Color32, FontId, Frame, Id, Rect, Rounding, UiBuilder, Vec2b,
+};
 use serde::{Deserialize, Serialize};
 use std::ops::Bound;
 
@@ -304,7 +306,7 @@ impl App {
             return;
         }
 
-        ui.allocate_ui_at_rect(btn_rect, |ui| {
+        ui.allocate_new_ui(UiBuilder::new().max_rect(btn_rect), |ui| {
             ui.set_opacity(opacity);
             if ui
                 .add(
@@ -379,7 +381,7 @@ impl App {
             }
         }
 
-        ui.allocate_ui_at_rect(rect, |ui| {
+        ui.allocate_new_ui(UiBuilder::new().max_rect(rect), |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 egui::Grid::new("info_grid")
                     .num_columns(2)

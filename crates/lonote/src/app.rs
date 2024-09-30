@@ -4,7 +4,7 @@ use eframe::egui::{
     text::{CCursor, CCursorRange},
     text_edit::TextEditOutput,
     text_selection::text_cursor_state::{byte_index_from_char_index, cursor_rect},
-    vec2, Color32, Margin, Vec2,
+    vec2, Color32, Margin, UiBuilder, Vec2,
 };
 use std::{
     borrow::Cow,
@@ -368,7 +368,7 @@ impl App {
             .show_inside(ui, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     let rect = ui.max_rect().shrink2(vec2(8.0, 0.0));
-                    ui.allocate_ui_at_rect(rect, |ui| {
+                    ui.allocate_new_ui(UiBuilder::new().max_rect(rect), |ui| {
                         ui.with_layout(
                             egui::Layout::centered_and_justified(egui::Direction::LeftToRight),
                             |ui| {
@@ -396,7 +396,7 @@ impl App {
     fn ui_bottom_panel(&mut self, ui: &mut egui::Ui) {
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             ui.add_space(8.0);
-            egui::ComboBox::from_id_source("codec").show_index(
+            egui::ComboBox::from_id_salt("codec").show_index(
                 ui,
                 &mut self.note.borrow_mut().codec_idx,
                 codec::get_codec_list().len(),
@@ -616,7 +616,9 @@ impl eframe::App for App {
 
             ui.add_enabled_ui(self.dialog_cb.is_none(), |ui| {
                 self.ui_title_bar(ui, title_bar_rect);
-                self.ui_contents(&mut ui.child_ui(content_rect, *ui.layout(), None));
+                self.ui_contents(
+                    &mut ui.new_child(UiBuilder::new().layout(*ui.layout()).max_rect(content_rect)),
+                );
             });
 
             self.ui_show_search_box(ui);

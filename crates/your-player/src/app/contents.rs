@@ -2,7 +2,7 @@ use crate::mpv::{self, player::PlayState};
 use eapp_utils::widgets::PlainButton;
 use eframe::egui::{
     self, load::SizedTexture, pos2, vec2, Align2, Color32, FontId, Frame, Id, Rect, Rounding,
-    Sense, Stroke, ViewportCommand,
+    Sense, Stroke, UiBuilder, ViewportCommand,
 };
 
 impl super::App {
@@ -75,8 +75,7 @@ impl super::App {
         if opacity == 0.0 {
             return;
         }
-
-        ui.allocate_ui_at_rect(btn_rect, |ui| {
+        ui.allocate_new_ui(UiBuilder::new().max_rect(btn_rect), |ui| {
             ui.set_opacity(opacity);
             if ui
                 .add(
@@ -150,7 +149,7 @@ impl super::App {
         mesh.add_triangle(1, 2, 3);
         painter.add(mesh);
 
-        ui.allocate_ui_at_rect(rect, |ui| {
+        ui.allocate_new_ui(UiBuilder::new().max_rect(rect), |ui| {
             ui.visuals_mut().override_text_color = Some(Color32::WHITE);
 
             let progress_bar_rect = {
@@ -308,7 +307,7 @@ impl super::App {
 
             use eapp_utils::codicons::*;
 
-            ui.allocate_ui_at_rect(center_btns_rect, |ui| {
+            ui.allocate_new_ui(UiBuilder::new().max_rect(center_btns_rect), |ui| {
                 ui.horizontal(|ui| {
                     if ui
                         .add(new_button(28.0, ICON_STOP_CIRCLE.to_string()))
@@ -388,7 +387,7 @@ impl super::App {
                 )
             };
 
-            ui.allocate_ui_at_rect(right_btns_rect, |ui| {
+            ui.allocate_new_ui(UiBuilder::new().max_rect(right_btns_rect), |ui| {
                 ui.horizontal(|ui| {
                     macro_rules! simple_popup {
                         ($icon:expr, $state:ident, $popup_fn:ident) => {

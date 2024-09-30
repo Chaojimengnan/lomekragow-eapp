@@ -135,7 +135,7 @@ impl FontAtlas {
                                 }
                                 let px = pos.0 + x as usize;
                                 let py = pos.1 + y as usize;
-                                image[(px, py)] = v as f32 / std::u8::MAX as f32;
+                                image[(px, py)] = v as f32 / u8::MAX as f32;
                             }
                         }
 

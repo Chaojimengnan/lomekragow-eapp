@@ -1,7 +1,7 @@
 //! Contains borderless application related utils
 
 use crate::{codicons, widgets::PlainButton};
-use eframe::egui::{self, vec2, Color32, CursorIcon, ResizeDirection, ViewportCommand};
+use eframe::egui::{self, vec2, Color32, CursorIcon, ResizeDirection, UiBuilder, ViewportCommand};
 
 // https://github.com/emilk/egui/pull/3762
 pub fn handle_resize(ui: &mut egui::Ui) -> bool {
@@ -121,7 +121,7 @@ pub fn title_bar(
         ui.visuals().widgets.noninteractive.bg_stroke,
     );
 
-    ui.allocate_ui_at_rect(title_bar_rect, |ui| {
+    ui.allocate_new_ui(UiBuilder::new().max_rect(title_bar_rect), |ui| {
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             close_maximize_minimize(
                 ui,
@@ -171,7 +171,7 @@ pub fn title_bar_animated(ui: &mut egui::Ui, title_bar_rect: eframe::epaint::Rec
         return;
     }
 
-    ui.allocate_ui_at_rect(title_bar_rect, |ui| {
+    ui.allocate_new_ui(UiBuilder::new().max_rect(title_bar_rect), |ui| {
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             ui.set_opacity(opacity);
             close_maximize_minimize(ui, width, height, Color32::from_rgb(40, 40, 40));

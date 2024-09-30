@@ -1,5 +1,5 @@
 use crate::sync::{self, ItemCmd, Syncer};
-use eframe::egui::{self, Color32, RichText, Vec2, Widget};
+use eframe::egui::{self, Color32, RichText, UiBuilder, Vec2, Widget};
 use serde::{Deserialize, Serialize};
 use std::thread::JoinHandle;
 
@@ -304,7 +304,9 @@ impl eframe::App for App {
 
             self.ui_title_bar(ui, title_bar_rect);
 
-            self.ui_contents(&mut ui.child_ui(content_rect, *ui.layout(), None));
+            self.ui_contents(
+                &mut ui.new_child(UiBuilder::new().layout(*ui.layout()).max_rect(content_rect)),
+            );
         });
     }
 

@@ -3,8 +3,6 @@
 pub mod app;
 pub mod codec;
 
-// TODO: 1. impl search
-
 fn main() {
     eapp_utils::setup_loggers("lonote.log").unwrap();
 

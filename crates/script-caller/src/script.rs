@@ -53,7 +53,7 @@ impl Arg {
                 }
                 ui.add_enabled_ui(self.enabled, |ui| match &mut self.r#type {
                     ArgType::Choices(value) => {
-                        egui::ComboBox::from_id_source(format!("{}_combo", self.name))
+                        egui::ComboBox::from_id_salt(format!("{}_combo", self.name))
                             .selected_text(&self.choices[*value])
                             .show_index(ui, value, self.choices.len(), |i| &self.choices[i]);
                     }

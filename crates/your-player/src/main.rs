@@ -6,10 +6,6 @@ pub mod mpv;
 pub mod playlist;
 pub mod tex_register;
 
-// TODO:
-// 5. deal with mpv frash rate
-// 6. optim danmu code struct
-
 fn main() {
     eapp_utils::setup_loggers("your-player.log").unwrap();
 

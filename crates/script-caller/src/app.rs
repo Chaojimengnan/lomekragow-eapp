@@ -1,5 +1,5 @@
 use crate::script::{self, Script};
-use eframe::egui::{self, Event, Key, Margin, Vec2, Vec2b};
+use eframe::egui::{self, Event, Key, Margin, UiBuilder, Vec2, Vec2b};
 
 #[derive(PartialEq, Eq)]
 enum RunMode {
@@ -340,7 +340,9 @@ impl eframe::App for App {
             }
             .shrink2(Vec2::new(0.5, 6.0));
 
-            self.ui_contents(&mut ui.child_ui(content_rect, *ui.layout(), None));
+            self.ui_contents(
+                &mut ui.new_child(UiBuilder::new().layout(*ui.layout()).max_rect(content_rect)),
+            );
         });
     }
 }
