@@ -338,9 +338,12 @@ impl Manager {
             return;
         }
 
-        let mut remove = Vec::new();
+        let mut remove = HashSet::new();
         let mut stroked_mesh = eframe::egui::Mesh::with_texture(tex);
         let mut mesh = eframe::egui::Mesh::with_texture(tex);
+
+        let white = egui::Color32::from_rgba_unmultiplied(255, 255, 255, self.state.alpha);
+        let black = egui::Color32::from_rgba_unmultiplied(0, 0, 0, self.state.alpha);
 
         for danmu in &self.emitted {
             let danmu_ref = unsafe { &mut **danmu };
@@ -354,7 +357,7 @@ impl Manager {
                     if emitted.rect.right() < rect.left()
                         || emitted.rect.left() > rect.right() + emitted.rect.width()
                     {
-                        remove.push(*danmu);
+                        remove.insert(*danmu);
                     }
                 }
                 DanmuType::Top | DanmuType::Bottom => {
@@ -364,7 +367,7 @@ impl Manager {
                     );
                     emitted.lifetime = (emitted.lifetime - elapsed_time).min(self.state.lifetime);
                     if emitted.lifetime <= 0.0 {
-                        remove.push(*danmu);
+                        remove.insert(*danmu);
                     }
                 }
             }
@@ -399,9 +402,6 @@ impl Manager {
                         $mesh.add_rect_with_uv(rect, uv, $color);
                     };
                 }
-
-                let white = egui::Color32::from_rgba_unmultiplied(255, 255, 255, self.state.alpha);
-                let black = egui::Color32::from_rgba_unmultiplied(0, 0, 0, self.state.alpha);
 
                 for glyph in &glyphs {
                     add_glyph!(
@@ -460,7 +460,8 @@ impl Manager {
             unsafe { &mut **v }.emitted_data.as_ref().unwrap().state
                 == DanmuEmittedDataState::NotInit
         };
-        let list: Vec<_> = self
+
+        for danmu_ptr in self
             .centered_pending
             .iter()
             .rev()
@@ -473,10 +474,8 @@ impl Manager {
                     .copied()
                     .take_while(danmu_not_initlize),
             )
-            .collect();
-
-        for ptr in list.iter() {
-            self.calculate_size(*ptr);
+        {
+            Self::calculate_size(&mut self.state, danmu_ptr);
         }
 
         while let Some(danmu) = self.centered_pending.pop_front() {
@@ -610,11 +609,11 @@ impl Manager {
         }
     }
 
-    fn calculate_size(&mut self, ptr: *mut DanmuData) {
+    fn calculate_size(state: &mut State, ptr: *mut DanmuData) {
         let danmu_ref = unsafe { &mut *ptr };
 
         let mut glyphs = Vec::new();
-        self.state
+        state
             .atlas
             .get_glyphs_from_text(&danmu_ref.text, &mut glyphs);
 
@@ -627,17 +626,14 @@ impl Manager {
             }
             // important: it's necessary to keep all danmus have the same height
             // to ensure emit properly
-            let height =
-                (self.state.atlas.font_size() + self.state.atlas.stroke_size() * 2.0).ceil() as i32;
+            let height = (state.atlas.font_size() + state.atlas.stroke_size() * 2.0).ceil() as i32;
 
             danmu_ref.emitted_data = Some(DanmuEmittedData {
                 rect: egui::Rect::from_min_size(pos2(0.0, 0.0), vec2(width as _, height as _)),
                 baseline,
-                lifetime: self.state.lifetime,
-                speed: (self.state.rolling_speed * width as f32 / 160.0).clamp(
-                    self.state.rolling_speed * 0.75,
-                    self.state.rolling_speed * 1.25,
-                ),
+                lifetime: state.lifetime,
+                speed: (state.rolling_speed * width as f32 / 160.0)
+                    .clamp(state.rolling_speed * 0.75, state.rolling_speed * 1.25),
                 state: DanmuEmittedDataState::Ready,
             })
         } else {
