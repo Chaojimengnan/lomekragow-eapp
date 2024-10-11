@@ -380,13 +380,13 @@ impl Manager {
                     .atlas
                     .get_glyphs_from_text(&danmu_ref.text, &mut glyphs);
 
-                let mut px = emitted.rect.left().round() as i32 - glyphs[0].stroke.left;
+                let mut px = emitted.rect.left() - glyphs[0].stroke.left as f32;
                 let py = emitted.rect.top().round() as i32 + emitted.baseline;
 
                 macro_rules! add_glyph {
                     ($expr:expr, $mesh:ident,$color:expr) => {
                         let rect = egui::Rect::from_min_size(
-                            pos2((px + $expr.left) as _, (py - $expr.top) as _),
+                            pos2(px + $expr.left as f32, (py - $expr.top) as _),
                             [$expr.size[0] as _, $expr.size[1] as _].into(),
                         );
                         let uv = egui::Rect::from_min_max(
@@ -427,7 +427,7 @@ impl Manager {
                             self.state.alpha
                         )
                     );
-                    px += glyph.stroke.advance.round() as i32;
+                    px += glyph.stroke.advance;
                 }
             }
         }
