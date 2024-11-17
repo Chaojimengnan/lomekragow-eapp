@@ -1,17 +1,14 @@
-use std::{
-    collections::{btree_set::Range, BTreeSet},
-    ops::Bound,
-    path::Path,
-};
+use eapp_utils::natordset::NatOrdSet;
+use std::{path::Path, slice::Iter};
 use walkdir::WalkDir;
 
 #[derive(Default, Clone, Debug)]
 pub struct ImgFinder {
     search_dir: Option<String>,
-    cur_image: Option<String>,
-    cur_dir: Option<String>,
-    cur_image_set: BTreeSet<String>,
-    cur_dir_set: BTreeSet<String>,
+    cur_image: Option<usize>,
+    cur_dir: Option<usize>,
+    cur_image_set: NatOrdSet,
+    cur_dir_set: NatOrdSet,
     dir_changed: bool,
 }
 
@@ -57,9 +54,11 @@ impl ImgFinder {
                 let item_path = item.path();
                 if item_path.is_dir() && Self::is_dir_has_supported_image(item_path)? {
                     self.cur_dir_set
-                        .insert(item_path.to_string_lossy().into_owned());
+                        .push(item_path.to_string_lossy().into_owned());
                 }
             }
+
+            self.cur_dir_set.sort();
         }
 
         self.set_cur_dir(&cwd_str);
@@ -88,63 +87,76 @@ impl ImgFinder {
         self.dir_changed
     }
 
-    pub fn set_cur_image(&mut self, image: &str) {
-        if self.cur_image_set.contains(image) {
-            self.cur_image = Some(image.to_owned());
+    pub fn set_cur_image(&mut self, image_name: &str) {
+        if let Ok(image) = self.cur_image_set.search(image_name) {
+            self.cur_image = Some(image);
         }
     }
 
-    pub fn cur_image(&self) -> Option<&String> {
-        self.cur_image.as_ref()
+    pub fn set_cur_image_idx(&mut self, image: usize) {
+        if image < self.cur_image_set.0.len() {
+            self.cur_image = Some(image);
+        }
     }
 
-    pub fn cur_image_set(&self) -> &BTreeSet<String> {
+    pub fn cur_image(&self) -> Option<usize> {
+        self.cur_image
+    }
+
+    pub fn cur_image_name(&self) -> Option<&str> {
+        if let Some(image) = self.cur_image {
+            return Some(&self.cur_image_set.0[image]);
+        }
+
+        None
+    }
+
+    pub fn image_iter(&self) -> Iter<'_, String> {
+        self.cur_image_set.iter()
+    }
+
+    pub fn cur_image_set(&self) -> &NatOrdSet {
         &self.cur_image_set
     }
 
-    pub fn next_image(&mut self) -> Option<Range<'_, String>> {
-        if let Some(image) = self.cur_image.as_ref() {
-            let mut range = self
-                .cur_image_set
-                .range((Bound::Excluded(image.to_owned()), Bound::Unbounded));
-            if let Some(next_image) = range.next() {
-                self.cur_image = Some(next_image.to_owned());
-                return Some(range);
+    pub fn next_image(&mut self) {
+        if let Some(image) = self.cur_image {
+            if image + 1 < self.cur_image_set.0.len() {
+                self.cur_image = Some(image + 1)
             }
-
-            return None;
+            return;
         }
 
-        self.cur_image = self.cur_image_set.first().cloned();
-        None
+        if !self.cur_image_set.0.is_empty() {
+            self.cur_image = Some(0);
+        }
     }
 
-    pub fn prev_image(&mut self) -> Option<Range<'_, String>> {
-        if let Some(image) = self.cur_image.as_ref() {
-            let mut range = self
-                .cur_image_set
-                .range((Bound::Unbounded, Bound::Excluded(image.to_owned())));
-            if let Some(prev_image) = range.next_back() {
-                self.cur_image = Some(prev_image.to_owned());
-                return Some(range);
-            }
-
-            return None;
+    pub fn prev_image(&mut self) {
+        if let Some(image) = self.cur_image {
+            self.cur_image = Some(image.saturating_sub(1));
+            return;
         }
 
-        self.cur_image = self.cur_image_set.first().cloned();
-        None
+        if !self.cur_image_set.0.is_empty() {
+            self.cur_image = Some(0);
+        }
     }
 
-    pub fn set_cur_dir(&mut self, dir: &str) {
-        let dir = dir.to_owned();
-        if self.cur_dir_set.contains(&dir) && self.cur_dir.as_ref() != Some(&dir) {
-            self.cur_dir = Some(dir.to_owned());
+    pub fn set_cur_dir(&mut self, dir_name: &str) {
+        if let Ok(dir) = self.cur_dir_set.search(dir_name) {
+            self.set_cur_dir_idx(dir);
+        }
+    }
+
+    pub fn set_cur_dir_idx(&mut self, dir: usize) {
+        if self.cur_dir != Some(dir) && dir < self.cur_dir_set.0.len() {
+            self.cur_dir = Some(dir);
             self.cur_image = None;
-            self.cur_image_set.clear();
+            self.cur_image_set.0.clear();
             self.dir_changed = true;
 
-            if let Ok(dir_items) = std::fs::read_dir(&dir) {
+            if let Ok(dir_items) = std::fs::read_dir(&self.cur_dir_set.0[dir]) {
                 for item in dir_items {
                     if item.is_err() {
                         log::warn!("read dir item fails: {}", item.err().unwrap());
@@ -157,55 +169,53 @@ impl ImgFinder {
                             .extension()
                             .is_some_and(|ext| Self::is_supported_ext(ext.to_str().unwrap()))
                     {
-                        self.cur_image_set
-                            .insert(item.to_string_lossy().into_owned());
+                        self.cur_image_set.push(item.to_string_lossy().into_owned());
                     }
                 }
             }
 
+            self.cur_image_set.sort();
             self.next_image();
         }
     }
 
-    pub fn cur_dir(&self) -> Option<&String> {
-        self.cur_dir.as_ref()
+    pub fn cur_dir(&self) -> Option<usize> {
+        self.cur_dir
     }
 
-    pub fn cur_dir_set(&self) -> &BTreeSet<String> {
+    pub fn cur_dir_name(&self) -> Option<&str> {
+        if let Some(dir) = self.cur_dir {
+            return Some(&self.cur_dir_set.0[dir]);
+        }
+
+        None
+    }
+
+    pub fn cur_dir_set(&self) -> &NatOrdSet {
         &self.cur_dir_set
     }
 
     pub fn next_dir(&mut self) {
-        if let Some(dir) = self.cur_dir.as_ref() {
-            if let Some(next_dir) = self
-                .cur_dir_set
-                .range((Bound::Excluded(dir.to_owned()), Bound::Unbounded))
-                .next()
-            {
-                self.set_cur_dir(&next_dir.to_owned());
+        if let Some(dir) = self.cur_dir {
+            if dir + 1 < self.cur_dir_set.0.len() {
+                self.set_cur_dir_idx(dir + 1);
             }
             return;
         }
 
-        if let Some(dir) = self.cur_dir_set.first() {
-            self.set_cur_dir(&dir.to_owned());
+        if !self.cur_dir_set.0.is_empty() {
+            self.set_cur_dir_idx(0);
         }
     }
 
     pub fn prev_dir(&mut self) {
-        if let Some(dir) = self.cur_dir.as_ref() {
-            if let Some(prev_dir) = self
-                .cur_dir_set
-                .range((Bound::Unbounded, Bound::Excluded(dir.to_owned())))
-                .next_back()
-            {
-                self.set_cur_dir(&prev_dir.to_owned());
-            }
+        if let Some(dir) = self.cur_dir {
+            self.set_cur_dir_idx(dir.saturating_sub(1));
             return;
         }
 
-        if let Some(dir) = self.cur_dir_set.first() {
-            self.set_cur_dir(&dir.to_owned());
+        if !self.cur_dir_set.0.is_empty() {
+            self.set_cur_dir_idx(0);
         }
     }
 }

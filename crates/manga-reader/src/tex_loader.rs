@@ -124,7 +124,7 @@ impl TexLoader {
         }
     }
 
-    pub fn update(&mut self, ctx: &egui::Context, cur_image: Option<&String>) {
+    pub fn update(&mut self, ctx: &egui::Context, cur_image: Option<&str>) {
         if let Some(cur_img) = cur_image {
             self.load(cur_img);
 

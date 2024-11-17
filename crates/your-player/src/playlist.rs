@@ -1,14 +1,14 @@
 use crate::mpv;
+use eapp_utils::natordset::NatOrdSet;
 use eframe::egui::ahash::HashMap;
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeSet, ops::Bound};
 use walkdir::WalkDir;
 
 #[derive(Deserialize, Serialize, Default, Debug)]
 pub struct Playlist {
     #[serde(skip)]
     current_play: Option<(String, String)>,
-    map: HashMap<String, BTreeSet<String>>,
+    map: HashMap<String, NatOrdSet>,
 }
 
 impl Playlist {
@@ -17,7 +17,7 @@ impl Playlist {
             return;
         }
 
-        let mut set = BTreeSet::new();
+        let mut set = NatOrdSet::new();
 
         eapp_utils::capture_error!(
             err => log::error!("playlist add list '{list}' fails: {err}"),
@@ -31,12 +31,13 @@ impl Playlist {
                             mpv::VIDEO_FORMAT.contains(&ext.as_str())
                         });
                     if is_valid {
-                        set.insert(item_path.to_string_lossy().into_owned());
+                        set.push(item_path.to_string_lossy().into_owned());
                     }
                 }
             }
         );
 
+        set.sort();
         self.map.insert(list, set);
     }
 
@@ -55,7 +56,7 @@ impl Playlist {
     pub fn set_current_play(&mut self, list_and_media: Option<(String, String)>) {
         if let Some((list, media)) = list_and_media {
             if let Some(media_set) = self.map.get(&list) {
-                if media_set.contains(&media) {
+                if media_set.search(&media).is_ok() {
                     self.current_play = Some((list, media));
                 }
             }
@@ -71,36 +72,41 @@ impl Playlist {
     }
 
     pub fn next_item(&mut self) -> Option<String> {
-        self.current_play.as_ref()?;
-
-        let (list, media) = self.current_play.clone().unwrap();
+        let (list, media) = self.current_play.clone()?;
         let media_set = &self.map[&list];
-        let next = media_set
-            .range((Bound::Excluded(media), Bound::Unbounded))
-            .next()
-            .unwrap_or(media_set.first().unwrap())
-            .to_owned();
+
+        let next_idx = match media_set.search(&media) {
+            Ok(media_idx) => (media_idx + 1) % media_set.0.len(),
+            _ => 0,
+        };
+
+        let next = media_set.0[next_idx].clone();
 
         self.set_current_play(Some((list, next.clone())));
         Some(next)
     }
 
     pub fn prev_item(&mut self) -> Option<String> {
-        self.current_play.as_ref()?;
+        let (list, media) = self.current_play.clone()?;
+        let media_set = &self.map[&list];
 
-        let (list, media) = self.current_play.clone().unwrap();
-        let list_c = &self.map[&list];
-        let prev = list_c
-            .range((Bound::Unbounded, Bound::Excluded(media)))
-            .next_back()
-            .unwrap_or(list_c.last().unwrap())
-            .to_owned();
+        let prev_idx = match media_set.search(&media) {
+            Ok(media_idx) => {
+                if media_idx != 0 {
+                    media_idx - 1
+                } else {
+                    media_set.0.len() - 1
+                }
+            }
+            _ => 0,
+        };
+        let prev = media_set.0[prev_idx].clone();
 
         self.set_current_play(Some((list, prev.clone())));
         Some(prev)
     }
 
-    pub fn inner_map(&self) -> &HashMap<String, BTreeSet<String>> {
+    pub fn inner_map(&self) -> &HashMap<String, NatOrdSet> {
         &self.map
     }
 }

@@ -79,7 +79,7 @@ impl super::App {
 
         for (list_name, list) in self.playlist.inner_map() {
             let (iter, len): (Box<dyn Iterator<Item = &String>>, usize) = if key_empty {
-                (Box::new(list.iter()), list.len())
+                (Box::new(list.iter()), list.0.len())
             } else {
                 let iter = list.iter().filter(|v| {
                     Path::new(v)

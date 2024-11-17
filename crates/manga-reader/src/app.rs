@@ -4,8 +4,6 @@ use eframe::egui::{
     self, pos2, vec2, Align2, Color32, FontId, Frame, Id, Rect, Rounding, UiBuilder, Vec2b,
 };
 use serde::{Deserialize, Serialize};
-use std::ops::Bound;
-
 pub struct App {
     state: State,
     img_finder: ImgFinder,
@@ -17,7 +15,7 @@ pub struct App {
 pub struct State {
     left_panel_open: bool,
     #[serde(skip)]
-    last_cur_dir: Option<String>,
+    last_cur_dir: Option<usize>,
     search_key: String,
 }
 
@@ -79,8 +77,8 @@ impl App {
     fn spawn(&self) {
         eapp_utils::capture_error!(err => log::error!("spawn error: {err}"), {
             let mut cmd = std::process::Command::new(std::env::current_exe()?);
-            if let Some(cur_image) = self.img_finder.cur_image() {
-                cmd.arg(cur_image);
+            if let Some(cur_image_name) = self.img_finder.cur_image_name() {
+                cmd.arg(cur_image_name);
             }
             cmd.spawn()?;
         });
@@ -117,24 +115,24 @@ impl App {
                             .unwrap_or(0);
                         let prefix = self
                             .img_finder
-                            .cur_dir()
+                            .cur_dir_name()
                             .map(|str| str.len() + 1)
                             .unwrap_or(0);
-                        let mut cur_dir = self.img_finder.cur_dir().cloned();
-                        let mut cur_image = self.img_finder.cur_image().cloned();
+                        let mut cur_dir = self.img_finder.cur_dir();
+                        let mut cur_image = self.img_finder.cur_image();
                         const ACTIVE_COL: Color32 =
                             Color32::from_rgba_premultiplied(80, 138, 214, 160);
 
                         let dir_changed = if self.state.last_cur_dir != cur_dir {
-                            self.state.last_cur_dir = cur_dir.clone();
+                            self.state.last_cur_dir = cur_dir;
                             true
                         } else {
                             false
                         };
 
-                        for dir in self.img_finder.cur_dir_set() {
-                            let dir_str = if dir.len() != dir_prefix - 1 {
-                                &dir[dir_prefix..]
+                        for (dir, dir_name) in self.img_finder.cur_dir_set().iter().enumerate() {
+                            let dir_str = if dir_name.len() != dir_prefix - 1 {
+                                &dir_name[dir_prefix..]
                             } else {
                                 "current directory"
                             };
@@ -147,7 +145,7 @@ impl App {
                                 continue;
                             }
 
-                            let is_cur_dir = cur_dir.as_ref() == Some(dir);
+                            let is_cur_dir = cur_dir == Some(dir);
                             let (str, open) = if is_cur_dir {
                                 (
                                     egui::RichText::new(dir_str).color(ACTIVE_COL),
@@ -160,11 +158,13 @@ impl App {
                             if egui::CollapsingHeader::new(str)
                                 .open(open)
                                 .show(ui, |ui| {
-                                    for img in self.img_finder.cur_image_set().iter() {
+                                    for (img, img_name) in
+                                        self.img_finder.cur_image_set().iter().enumerate()
+                                    {
                                         if ui
                                             .selectable_label(
-                                                cur_image.as_ref() == Some(img),
-                                                &img[prefix..],
+                                                cur_image == Some(img),
+                                                &img_name[prefix..],
                                             )
                                             .clicked()
                                         {
@@ -176,16 +176,16 @@ impl App {
                                 .on_hover_text(dir_str)
                                 .clicked()
                             {
-                                cur_dir = Some(dir.to_owned());
+                                cur_dir = Some(dir);
                             };
                         }
 
-                        if let Some(v) = cur_dir {
-                            self.img_finder.set_cur_dir(&v);
+                        if let Some(dir) = cur_dir {
+                            self.img_finder.set_cur_dir_idx(dir);
                         }
 
-                        if let Some(v) = cur_image {
-                            self.img_finder.set_cur_image(&v);
+                        if let Some(image) = cur_image {
+                            self.img_finder.set_cur_image_idx(image);
                         }
                     });
             });
@@ -253,10 +253,10 @@ impl App {
                 ui.visuals().text_color(),
             )
         };
-        if let Some(cur_image) = self.img_finder.cur_image() {
-            self.tex_loader.load(cur_image);
+        if let Some(cur_image_name) = self.img_finder.cur_image_name() {
+            self.tex_loader.load(cur_image_name);
 
-            if let Some(texture) = self.tex_loader.textures().get(cur_image).unwrap() {
+            if let Some(texture) = self.tex_loader.textures().get(cur_image_name).unwrap() {
                 use crate::tex_loader::Texture::*;
                 let handle = match texture {
                     Static(handle) => handle,
@@ -361,17 +361,13 @@ impl App {
 
         if let Some(img) = self.img_finder.cur_image() {
             let prefix = self.img_finder.search_dir().unwrap().len() + 1;
-            name = img[prefix..].to_owned();
-            let i = self
-                .img_finder
-                .cur_image_set()
-                .range((Bound::Unbounded, Bound::Excluded(img.clone())))
-                .count()
-                + 1;
-            let len = self.img_finder.cur_image_set().len();
-            page = format!("{} / {}", i, len);
+            let img_name = self.img_finder.cur_image_name().unwrap();
+            name = img_name[prefix..].to_owned();
 
-            if let Some(texture) = self.tex_loader.textures().get(img).unwrap() {
+            let len = self.img_finder.cur_image_set().0.len();
+            page = format!("{} / {}", img + 1, len);
+
+            if let Some(texture) = self.tex_loader.textures().get(img_name).unwrap() {
                 use crate::tex_loader::Texture::*;
                 let size_number = match texture {
                     Static(v) => v.size(),
@@ -421,16 +417,30 @@ impl App {
             }
 
             if ui.input(|i| i.key_pressed(egui::Key::ArrowUp)) {
-                if let Some(range) = self.img_finder.prev_image() {
-                    for item in range.rev().take(3) {
+                self.img_finder.prev_image();
+
+                if let Some(cur_image) = self.img_finder.cur_image() {
+                    for item in self
+                        .img_finder
+                        .image_iter()
+                        .skip(cur_image.saturating_sub(3))
+                        .take(3)
+                    {
                         self.tex_loader.load(item);
                     }
                 }
             }
 
             if ui.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
-                if let Some(range) = self.img_finder.next_image() {
-                    for item in range.take(3) {
+                self.img_finder.next_image();
+                if let Some(cur_image) = self.img_finder.cur_image() {
+                    for item in self
+                        .img_finder
+                        .image_iter()
+                        .skip(cur_image + 1)
+                        .take(3)
+                        .rev()
+                    {
                         self.tex_loader.load(item);
                     }
                 }
@@ -477,7 +487,8 @@ impl eframe::App for App {
         eapp_utils::borderless::window_frame(ctx, None).show(ctx, |ui| {
             eapp_utils::borderless::handle_resize(ui);
 
-            self.tex_loader.update(ctx, self.img_finder.cur_image());
+            self.tex_loader
+                .update(ctx, self.img_finder.cur_image_name());
 
             self.ui_left_panel(ui);
             self.ui_contents(ui);

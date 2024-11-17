@@ -13,7 +13,9 @@ default_fonts = ["eframe/default_fonts"]
 eframe = { workspace = true, features = ["glow", "persistence"] }
 simplelog.workspace = true
 log.workspace = true
+serde.workspace = true
 include-flate = "0.3.0"
+natord = "1.0"
 
 [target.'cfg(windows)'.dependencies.windows-sys]
 version = "0.52"
