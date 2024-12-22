@@ -218,7 +218,7 @@ impl Player {
                                         0,
                                         glow::RGBA,
                                         glow::UNSIGNED_BYTE,
-                                        None,
+                                    glow::PixelUnpackData::Slice(None),
                                     );
                                     gl.bind_texture(glow::TEXTURE_2D, None);
                                     eframe::egui_glow::check_for_gl_error!(gl);

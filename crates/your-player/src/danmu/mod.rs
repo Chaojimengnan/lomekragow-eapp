@@ -261,7 +261,7 @@ impl Manager {
                         h as _,
                         glow::RGBA,
                         glow::UNSIGNED_BYTE,
-                        glow::PixelUnpackData::Slice(&data),
+                        glow::PixelUnpackData::Slice(Some(&data)),
                     );
                     eframe::egui_glow::check_for_gl_error!(gl);
                 } else {
@@ -275,7 +275,7 @@ impl Manager {
                         border,
                         glow::RGBA,
                         glow::UNSIGNED_BYTE,
-                        Some(&data),
+                        glow::PixelUnpackData::Slice(Some(&data)),
                     );
                     eframe::egui_glow::check_for_gl_error!(gl);
                 }

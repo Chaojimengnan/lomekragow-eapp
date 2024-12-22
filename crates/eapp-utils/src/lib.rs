@@ -27,12 +27,14 @@ pub fn setup_fonts(ctx: &egui::Context) {
     include_flate::flate!(static UNIFONT: [u8] from "../../assets/unifont-15.1.04.otf");
     include_flate::flate!(static CODICON: [u8] from "../../assets/codicon.ttf");
 
-    fonts
-        .font_data
-        .insert("unifont".to_owned(), egui::FontData::from_static(&UNIFONT));
-    fonts
-        .font_data
-        .insert("codicon".to_owned(), egui::FontData::from_static(&CODICON));
+    fonts.font_data.insert(
+        "unifont".to_owned(),
+        egui::FontData::from_static(&UNIFONT).into(),
+    );
+    fonts.font_data.insert(
+        "codicon".to_owned(),
+        egui::FontData::from_static(&CODICON).into(),
+    );
 
     fonts
         .families

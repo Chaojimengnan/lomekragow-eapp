@@ -93,7 +93,7 @@ impl Preview {
                                         0,
                                         glow::RGBA,
                                         glow::UNSIGNED_BYTE,
-                                        None,
+                                        glow::PixelUnpackData::Slice(None),
                                     );
                                     gl.bind_texture(glow::TEXTURE_2D, None);
                                     eframe::egui_glow::check_for_gl_error!(gl);
@@ -156,7 +156,7 @@ impl Preview {
                     0,
                     glow::RGBA,
                     glow::UNSIGNED_BYTE,
-                    None,
+                    glow::PixelUnpackData::Slice(None),
                 );
                 gl.bind_framebuffer(glow::FRAMEBUFFER, Some(self.fbo));
                 gl.copy_tex_image_2d(

@@ -285,27 +285,22 @@ impl App {
 }
 
 impl App {
-    fn ui_show_confirm_dialog(&mut self, ui: &mut egui::Ui, pos: egui::Pos2) {
+    fn ui_show_confirm_dialog(&mut self, ui: &mut egui::Ui) {
         if self.dialog_cb.is_some() {
-            egui::Window::new("Warning")
-                .collapsible(false)
-                .resizable(false)
-                .pivot(egui::Align2::CENTER_CENTER)
-                .fixed_pos(pos)
-                .show(ui.ctx(), |ui| {
-                    let str = &self.dialog_cb.as_ref().unwrap().0;
-                    ui.label(str);
-                    ui.horizontal(|ui| {
-                        let no_res = ui.button("No");
-                        let yes_res = ui.button("Yes");
-                        if no_res.clicked() || yes_res.clicked() {
-                            let (.., cb) = self.dialog_cb.take().unwrap();
-                            if let Err(err) = cb(yes_res.clicked()) {
-                                self.note.borrow_mut().state_msg = err.to_string();
-                            }
+            egui::Modal::new(egui::Id::new("Warning")).show(ui.ctx(), |ui| {
+                let str = &self.dialog_cb.as_ref().unwrap().0;
+                ui.label(str);
+                ui.horizontal(|ui| {
+                    let no_res = ui.button("No");
+                    let yes_res = ui.button("Yes");
+                    if no_res.clicked() || yes_res.clicked() {
+                        let (.., cb) = self.dialog_cb.take().unwrap();
+                        if let Err(err) = cb(yes_res.clicked()) {
+                            self.note.borrow_mut().state_msg = err.to_string();
                         }
-                    });
+                    }
                 });
+            });
         }
     }
 
@@ -614,15 +609,13 @@ impl eframe::App for App {
             self.process_close_request(ui);
             self.process_inputs(ui);
 
-            ui.add_enabled_ui(self.dialog_cb.is_none(), |ui| {
-                self.ui_title_bar(ui, title_bar_rect);
-                self.ui_contents(
-                    &mut ui.new_child(UiBuilder::new().layout(*ui.layout()).max_rect(content_rect)),
-                );
-            });
+            self.ui_title_bar(ui, title_bar_rect);
+            self.ui_contents(
+                &mut ui.new_child(UiBuilder::new().layout(*ui.layout()).max_rect(content_rect)),
+            );
 
             self.ui_show_search_box(ui);
-            self.ui_show_confirm_dialog(ui, app_rect.center());
+            self.ui_show_confirm_dialog(ui);
         });
     }
 }
