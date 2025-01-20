@@ -96,6 +96,7 @@ pub fn setup_loggers(log_filename: &str) -> Result<(), Box<dyn std::error::Error
 
 pub fn open_in_explorer(path: &str) {
     // https://github.com/tauri-apps/plugins-workspace/issues/999
+    #[allow(clippy::zombie_processes)]
     #[cfg(target_os = "windows")]
     std::process::Command::new("explorer")
         .args(["/select,", path])
