@@ -55,6 +55,8 @@ pub fn setup_fonts(ctx: &egui::Context) {
         id.size = 16.0;
     }
     ctx.set_style(style);
+
+    ctx.set_theme(egui::Theme::Dark);
 }
 
 pub fn setup_loggers(log_filename: &str) -> Result<(), Box<dyn std::error::Error>> {
