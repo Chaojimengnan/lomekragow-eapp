@@ -1,5 +1,5 @@
 use crate::mpv::player::PlayState;
-use eframe::egui::{self, load::SizedTexture, vec2, Align2, FontId, Rect, Rounding};
+use eframe::egui::{self, load::SizedTexture, vec2, Align2, CornerRadius, FontId, Rect};
 
 impl super::App {
     pub fn ui_background(&mut self, ui: &mut egui::Ui) {
@@ -33,12 +33,12 @@ impl super::App {
 
             let size = tex.calc_size(rect.size(), Some(tex.size().unwrap()));
             let diff = rect.size() - size;
-            let mut rounding = Rounding::same(0.0);
+            let mut corner_radius = CornerRadius::same(0);
             if diff.x <= 16.0 && diff.y <= 16.0 {
-                rounding = Rounding::same(8.0);
+                corner_radius = CornerRadius::same(8);
             }
 
-            tex = tex.rounding(self.adjust_fullscreen(ui, self.adjust(rounding)));
+            tex = tex.corner_radius(self.adjust_fullscreen(ui, self.adjust(corner_radius)));
             tex.paint_at(ui, Rect::from_center_size(rect.center(), size));
         }
     }

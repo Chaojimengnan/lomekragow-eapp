@@ -4,7 +4,7 @@ use crate::{
     playlist::Playlist,
     tex_register::TexRegister,
 };
-use eframe::egui::{self, Color32, Rounding, TextBuffer, ViewportCommand};
+use eframe::egui::{self, Color32, CornerRadius, TextBuffer, ViewportCommand};
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -260,20 +260,20 @@ impl App {
         self.danmu.clear();
     }
 
-    fn adjust(&self, rounding: Rounding) -> Rounding {
-        let mut rounding = rounding;
+    fn adjust(&self, corner_radius: CornerRadius) -> CornerRadius {
+        let mut corner_radius = corner_radius;
         if self.state.playlist_open {
-            rounding.nw = 0.0;
-            rounding.sw = 0.0;
+            corner_radius.nw = 0;
+            corner_radius.sw = 0;
         }
-        rounding
+        corner_radius
     }
 
-    fn adjust_fullscreen(&self, ui: &egui::Ui, rounding: Rounding) -> Rounding {
+    fn adjust_fullscreen(&self, ui: &egui::Ui, corner_radius: CornerRadius) -> CornerRadius {
         if !ui.input(|i| i.viewport().fullscreen.unwrap_or(false)) {
-            rounding
+            corner_radius
         } else {
-            0.0.into()
+            0.into()
         }
     }
 

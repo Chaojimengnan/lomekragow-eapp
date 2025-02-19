@@ -1,7 +1,7 @@
 use crate::danmu::DanmuData;
 
 use super::PlaylistType;
-use eframe::egui::{self, Color32, Frame, Rounding};
+use eframe::egui::{self, Color32, CornerRadius, Frame};
 use std::path::Path;
 
 impl super::App {
@@ -11,13 +11,13 @@ impl super::App {
         egui::SidePanel::left("left_panel")
             .default_width(200.0)
             .frame(
-                Frame::side_top_panel(ui.style()).rounding(self.adjust_fullscreen(
+                Frame::side_top_panel(ui.style()).corner_radius(self.adjust_fullscreen(
                     ui,
-                    Rounding {
-                        nw: 8.0,
-                        sw: 8.0,
-                        ne: 0.0,
-                        se: 0.0,
+                    CornerRadius {
+                        nw: 8,
+                        sw: 8,
+                        ne: 0,
+                        se: 0,
                     },
                 )),
             )

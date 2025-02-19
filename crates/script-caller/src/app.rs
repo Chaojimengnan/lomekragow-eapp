@@ -149,7 +149,7 @@ impl App {
             .show_inside(ui, |ui| self.ui_left_panel(ui));
 
         egui::CentralPanel::default()
-            .frame(egui::Frame::default().inner_margin(Margin::symmetric(8.0, 2.0)))
+            .frame(egui::Frame::default().inner_margin(Margin::symmetric(8, 2)))
             .show_inside(ui, |ui| self.ui_right_panel(ui));
     }
 

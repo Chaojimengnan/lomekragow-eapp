@@ -1,14 +1,14 @@
 //! Contains widgets related utils
 
 use crate::animation::color_lerp;
-use eframe::egui::{self, Align2, Color32, FontId, Rounding, Sense, Vec2, Widget, WidgetText};
+use eframe::egui::{self, Align2, Color32, CornerRadius, FontId, Sense, Vec2, Widget, WidgetText};
 
 /// Just a button, with plain style
 pub struct PlainButton {
     text: WidgetText,
     size: Vec2,
     font_size: f32,
-    rounding: Rounding,
+    corner_radius: CornerRadius,
     fill: Color32,
     hover: Color32,
 }
@@ -19,15 +19,15 @@ impl PlainButton {
             text: text.into(),
             size,
             font_size: 16.0,
-            rounding: Default::default(),
+            corner_radius: Default::default(),
             fill: Default::default(),
             hover: Color32::DARK_GRAY,
         }
     }
 
     #[inline]
-    pub fn rounding(mut self, rounding: impl Into<Rounding>) -> Self {
-        self.rounding = rounding.into();
+    pub fn corner_radius(mut self, corner_radius: impl Into<CornerRadius>) -> Self {
+        self.corner_radius = corner_radius.into();
         self
     }
 
@@ -60,7 +60,7 @@ impl Widget for PlainButton {
 
             ui.painter().rect_filled(
                 rect,
-                self.rounding,
+                self.corner_radius,
                 color_lerp(self.fill, self.hover, factor),
             );
 
@@ -143,8 +143,13 @@ pub fn toggle_ui(ui: &mut egui::Ui, on: &mut bool) -> egui::Response {
         let visuals = ui.style().interact_selectable(&response, *on);
         let rect = rect.expand(visuals.expansion);
         let radius = 0.5 * rect.height();
-        ui.painter()
-            .rect(rect, radius, visuals.bg_fill, visuals.bg_stroke);
+        ui.painter().rect(
+            rect,
+            radius,
+            visuals.bg_fill,
+            visuals.bg_stroke,
+            egui::StrokeKind::Inside,
+        );
         let circle_x = egui::lerp((rect.left() + radius)..=(rect.right() - radius), how_on);
         let center = egui::pos2(circle_x, rect.center().y);
         ui.painter()

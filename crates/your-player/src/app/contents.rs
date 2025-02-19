@@ -1,18 +1,18 @@
 use crate::mpv::{self, player::PlayState};
 use eapp_utils::widgets::PlainButton;
 use eframe::egui::{
-    self, load::SizedTexture, pos2, vec2, Align2, Color32, FontId, Frame, Id, Rect, Rounding,
+    self, load::SizedTexture, pos2, vec2, Align2, Color32, CornerRadius, FontId, Frame, Id, Rect,
     Sense, Stroke, UiBuilder, ViewportCommand,
 };
 
 impl super::App {
     pub fn ui_contents(&mut self, ui: &mut egui::Ui) {
-        let rounding = self.adjust_fullscreen(ui, self.adjust(Rounding::same(8.0)));
+        let corner_radius = self.adjust_fullscreen(ui, self.adjust(CornerRadius::same(8)));
 
         egui::CentralPanel::default()
             .frame(
                 Frame::default()
-                    .rounding(rounding)
+                    .corner_radius(corner_radius)
                     .fill(Color32::TRANSPARENT),
             )
             .show_inside(ui, |ui| {
@@ -83,7 +83,7 @@ impl super::App {
                         vec2(btn_rect.width(), btn_rect.height()),
                         btn_text.to_string(),
                     )
-                    .rounding(Rounding::same(9.0)),
+                    .corner_radius(CornerRadius::same(9)),
                 )
                 .clicked()
             {
@@ -130,11 +130,11 @@ impl super::App {
             },
             self.adjust_fullscreen(
                 ui,
-                self.adjust(Rounding {
-                    se: 8.0,
-                    sw: 8.0,
-                    nw: 0.0,
-                    ne: 0.0,
+                self.adjust(CornerRadius {
+                    se: 8,
+                    sw: 8,
+                    nw: 0,
+                    ne: 0,
                 }),
             ),
             mesh_bottom_color,
@@ -186,7 +186,7 @@ impl super::App {
                             if let Some(tex) = self.preview.get(hover_playback_time) {
                                 if let Some(tex_id) = self.tex_register.get(*tex) {
                                     egui::Image::from_texture(SizedTexture::new(tex_id, size))
-                                        .rounding(4.0)
+                                        .corner_radius(4)
                                         .paint_at(ui, rect);
                                 }
                             }
@@ -205,7 +205,7 @@ impl super::App {
 
                             ui.painter().rect_filled(
                                 Rect::from_min_max(pos, pos + galley.size()),
-                                Rounding::ZERO,
+                                CornerRadius::ZERO,
                                 Color32::from_black_alpha(160),
                             );
                             ui.painter().galley(pos, galley, Color32::WHITE);
@@ -296,7 +296,7 @@ impl super::App {
             let new_button = |font_size, str| {
                 PlainButton::new(vec2(btn_size, btn_size), str)
                     .font_size(font_size)
-                    .rounding(Rounding::same(2.0))
+                    .corner_radius(CornerRadius::same(2))
                     .hover(Self::ACTIVE_COL)
             };
 

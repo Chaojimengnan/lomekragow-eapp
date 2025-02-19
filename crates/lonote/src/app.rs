@@ -263,7 +263,6 @@ impl App {
                                 CCursor::new(new_ci_end),
                             )));
                             let primary_cursor_rect = cursor_rect(
-                                output.galley_pos,
                                 &output.galley,
                                 &output.state.cursor.range(&output.galley).unwrap().primary,
                                 16.0,
@@ -350,11 +349,11 @@ impl App {
 
         egui::TopBottomPanel::bottom("bottom_panel")
             .exact_height(32.0)
-            .frame(egui::Frame::default().rounding(egui::Rounding {
-                nw: 0.0,
-                ne: 0.0,
-                sw: 8.0,
-                se: 8.0,
+            .frame(egui::Frame::default().corner_radius(egui::CornerRadius {
+                nw: 0,
+                ne: 0,
+                sw: 8,
+                se: 8,
             }))
             .show_inside(ui, |ui| self.ui_bottom_panel(ui));
 

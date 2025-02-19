@@ -1,7 +1,7 @@
 use crate::{img_finder::ImgFinder, tex_loader::TexLoader};
 use eapp_utils::widgets::PlainButton;
 use eframe::egui::{
-    self, pos2, vec2, Align2, Color32, FontId, Frame, Id, Rect, Rounding, UiBuilder, Vec2b,
+    self, pos2, vec2, Align2, Color32, CornerRadius, FontId, Frame, Id, Rect, UiBuilder, Vec2b,
 };
 use serde::{Deserialize, Serialize};
 pub struct App {
@@ -65,13 +65,13 @@ impl App {
         }
     }
 
-    fn adjust_rounding_match_left_panel(&self, rounding: Rounding) -> Rounding {
-        let mut rounding = rounding;
+    fn adjust_corner_radius_match_left_panel(&self, corner_radius: CornerRadius) -> CornerRadius {
+        let mut corner_radius = corner_radius;
         if self.state.left_panel_open {
-            rounding.nw = 0.0;
-            rounding.sw = 0.0;
+            corner_radius.nw = 0;
+            corner_radius.sw = 0;
         }
-        rounding
+        corner_radius
     }
 
     fn spawn(&self) {
@@ -89,12 +89,14 @@ impl App {
 
         egui::SidePanel::left("left_panel")
             .default_width(200.0)
-            .frame(Frame::side_top_panel(ui.style()).rounding(Rounding {
-                nw: 8.0,
-                sw: 8.0,
-                ne: 0.0,
-                se: 0.0,
-            }))
+            .frame(
+                Frame::side_top_panel(ui.style()).corner_radius(CornerRadius {
+                    nw: 8,
+                    sw: 8,
+                    ne: 0,
+                    se: 0,
+                }),
+            )
             .width_range(200.0..=max_width)
             .show_animated_inside(ui, self.state.left_panel_open, |ui| {
                 ui.add(
@@ -192,10 +194,14 @@ impl App {
     }
 
     fn ui_contents(&mut self, ui: &mut egui::Ui) {
-        let rounding = self.adjust_rounding_match_left_panel(Rounding::same(8.0));
+        let corner_radius = self.adjust_corner_radius_match_left_panel(CornerRadius::same(8));
 
         egui::CentralPanel::default()
-            .frame(Frame::default().rounding(rounding).fill(Color32::BLACK))
+            .frame(
+                Frame::default()
+                    .corner_radius(corner_radius)
+                    .fill(Color32::BLACK),
+            )
             .show_inside(ui, |ui| {
                 let app_rect = ui.max_rect();
 
@@ -270,12 +276,12 @@ impl App {
 
                 let size = tex.calc_size(rect.size(), Some(handle.size_vec2()));
                 let diff = rect.size() - size;
-                let mut rounding = Rounding::same(0.0);
+                let mut corner_radius = CornerRadius::same(0);
                 if diff.x <= 16.0 && diff.y <= 16.0 {
-                    rounding = Rounding::same(8.0);
+                    corner_radius = CornerRadius::same(8);
                 }
 
-                tex = tex.rounding(self.adjust_rounding_match_left_panel(rounding));
+                tex = tex.corner_radius(self.adjust_corner_radius_match_left_panel(corner_radius));
                 tex.paint_at(ui, Rect::from_center_size(rect.center(), size));
             } else {
                 show_center_text("Maiden in Prayer...");
@@ -314,7 +320,7 @@ impl App {
                         vec2(btn_rect.width(), btn_rect.height()),
                         btn_text.to_string(),
                     )
-                    .rounding(Rounding::same(9.0)),
+                    .corner_radius(CornerRadius::same(9)),
                 )
                 .clicked()
             {
@@ -346,11 +352,11 @@ impl App {
                 rect.set_top(rect.bottom() - 130.0);
                 rect
             },
-            self.adjust_rounding_match_left_panel(Rounding {
-                se: 8.0,
-                sw: 8.0,
-                nw: 0.0,
-                ne: 0.0,
+            self.adjust_corner_radius_match_left_panel(CornerRadius {
+                se: 8,
+                sw: 8,
+                nw: 0,
+                ne: 0,
             }),
             Color32::from_black_alpha(180),
         );

@@ -119,16 +119,16 @@ impl App {
     fn ui_contents(&mut self, ui: &mut egui::Ui) {
         ui.set_clip_rect(ui.max_rect());
 
-        let rounding = egui::Rounding {
-            nw: 0.0,
-            ne: 0.0,
-            sw: 8.0,
-            se: 8.0,
+        let corner_radius = egui::CornerRadius {
+            nw: 0,
+            ne: 0,
+            sw: 8,
+            se: 8,
         };
 
         egui::TopBottomPanel::bottom("bottom_panel")
             .exact_height(32.0)
-            .frame(egui::Frame::default().rounding(rounding))
+            .frame(egui::Frame::default().corner_radius(corner_radius))
             .show_animated_inside(ui, !self.state.msg.is_empty(), |ui| {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     ui.add_space(8.0);
@@ -146,7 +146,7 @@ impl App {
             });
 
         egui::CentralPanel::default()
-            .frame(egui::Frame::central_panel(ui.style()).rounding(rounding))
+            .frame(egui::Frame::central_panel(ui.style()).corner_radius(corner_radius))
             .show_inside(ui, |ui| {
                 fn directory_line(ui: &mut egui::Ui, path: &mut String, label: &str) {
                     ui.horizontal(|ui| {

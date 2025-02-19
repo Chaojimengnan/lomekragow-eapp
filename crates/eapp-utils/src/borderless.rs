@@ -65,17 +65,17 @@ pub fn window_frame(
     ctx: &egui::Context,
     fill: Option<Color32>,
 ) -> egui::containers::panel::CentralPanel {
-    let rounding = if !ctx.input(|i| i.viewport().fullscreen.unwrap_or(false)) {
-        8.0.into()
+    let corner_radius = if !ctx.input(|i| i.viewport().fullscreen.unwrap_or(false)) {
+        8.into()
     } else {
-        0.0.into()
+        0.into()
     };
 
     let frame = egui::Frame {
         fill: fill.unwrap_or(ctx.style().visuals.window_fill()),
-        rounding,
+        corner_radius,
         stroke: ctx.style().visuals.widgets.noninteractive.bg_stroke,
-        outer_margin: 0.5.into(),
+        outer_margin: 1.into(),
         ..Default::default()
     };
 
@@ -205,9 +205,9 @@ pub fn close_maximize_minimize(
 
         ui.painter().rect_filled(
             frame_rect,
-            egui::Rounding {
-                ne: 8.0,
-                ..egui::Rounding::ZERO
+            egui::CornerRadius {
+                ne: 8,
+                ..egui::CornerRadius::ZERO
             },
             f_col,
         );
@@ -215,9 +215,9 @@ pub fn close_maximize_minimize(
         if ui
             .add(
                 new_button(codicons::ICON_CHROME_CLOSE.to_string())
-                    .rounding(egui::Rounding {
-                        ne: 8.0,
-                        ..egui::Rounding::ZERO
+                    .corner_radius(egui::CornerRadius {
+                        ne: 8,
+                        ..egui::CornerRadius::ZERO
                     })
                     .hover(Color32::from_rgb(200, 5, 5)),
             )
