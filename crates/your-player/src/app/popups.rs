@@ -1,5 +1,5 @@
 use crate::{
-    app::{opts_highlight, END_REACHED_LIST},
+    app::{END_REACHED_LIST, opts_highlight},
     mpv,
 };
 use eframe::egui::{self, Vec2b};

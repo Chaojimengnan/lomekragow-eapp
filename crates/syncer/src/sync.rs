@@ -96,8 +96,9 @@ impl Syncer {
         let (result_sender, receiver) = std::sync::mpsc::channel();
 
         let ctx = ctx.clone();
-        let handle = std::thread::spawn(move || loop {
-            macro_rules! handle_cancel_or_disconnected {
+        let handle = std::thread::spawn(move || {
+            loop {
+                macro_rules! handle_cancel_or_disconnected {
                 (cancel => $cancel_expr:expr, disconnect => $disconnect_expr:expr) => {
                     match cmd_receiver.try_recv() {
                         Ok(SyncCmd::Cancel) => $cancel_expr,
@@ -113,77 +114,78 @@ impl Syncer {
                 };
             }
 
-            let mut buffer = [0u8; 1024 * 1024];
+                let mut buffer = [0u8; 1024 * 1024];
 
-            match cmd_receiver.recv() {
-                Ok(SyncCmd::Sync(items)) => {
-                    for (i, item) in items.iter().enumerate().filter(|(_, v)| v.is_some()) {
-                        handle_cancel_or_disconnected!(cancel => break, disconnect => return);
-                        let item = item.as_ref().unwrap();
-                        let mut do_sync = || -> Result<bool, Box<dyn std::error::Error>> {
-                            let source = item.source_path.as_path();
-                            let target = item.target_path.as_path();
+                match cmd_receiver.recv() {
+                    Ok(SyncCmd::Sync(items)) => {
+                        for (i, item) in items.iter().enumerate().filter(|(_, v)| v.is_some()) {
+                            handle_cancel_or_disconnected!(cancel => break, disconnect => return);
+                            let item = item.as_ref().unwrap();
+                            let mut do_sync = || -> Result<bool, Box<dyn std::error::Error>> {
+                                let source = item.source_path.as_path();
+                                let target = item.target_path.as_path();
 
-                            if item.cmd == ItemCmd::Delete {
-                                std::fs::remove_file(target)?;
-                                return Ok(false);
-                            }
-
-                            if let Some(target_dir) = target.parent() {
-                                std::fs::create_dir_all(target_dir)?;
-                            }
-
-                            let source_meta = source.metadata()?;
-                            if source_meta.len() <= 128 * 1024 * 1024 {
-                                std::fs::copy(source, target)?;
-                            } else {
-                                let mut source_file = std::fs::File::open(source)?;
-                                let mut target_file = std::fs::File::create(target)?;
-
-                                let mut bytes_read = 0;
-                                while let Ok(n) = source_file.read(&mut buffer[..]) {
-                                    if n == 0 {
-                                        break;
-                                    }
-
-                                    handle_cancel_or_disconnected!({
-                                        drop(target_file);
-                                        let _ = std::fs::remove_file(target);
-                                        return Ok(true);
-                                    });
-
-                                    bytes_read += n;
-                                    target_file.write_all(&buffer[..n])?; // 将读取的数据写入目标文件
-
-                                    ctx.request_repaint();
-                                    let _ = result_sender.send(SyncResult::Pending((
-                                        i,
-                                        bytes_read as f32 / source_meta.len() as f32,
-                                    )));
+                                if item.cmd == ItemCmd::Delete {
+                                    std::fs::remove_file(target)?;
+                                    return Ok(false);
                                 }
 
-                                target_file.set_permissions(source_meta.permissions())?;
-                                target_file.set_modified(source_meta.modified()?)?;
-                            }
+                                if let Some(target_dir) = target.parent() {
+                                    std::fs::create_dir_all(target_dir)?;
+                                }
 
-                            Ok(false)
-                        };
+                                let source_meta = source.metadata()?;
+                                if source_meta.len() <= 128 * 1024 * 1024 {
+                                    std::fs::copy(source, target)?;
+                                } else {
+                                    let mut source_file = std::fs::File::open(source)?;
+                                    let mut target_file = std::fs::File::create(target)?;
 
-                        let result = match do_sync() {
-                            Ok(true) => break,
-                            Ok(false) => Ok(()),
-                            Err(err) => Err(err.to_string()),
-                        };
+                                    let mut bytes_read = 0;
+                                    while let Ok(n) = source_file.read(&mut buffer[..]) {
+                                        if n == 0 {
+                                            break;
+                                        }
 
+                                        handle_cancel_or_disconnected!({
+                                            drop(target_file);
+                                            let _ = std::fs::remove_file(target);
+                                            return Ok(true);
+                                        });
+
+                                        bytes_read += n;
+                                        target_file.write_all(&buffer[..n])?; // 将读取的数据写入目标文件
+
+                                        ctx.request_repaint();
+                                        let _ = result_sender.send(SyncResult::Pending((
+                                            i,
+                                            bytes_read as f32 / source_meta.len() as f32,
+                                        )));
+                                    }
+
+                                    target_file.set_permissions(source_meta.permissions())?;
+                                    target_file.set_modified(source_meta.modified()?)?;
+                                }
+
+                                Ok(false)
+                            };
+
+                            let result = match do_sync() {
+                                Ok(true) => break,
+                                Ok(false) => Ok(()),
+                                Err(err) => Err(err.to_string()),
+                            };
+
+                            ctx.request_repaint();
+                            let _ = result_sender.send(SyncResult::Complete((i, result)));
+                        }
                         ctx.request_repaint();
-                        let _ = result_sender.send(SyncResult::Complete((i, result)));
+                        let _ = result_sender.send(SyncResult::CompleteAll);
                     }
-                    ctx.request_repaint();
-                    let _ = result_sender.send(SyncResult::CompleteAll);
-                }
-                Ok(SyncCmd::Cancel) => unreachable!(),
-                Err(_) => return,
-            };
+                    Ok(SyncCmd::Cancel) => unreachable!(),
+                    Err(_) => return,
+                };
+            }
         });
 
         let synchronizing = false;

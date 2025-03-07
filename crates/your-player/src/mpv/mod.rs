@@ -1,11 +1,11 @@
 use libmpv::{
+    Mpv,
     events::EventContext,
     render::{OpenGLInitParams, RenderContext, RenderParam, RenderParamApiType},
-    Mpv,
 };
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
     Arc,
+    atomic::{AtomicBool, Ordering},
 };
 
 pub mod player;
@@ -92,49 +92,53 @@ impl BasicMpvWrapper {
 pub unsafe fn get_texture(
     gl: &eframe::glow::Context,
 ) -> Result<eframe::glow::Texture, Box<dyn std::error::Error>> {
-    use eframe::glow::{self, HasContext};
-    let tex = gl.create_texture()?;
+    unsafe {
+        use eframe::glow::{self, HasContext};
+        let tex = gl.create_texture()?;
 
-    gl.bind_texture(glow::TEXTURE_2D, Some(tex));
-    gl.tex_parameter_i32(
-        glow::TEXTURE_2D,
-        glow::TEXTURE_MIN_FILTER,
-        glow::LINEAR as _,
-    );
-    gl.tex_parameter_i32(
-        glow::TEXTURE_2D,
-        glow::TEXTURE_MAG_FILTER,
-        glow::LINEAR as _,
-    );
-    gl.bind_texture(glow::TEXTURE_2D, None);
+        gl.bind_texture(glow::TEXTURE_2D, Some(tex));
+        gl.tex_parameter_i32(
+            glow::TEXTURE_2D,
+            glow::TEXTURE_MIN_FILTER,
+            glow::LINEAR as _,
+        );
+        gl.tex_parameter_i32(
+            glow::TEXTURE_2D,
+            glow::TEXTURE_MAG_FILTER,
+            glow::LINEAR as _,
+        );
+        gl.bind_texture(glow::TEXTURE_2D, None);
 
-    eframe::egui_glow::check_for_gl_error!(gl);
+        eframe::egui_glow::check_for_gl_error!(gl);
 
-    Ok(tex)
+        Ok(tex)
+    }
 }
 
 #[allow(clippy::missing_safety_doc)]
 pub unsafe fn get_frame_buffer_with_texture(
     gl: &eframe::glow::Context,
 ) -> Result<(eframe::glow::Framebuffer, eframe::glow::Texture), Box<dyn std::error::Error>> {
-    use eframe::glow::{self, HasContext};
-    let tex = get_texture(gl)?;
-    let fbo = gl.create_framebuffer()?;
+    unsafe {
+        use eframe::glow::{self, HasContext};
+        let tex = get_texture(gl)?;
+        let fbo = gl.create_framebuffer()?;
 
-    gl.bind_texture(glow::TEXTURE_2D, Some(tex));
-    gl.bind_framebuffer(glow::FRAMEBUFFER, Some(fbo));
-    gl.framebuffer_texture_2d(
-        glow::FRAMEBUFFER,
-        glow::COLOR_ATTACHMENT0,
-        glow::TEXTURE_2D,
-        Some(tex),
-        0,
-    );
+        gl.bind_texture(glow::TEXTURE_2D, Some(tex));
+        gl.bind_framebuffer(glow::FRAMEBUFFER, Some(fbo));
+        gl.framebuffer_texture_2d(
+            glow::FRAMEBUFFER,
+            glow::COLOR_ATTACHMENT0,
+            glow::TEXTURE_2D,
+            Some(tex),
+            0,
+        );
 
-    gl.bind_framebuffer(glow::FRAMEBUFFER, None);
-    gl.bind_texture(glow::TEXTURE_2D, None);
+        gl.bind_framebuffer(glow::FRAMEBUFFER, None);
+        gl.bind_texture(glow::TEXTURE_2D, None);
 
-    eframe::egui_glow::check_for_gl_error!(gl);
+        eframe::egui_glow::check_for_gl_error!(gl);
 
-    Ok((fbo, tex))
+        Ok((fbo, tex))
+    }
 }

@@ -1,7 +1,7 @@
 use crate::{img_finder::ImgFinder, tex_loader::TexLoader};
 use eapp_utils::widgets::PlainButton;
 use eframe::egui::{
-    self, pos2, vec2, Align2, Color32, CornerRadius, FontId, Frame, Id, Rect, UiBuilder, Vec2b,
+    self, Align2, Color32, CornerRadius, FontId, Frame, Id, Rect, UiBuilder, Vec2b, pos2, vec2,
 };
 use serde::{Deserialize, Serialize};
 pub struct App {

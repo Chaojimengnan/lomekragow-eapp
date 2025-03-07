@@ -1,8 +1,8 @@
 use crate::mpv::{self, player::PlayState};
 use eapp_utils::widgets::PlainButton;
 use eframe::egui::{
-    self, load::SizedTexture, pos2, vec2, Align2, Color32, CornerRadius, FontId, Frame, Id, Rect,
-    Sense, Stroke, UiBuilder, ViewportCommand,
+    self, Align2, Color32, CornerRadius, FontId, Frame, Id, Rect, Sense, Stroke, UiBuilder,
+    ViewportCommand, load::SizedTexture, pos2, vec2,
 };
 
 impl super::App {

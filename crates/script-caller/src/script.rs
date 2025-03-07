@@ -203,14 +203,14 @@ impl Loader {
             .unwrap()
             .join(Self::FILENAME);
 
-        let script_path = serde_json::from_str::<Value>(&std::fs::read_to_string(path)?)?
-            ["python_path"]
-            .as_str()
-            .ok_or(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "Cannot found 'script_path' in json",
-            ))?
-            .to_owned();
+        let script_path =
+            serde_json::from_str::<Value>(&std::fs::read_to_string(path)?)?["python_path"]
+                .as_str()
+                .ok_or(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "Cannot found 'script_path' in json",
+                ))?
+                .to_owned();
 
         let mut this = serde_json::from_str::<Loader>(&std::fs::read_to_string(format!(
             "{}/{}",
@@ -236,7 +236,7 @@ pub fn runas_admin(script_path: &str, args: &str) -> anyhow::Result<()> {
     unsafe {
         use windows_sys::Win32::Foundation::GetLastError;
         use windows_sys::Win32::UI::Shell::{
-            ShellExecuteExW, SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW, SHELLEXECUTEINFOW_0,
+            SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW, SHELLEXECUTEINFOW_0, ShellExecuteExW,
         };
 
         let mut args: Vec<_> = format!("python -i \"{}\" {}", script_path, args)

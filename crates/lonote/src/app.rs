@@ -1,10 +1,10 @@
 use crate::codec;
 use eframe::egui::{
-    self,
+    self, Color32, Margin, UiBuilder, Vec2,
     text::{CCursor, CCursorRange},
     text_edit::TextEditOutput,
     text_selection::text_cursor_state::{byte_index_from_char_index, cursor_rect},
-    vec2, Color32, Margin, UiBuilder, Vec2,
+    vec2,
 };
 use std::{
     borrow::Cow,

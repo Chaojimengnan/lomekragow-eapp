@@ -1,7 +1,7 @@
 //! Contains borderless application related utils
 
 use crate::{codicons, widgets::PlainButton};
-use eframe::egui::{self, vec2, Color32, CursorIcon, ResizeDirection, UiBuilder, ViewportCommand};
+use eframe::egui::{self, Color32, CursorIcon, ResizeDirection, UiBuilder, ViewportCommand, vec2};
 
 // https://github.com/emilk/egui/pull/3762
 pub fn handle_resize(ui: &mut egui::Ui) -> bool {

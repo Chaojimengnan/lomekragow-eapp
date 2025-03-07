@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use swash::{
-    scale::{ScaleContext, Scaler},
     FontRef, GlyphMetrics,
+    scale::{ScaleContext, Scaler},
 };
 
 pub struct FontData {

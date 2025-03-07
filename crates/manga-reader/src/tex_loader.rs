@@ -46,65 +46,67 @@ impl TexLoader {
         let textures = HashMap::new();
 
         let ctx = ctx.clone();
-        std::thread::spawn(move || loop {
-            match cmd_receiver.recv() {
-                Ok(cmd) => match cmd {
-                    LoadCommand::Load(image_path) => eapp_utils::capture_error!(
-                        error => log::warn!("error when load image '{image_path}': {error}"),
-                        {
-                            let content = std::fs::read(&image_path)?;
-                            match image::guess_format(&content)? {
-                                image::ImageFormat::Gif => {
-                                    let frames = (
-                                        image_path.clone(),
-                                        Image::Animated(
-                                            image::codecs::gif::GifDecoder::new(std::io::Cursor::new(content))?
-                                                .into_frames()
-                                                .collect_frames()?
-                                                .into_iter()
-                                                .map(|frame| {
-                                                    let (num, den) = frame.delay().numer_denom_ms();
-                                                    (
-                                                        egui::ColorImage::from_rgba_unmultiplied(
-                                                            [
-                                                                frame.buffer().width() as _,
-                                                                frame.buffer().height() as _,
-                                                            ],
-                                                            frame.buffer(),
-                                                        ),
-                                                        (num as f32 * 1000.0 / den as f32) as _,
-                                                    )
-                                                })
-                                                .collect(),
-                                        ),
-                                    );
-                                    image_sender.send(frames).unwrap();
-                                }
-                                // image::ImageFormat::WebP => todo!(),
-                                fmt => {
-                                    let img = image::load_from_memory_with_format(&content, fmt)?;
-                                    let size = [img.width() as _, img.height() as _];
-                                    let image_buffer = img.to_rgba8();
-                                    let pixels = image_buffer.as_flat_samples();
-
-                                    image_sender
-                                        .send((
+        std::thread::spawn(move || {
+            loop {
+                match cmd_receiver.recv() {
+                    Ok(cmd) => match cmd {
+                        LoadCommand::Load(image_path) => eapp_utils::capture_error!(
+                            error => log::warn!("error when load image '{image_path}': {error}"),
+                            {
+                                let content = std::fs::read(&image_path)?;
+                                match image::guess_format(&content)? {
+                                    image::ImageFormat::Gif => {
+                                        let frames = (
                                             image_path.clone(),
-                                            Image::Static(
-                                                egui::ColorImage::from_rgba_unmultiplied(
-                                                    size,
-                                                    pixels.as_slice(),
-                                                ),
+                                            Image::Animated(
+                                                image::codecs::gif::GifDecoder::new(std::io::Cursor::new(content))?
+                                                    .into_frames()
+                                                    .collect_frames()?
+                                                    .into_iter()
+                                                    .map(|frame| {
+                                                        let (num, den) = frame.delay().numer_denom_ms();
+                                                        (
+                                                            egui::ColorImage::from_rgba_unmultiplied(
+                                                                [
+                                                                    frame.buffer().width() as _,
+                                                                    frame.buffer().height() as _,
+                                                                ],
+                                                                frame.buffer(),
+                                                            ),
+                                                            (num as f32 * 1000.0 / den as f32) as _,
+                                                        )
+                                                    })
+                                                    .collect(),
                                             ),
-                                        ))
-                                        .unwrap();
+                                        );
+                                        image_sender.send(frames).unwrap();
+                                    }
+                                    // image::ImageFormat::WebP => todo!(),
+                                    fmt => {
+                                        let img = image::load_from_memory_with_format(&content, fmt)?;
+                                        let size = [img.width() as _, img.height() as _];
+                                        let image_buffer = img.to_rgba8();
+                                        let pixels = image_buffer.as_flat_samples();
+
+                                        image_sender
+                                            .send((
+                                                image_path.clone(),
+                                                Image::Static(
+                                                    egui::ColorImage::from_rgba_unmultiplied(
+                                                        size,
+                                                        pixels.as_slice(),
+                                                    ),
+                                                ),
+                                            ))
+                                            .unwrap();
+                                    }
                                 }
+                                ctx.request_repaint();
                             }
-                            ctx.request_repaint();
-                        }
-                    ),
-                },
-                Err(_) => return,
+                        ),
+                    },
+                    Err(_) => return,
+                }
             }
         });
 

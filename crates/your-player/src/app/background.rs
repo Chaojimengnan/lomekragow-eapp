@@ -1,5 +1,5 @@
 use crate::mpv::player::PlayState;
-use eframe::egui::{self, load::SizedTexture, vec2, Align2, CornerRadius, FontId, Rect};
+use eframe::egui::{self, Align2, CornerRadius, FontId, Rect, load::SizedTexture, vec2};
 
 impl super::App {
     pub fn ui_background(&mut self, ui: &mut egui::Ui) {

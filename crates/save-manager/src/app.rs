@@ -1,5 +1,5 @@
 use crate::save_manager::SaveManager;
-use eframe::egui::{self, collapsing_header::CollapsingState, Color32, UiBuilder, Vec2};
+use eframe::egui::{self, Color32, UiBuilder, Vec2, collapsing_header::CollapsingState};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Default)]
