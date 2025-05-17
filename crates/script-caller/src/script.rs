@@ -206,10 +206,7 @@ impl Loader {
         let script_path =
             serde_json::from_str::<Value>(&std::fs::read_to_string(path)?)?["python_path"]
                 .as_str()
-                .ok_or(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    "Cannot found 'script_path' in json",
-                ))?
+                .ok_or(std::io::Error::other("Cannot found 'script_path' in json"))?
                 .to_owned();
 
         let mut this = serde_json::from_str::<Loader>(&std::fs::read_to_string(format!(

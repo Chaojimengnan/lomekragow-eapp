@@ -15,9 +15,13 @@ pub const DEFAULT_OPTS: &str = r#"# write your own mpv options here
 hwdec=auto
 "#;
 
-pub const VIDEO_FORMAT: [&str; 24] = [
+pub const VIDEO_FORMATS: [&str; 24] = [
     "mp4", "mkv", "avi", "flv", "wmv", "webm", "vob", "mts", "ts", "m2ts", "mov", "rm", "rmvb",
     "asf", "m4v", "mpg", "mp2", "mpeg", "mpe", "mpv", "m2v", "m4v", "3gp", "f4v",
+];
+
+pub const AUDIO_FORMATS: [&str; 9] = [
+    "mp3", "wav", "ogg", "flac", "aac", "ape", "ac3", "m4a", "mka",
 ];
 
 pub fn make_time_string(seconds: f64) -> String {

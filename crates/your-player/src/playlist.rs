@@ -28,7 +28,7 @@ impl Playlist {
                     let is_valid = item_path.is_file()
                         && item_path.extension().is_some_and(|ext| {
                             let ext = ext.to_str().unwrap_or("").to_ascii_lowercase();
-                            mpv::VIDEO_FORMAT.contains(&ext.as_str())
+                            mpv::VIDEO_FORMATS.contains(&ext.as_str()) || mpv::AUDIO_FORMATS.contains(&ext.as_str())
                         });
                     if is_valid {
                         set.push(item_path.to_string_lossy().into_owned());
