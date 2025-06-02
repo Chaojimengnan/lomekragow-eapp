@@ -181,7 +181,11 @@ impl Preview {
     pub fn set_media(&mut self, media_path: &str) {
         self.clear();
 
-        if let Err(err) = self.mpv.handle.command_async(0, &["loadfile", media_path]) {
+        if let Err(err) = self
+            .mpv
+            .handle
+            .command_async(u64::MAX, &["loadfile", media_path])
+        {
             log::error!("preview set media '{media_path}' fails: {err}");
         }
     }
@@ -193,10 +197,8 @@ impl Preview {
     pub fn get(&mut self, playback_time: f64) -> Option<&glow::Texture> {
         let idx = (playback_time / self.interval) as u64;
 
-        if let Some((ready, tex)) = self.preview.get(&idx) {
-            if *ready {
-                return Some(tex);
-            }
+        if let Some((true, tex)) = self.preview.get(&idx) {
+            return Some(tex);
         }
 
         if self.cur_seek_idx == idx + 1 {
