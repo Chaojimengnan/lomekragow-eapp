@@ -33,7 +33,7 @@ impl Preview {
             .observe_property("duration", Format::Double, 0)?;
 
         let preview = HashMap::new();
-        let size = (0, 0);
+        let size = (max_size, max_size);
         let update_idx = 0;
         let cur_seek_idx = 0;
         let interval = 5.0;
@@ -75,12 +75,13 @@ impl Preview {
                         eapp_utils::capture_error!(
                             err => log::error!("preview mpv get property fails: {err}"),
                             {
-                                self.size.0 = self.mpv.handle.get_property("width")?;
-                                self.size.1 = self.mpv.handle.get_property("height")?;
-                                let scale_factor = (self.max_size as f64 / self.size.0 as f64)
-                                    .min(self.max_size as f64 / self.size.1 as f64);
-                                self.size.0 = (self.size.0 as f64 * scale_factor).round() as _;
-                                self.size.1 = (self.size.1 as f64 * scale_factor).round() as _;
+                                let width: i64 = self.mpv.handle.get_property("width")?;
+                                let height: i64 = self.mpv.handle.get_property("height")?;
+
+                                let scale_factor = (self.max_size as f64 / width as f64)
+                                    .min(self.max_size as f64 / height as f64);
+                                self.size.0 = (width as f64 * scale_factor).round() as _;
+                                self.size.1 = (height as f64 * scale_factor).round() as _;
 
                                 unsafe {
                                     gl.bind_texture(glow::TEXTURE_2D, Some(self.tex));
@@ -123,7 +124,7 @@ impl Preview {
             }
         }
 
-        if self.mpv.consume_need_update_flag() && self.size != (0, 0) {
+        if self.mpv.consume_need_update_flag() {
             if let Err(err) = self.mpv.render_ctx.render::<glow::Context>(
                 self.fbo.0.get() as _,
                 self.size.0 as _,

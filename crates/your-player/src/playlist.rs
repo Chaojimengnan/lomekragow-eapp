@@ -25,9 +25,10 @@ impl Playlist {
                 for item in WalkDir::new(&list) {
                     let item = item?;
                     let item_path = item.path();
+                    let item_ext = mpv::get_ext_lowercase(item_path);
+
                     let is_valid = item_path.is_file()
-                        && item_path.extension().is_some_and(|ext| {
-                            let ext = ext.to_str().unwrap_or("").to_ascii_lowercase();
+                        && item_ext.is_some_and(|ext| {
                             mpv::VIDEO_FORMATS.contains(&ext.as_str()) || mpv::AUDIO_FORMATS.contains(&ext.as_str())
                         });
                     if is_valid {

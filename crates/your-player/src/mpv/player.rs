@@ -1,3 +1,4 @@
+use super::{AUDIO_FORMATS, get_ext_lowercase_from_str};
 use eframe::glow::{self, HasContext};
 use libmpv::Format;
 use serde::{Deserialize, Serialize};
@@ -38,6 +39,8 @@ pub struct State {
     pub media_size: (i64, i64),
     #[serde(skip)]
     pub play_state: PlayState,
+    #[serde(skip)]
+    pub is_audio: bool,
 
     pub video_rotate: ListIdx,
 
@@ -78,6 +81,7 @@ impl Default for State {
             media_title: Default::default(),
             media_size: (0, 0),
             play_state: PlayState::Stop,
+            is_audio: false,
             video_rotate: 0,
             playback_time: 0.0,
             duration: 0.0,
@@ -114,6 +118,7 @@ impl State {
         self.subtitle_tracks.clear();
         self.cur_audio_idx = 0;
         self.cur_subtitle_idx = 0;
+        self.is_audio = false;
     }
 }
 
@@ -200,12 +205,16 @@ impl Player {
                             err => log::error!("mpv get property fails: {err}"),
                             {
                                 self.state.media_title =
-                                    self.mpv.handle.get_property("media-title")?;
-                                self.state.media_size.0 = self.mpv.handle.get_property("width")?;
-                                self.state.media_size.1 = self.mpv.handle.get_property("height")?;
+                                    self.mpv.handle.get_property("media-title").unwrap_or("None".to_string());
+                                self.state.media_size.0 = self.mpv.handle.get_property("width").unwrap_or(0);
+                                self.state.media_size.1 = self.mpv.handle.get_property("height").unwrap_or(0);
 
                                 self.set_cur_audio_idx(self.state.cur_audio_idx);
                                 self.set_cur_subtitle_idx(self.state.cur_subtitle_idx);
+
+                                if self.state.media_size == (0,0) {
+                                    return Ok(());
+                                }
 
                                 unsafe {
                                     gl.bind_texture(glow::TEXTURE_2D, Some(self.tex));
@@ -405,7 +414,11 @@ impl Player {
 
     pub fn set_media(&mut self, media_path: &str) {
         match self.mpv.handle.command_async(0, &["loadfile", media_path]) {
-            Ok(_) => self.set_play_state_internal(PlayState::Play),
+            Ok(_) => {
+                self.set_play_state_internal(PlayState::Play);
+                self.state.is_audio = get_ext_lowercase_from_str(media_path)
+                    .is_some_and(|ext| AUDIO_FORMATS.contains(&ext.as_str()));
+            }
             Err(err) => log::error!("set media '{media_path}' fails: {err}"),
         }
     }

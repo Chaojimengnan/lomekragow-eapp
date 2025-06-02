@@ -245,7 +245,9 @@ impl App {
     /// set media to player and preview, regardless playlist
     pub fn set_media(&mut self, media_path: &str) {
         self.player.set_media(media_path);
-        self.preview.set_media(media_path);
+        if !self.player.state().is_audio {
+            self.preview.set_media(media_path);
+        }
 
         let mut path = std::path::PathBuf::from(media_path);
         path.set_extension("json");
@@ -389,7 +391,9 @@ impl eframe::App for App {
             let gl = frame.gl().unwrap();
 
             self.player.update(gl);
-            self.preview.update(gl);
+            if !self.player.state().is_audio {
+                self.preview.update(gl);
+            }
 
             self.ui_background(ui);
 

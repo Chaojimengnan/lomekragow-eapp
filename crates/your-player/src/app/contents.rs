@@ -183,11 +183,13 @@ impl super::App {
                         .show(ui.ctx(), |ui| {
                             let (_, rect) = ui.allocate_space(size);
 
-                            if let Some(tex) = self.preview.get(hover_playback_time) {
-                                if let Some(tex_id) = self.tex_register.get(*tex) {
-                                    egui::Image::from_texture(SizedTexture::new(tex_id, size))
-                                        .corner_radius(4)
-                                        .paint_at(ui, rect);
+                            if !self.player.state().is_audio {
+                                if let Some(tex) = self.preview.get(hover_playback_time) {
+                                    if let Some(tex_id) = self.tex_register.get(*tex) {
+                                        egui::Image::from_texture(SizedTexture::new(tex_id, size))
+                                            .corner_radius(4)
+                                            .paint_at(ui, rect);
+                                    }
                                 }
                             }
 

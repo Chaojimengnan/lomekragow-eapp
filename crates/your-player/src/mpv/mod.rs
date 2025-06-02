@@ -3,9 +3,12 @@ use libmpv::{
     events::EventContext,
     render::{OpenGLInitParams, RenderContext, RenderParam, RenderParamApiType},
 };
-use std::sync::{
-    Arc,
-    atomic::{AtomicBool, Ordering},
+use std::{
+    path::Path,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
 };
 
 pub mod player;
@@ -23,6 +26,16 @@ pub const VIDEO_FORMATS: [&str; 24] = [
 pub const AUDIO_FORMATS: [&str; 9] = [
     "mp3", "wav", "ogg", "flac", "aac", "ape", "ac3", "m4a", "mka",
 ];
+
+pub fn get_ext_lowercase_from_str(filename: &str) -> Option<String> {
+    get_ext_lowercase(Path::new(filename))
+}
+
+pub fn get_ext_lowercase(filename: &Path) -> Option<String> {
+    filename
+        .extension()
+        .map(|ext| ext.to_str().unwrap_or("").to_ascii_lowercase())
+}
 
 pub fn make_time_string(seconds: f64) -> String {
     let hour = (seconds / 3600.0) as i32;

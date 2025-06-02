@@ -10,11 +10,20 @@ impl super::App {
     }
 
     fn ui_show_cur_video_frame(&mut self, ui: &egui::Ui, rect: egui::Rect) {
-        if self.player.state().play_state == PlayState::Stop {
+        let state = self.player.state();
+        let playing_no_cover_audio = state.is_audio && state.media_size == (0, 0);
+
+        let welcome_text = if playing_no_cover_audio {
+            state.media_title.as_str()
+        } else {
+            "your player :)"
+        };
+
+        if self.player.state().play_state == PlayState::Stop || playing_no_cover_audio {
             ui.painter().text(
                 rect.center(),
                 Align2::CENTER_CENTER,
-                "your player :)",
+                welcome_text,
                 FontId::proportional(16.0),
                 ui.visuals().text_color(),
             );
