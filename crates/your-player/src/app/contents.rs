@@ -125,7 +125,7 @@ impl super::App {
         painter.rect_filled(
             {
                 let mut rect = sense_rect;
-                rect.set_top(rect.bottom() - 15.5);
+                rect.set_top(rect.bottom() - 16.0);
                 rect
             },
             self.adjust_fullscreen(

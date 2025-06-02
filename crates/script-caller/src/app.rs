@@ -208,7 +208,7 @@ impl App {
         ui.horizontal(|ui| {
             egui::ScrollArea::horizontal().show(ui, |ui| {
                 let cur_sel_tag = &mut self.cur_sel_tag;
-                Self::auto_selectable(ui, cur_sel_tag, None, "全部", t_changed);
+                Self::auto_selectable(ui, cur_sel_tag, None, "ALL", t_changed);
                 for (i, tag) in self.loader.tag_list.iter().enumerate() {
                     Self::auto_selectable(ui, cur_sel_tag, Some(i), tag, t_changed);
                 }
