@@ -239,7 +239,6 @@ impl super::App {
                                 .on_hover_text(text)
                                 .clicked()
                             {
-                                self.state.playback_changed = true;
                                 self.player.seek(danmu.playback_time, false);
                             }
                             ui.end_row();

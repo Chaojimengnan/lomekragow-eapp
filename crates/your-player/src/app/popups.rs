@@ -30,7 +30,6 @@ impl super::App {
                 }
 
                 if let Some(clicked_time) = clicked {
-                    self.state.playback_changed = true;
                     self.player.seek(*clicked_time, false);
                 };
             });

@@ -16,6 +16,7 @@ pub mod preview;
 
 pub const DEFAULT_OPTS: &str = r#"# write your own mpv options here
 hwdec=auto
+vf=lavfi="fps=fps=60:round=down"
 "#;
 
 pub const VIDEO_FORMATS: [&str; 24] = [

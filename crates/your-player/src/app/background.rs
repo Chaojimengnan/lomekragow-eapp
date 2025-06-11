@@ -56,19 +56,9 @@ impl super::App {
         if let Some(tex) = self.tex_register.get(*self.danmu.texture()) {
             let playback_time = self.player.state().playback_time;
 
-            let elapsed_time = if self.player.state().play_state.is_playing()
-                && playback_time >= 0.05
-                && !self.state.playback_changed
-            {
-                self.state.last_instant.elapsed().as_secs_f64() * self.player.state().speed
-            } else {
-                self.state.playback_changed = false;
-                playback_time - self.state.last_playback_time
-            };
+            let elapsed_time = playback_time - self.state.last_playback_time;
 
-            self.state.last_instant = std::time::Instant::now();
             self.state.last_playback_time = playback_time;
-
             self.danmu.render(ui, tex, rect, elapsed_time);
         }
     }

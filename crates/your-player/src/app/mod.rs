@@ -75,14 +75,6 @@ pub struct State {
     #[serde(skip)]
     pub last_playback_time: f64,
 
-    /// for calculating [`State::last_playback_time`]
-    /// when real playback time doesn't changes at current frame
-    #[serde(skip)]
-    pub last_instant: std::time::Instant,
-
-    /// Marks the playback time as changed and is used to calculate the correct danmu elapsed time
-    pub playback_changed: bool,
-
     /// the content rect of last frame, used by video frame
     #[serde(skip)]
     pub content_rect: egui::Rect,
@@ -147,8 +139,6 @@ impl Default for State {
             playlist_cur_sel: None,
             end_reached: EndReached::Idle,
             last_playback_time: 0.0,
-            last_instant: std::time::Instant::now(),
-            playback_changed: false,
             content_rect: egui::Rect::ZERO,
             enable_danmu: true,
             danmu_font_path: String::default(),
@@ -282,12 +272,10 @@ impl App {
     fn process_inputs(&mut self, ui: &mut egui::Ui) {
         if ui.memory(|mem| mem.focused().is_none()) {
             if ui.input(|i| i.key_pressed(egui::Key::ArrowLeft)) {
-                self.state.playback_changed = true;
                 self.player.seek(-0.5, true);
             }
 
             if ui.input(|i| i.key_pressed(egui::Key::ArrowRight)) {
-                self.state.playback_changed = true;
                 self.player.seek(0.5, true);
             }
 
