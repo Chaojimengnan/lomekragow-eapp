@@ -163,13 +163,37 @@ impl App {
                                     for (img, img_name) in
                                         self.img_finder.cur_image_set().iter().enumerate()
                                     {
-                                        if ui
+                                        let res = ui
                                             .selectable_label(
                                                 cur_image == Some(img),
                                                 &img_name[prefix..],
                                             )
-                                            .clicked()
-                                        {
+                                            .on_hover_ui_at_pointer(|ui| {
+                                                ui.set_min_size(vec2(64.0, 64.0));
+                                                if let Some(Some(texture)) =
+                                                    self.tex_loader.textures().get(img_name)
+                                                {
+                                                    use crate::tex_loader::Texture::*;
+                                                    let handle = match texture {
+                                                        Static(handle) => handle,
+                                                        Animated(animated) => {
+                                                            &animated.frames[animated.current].0
+                                                        }
+                                                    };
+                                                    ui.add(
+                                                        egui::Image::from_texture(handle)
+                                                            .max_size(vec2(256.0, 256.0)),
+                                                    );
+                                                } else {
+                                                    self.tex_loader.load(img_name);
+                                                    egui::Spinner::new().paint_at(
+                                                        ui,
+                                                        ui.available_rect_before_wrap(),
+                                                    );
+                                                }
+                                            });
+
+                                        if res.clicked() {
                                             cur_image = Some(img.to_owned());
                                         }
                                     }
