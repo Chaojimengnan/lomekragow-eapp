@@ -1,6 +1,7 @@
 use crate::codec;
+use chardetng::EncodingDetector;
 use eframe::egui::{
-    self, Color32, Margin, UiBuilder, Vec2,
+    self, Button, Margin, UiBuilder, Vec2,
     text::{CCursor, CCursorRange},
     text_edit::TextEditOutput,
     text_selection::text_cursor_state::{byte_index_from_char_index, cursor_rect},
@@ -48,18 +49,26 @@ impl Note {
         self.title = format!("{modified}{name} - lonote");
     }
 
-    pub fn read_from_file<P>(&self, path: P) -> Result<String>
+    pub fn read_from_file<P>(path: P) -> Result<(String, usize)>
     where
         P: AsRef<std::path::Path>,
     {
-        let contents = std::fs::read(path.as_ref())?;
+        let data = std::fs::read(path.as_ref())?;
 
-        if self.codec_idx == 0 {
-            return Ok(String::from_utf8_lossy(&contents).into_owned());
-        }
+        let mut detector = EncodingDetector::new();
+        detector.feed(&data, true);
+        let encoding = detector.guess(None, true);
 
-        let encoding = codec::get_codec_list()[self.codec_idx];
-        Ok(codec::decode_to_utf8(encoding, &contents))
+        let codec_list = codec::get_codec_list();
+        let codec_idx = codec_list.iter().position(|&e| e == encoding).unwrap_or(0); // 默认使用 UTF-8
+
+        let contents = if codec_idx == 0 {
+            String::from_utf8(data).map_err(|e| e.utf8_error())?
+        } else {
+            codec::decode_to_utf8(encoding, &data)
+        };
+
+        Ok((contents, codec_idx))
     }
 
     pub fn write_to_file<P>(&self, path: P) -> Result<()>
@@ -267,7 +276,14 @@ impl App {
                                 &output.state.cursor.range(&output.galley).unwrap().primary,
                                 16.0,
                             );
-                            ui.scroll_to_rect(primary_cursor_rect, None);
+
+                            ui.scroll_to_rect(
+                                egui::Rect::from_center_size(
+                                    primary_cursor_rect.center() + output.galley_pos.to_vec2(),
+                                    primary_cursor_rect.size(),
+                                ),
+                                None,
+                            );
                             ui.ctx().request_repaint();
                             output.state.store(ui.ctx(), id);
 
@@ -358,7 +374,7 @@ impl App {
             .show_inside(ui, |ui| self.ui_bottom_panel(ui));
 
         egui::CentralPanel::default()
-            .frame(egui::Frame::default().fill(Color32::from_gray(10)))
+            .frame(egui::Frame::default().fill(ui.style().visuals.extreme_bg_color))
             .show_inside(ui, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     let rect = ui.max_rect().shrink2(vec2(8.0, 0.0));
@@ -398,8 +414,27 @@ impl App {
             );
 
             ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                ui.set_clip_rect(ui.max_rect());
                 ui.add_space(8.0);
+
+                let is_dark = ui.visuals().dark_mode;
+                let theme_icon = if is_dark {
+                    eapp_utils::codicons::ICON_GITHUB_INVERTED
+                } else {
+                    eapp_utils::codicons::ICON_GITHUB
+                };
+
+                if ui
+                    .add(Button::new(theme_icon.to_string()).frame(false))
+                    .clicked()
+                {
+                    ui.ctx().set_visuals(if is_dark {
+                        egui::Visuals::light()
+                    } else {
+                        egui::Visuals::dark()
+                    });
+                }
+                ui.set_clip_rect(ui.max_rect());
+
                 ui.label(&self.note.borrow().state_msg);
             });
         });
@@ -477,19 +512,23 @@ impl App {
                 }
             }
 
-            if path.is_some() {
-                let path = path.unwrap();
+            if let Some(path) = path {
                 let last_modified_time = Note::get_modified_time(&path)?;
+                let (contents, codec_idx) = Note::read_from_file(&path)?;
 
                 let note = &mut *note.borrow_mut();
-                note.contents = note.read_from_file(&path)?;
+                note.contents = contents;
+                note.codec_idx = codec_idx;
                 note.cur_file = Some(File {
                     path,
                     last_modified_time,
                 });
                 note.modified = false;
                 note.update_title();
-                note.state_msg = "Open successfully".to_owned();
+                note.state_msg = format!(
+                    "Open successfully (Encoding: {})",
+                    codec::get_codec_list()[codec_idx].name()
+                );
             }
         });
     }
@@ -503,11 +542,17 @@ impl App {
             let note = &mut *note.borrow_mut();
             let path = note.get_path().unwrap();
             let last_modified_time = Note::get_modified_time(path)?;
-            note.contents = note.read_from_file(path)?;
+            let (contents, codec_idx) = Note::read_from_file(path)?;
+
+            note.contents = contents;
+            note.codec_idx = codec_idx;
             note.cur_file.as_mut().unwrap().last_modified_time = last_modified_time;
             note.modified = false;
             note.update_title();
-            note.state_msg = "Reopen successfully".to_owned();
+            note.state_msg = format!(
+                "Reopen successfully (Encoding: {})",
+                codec::get_codec_list()[codec_idx].name()
+            );
         });
     }
 
