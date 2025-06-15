@@ -22,12 +22,10 @@ fn main() {
             ..Default::default()
         };
 
-        let loader = script::Loader::load()?;
-
         eframe::run_native(
             "script-caller",
             options,
-            Box::new(|cc| Ok(Box::new(app::App::new(cc, loader)))),
+            Box::new(|cc| Ok(Box::new(app::App::new(cc)))),
         )?;
     });
 }

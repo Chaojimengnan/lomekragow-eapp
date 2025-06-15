@@ -13,42 +13,80 @@ pub struct App {
     cur_sel_tag: Option<usize>,
     cur_sel_script: usize,
     run_mode: RunMode,
+    info_json_path: Option<String>,
+    show_settings: bool,
+    search_query: String,
+    load_error: Option<String>,
 }
 
 impl App {
-    pub fn new(cc: &eframe::CreationContext<'_>, loader: script::Loader) -> Self {
+    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         eapp_utils::setup_fonts(&cc.egui_ctx);
+
+        let info_json_path: Option<String> = if let Some(storage) = cc.storage {
+            eframe::get_value(storage, "info_json_path").unwrap_or_default()
+        } else {
+            None
+        };
+
+        let (loader, load_error) = match script::Loader::load(info_json_path.as_deref()) {
+            Ok(loader) => (loader, None),
+            Err(err) => (script::Loader::default(), Some(err.to_string())),
+        };
+
         Self {
             loader,
             cur_sel_tag: None,
             cur_sel_script: 0,
             run_mode: RunMode::Config,
+            info_json_path,
+            show_settings: false,
+            search_query: String::new(),
+            load_error,
         }
     }
 
     fn get_cur_script(&mut self) -> Option<&mut Script> {
-        let mut iter = self.loader.script_list.iter_mut();
-
-        if self.cur_sel_tag.is_some() {
-            let cur_tag = &self.loader.tag_list[self.cur_sel_tag.unwrap()];
-            iter.filter(|script| script.tag.contains(cur_tag))
-                .nth(self.cur_sel_script)
-        } else {
-            iter.nth(self.cur_sel_script)
+        let indices = self.get_filtered_indices();
+        if indices.is_empty() {
+            return None;
         }
+
+        let script_index = indices.get(self.cur_sel_script)?;
+        self.loader.script_list.get_mut(*script_index)
     }
 
     fn get_cur_script_len(&self) -> usize {
-        if self.cur_sel_tag.is_some() {
-            let cur_tag = &self.loader.tag_list[self.cur_sel_tag.unwrap()];
-            self.loader
-                .script_list
-                .iter()
-                .filter(|script| script.tag.contains(cur_tag))
-                .count()
-        } else {
-            self.loader.script_list.len()
+        self.get_filtered_indices().len()
+    }
+
+    fn get_filtered_indices(&self) -> Vec<usize> {
+        let mut indices = Vec::new();
+
+        for (i, script) in self.loader.script_list.iter().enumerate() {
+            let tag_match = match self.cur_sel_tag {
+                Some(tag_index) => {
+                    let cur_tag = &self.loader.tag_list[tag_index];
+                    script.tag.contains(cur_tag)
+                }
+                None => true,
+            };
+
+            let search_match = if self.search_query.is_empty() {
+                true
+            } else {
+                let query = self.search_query.to_lowercase();
+                script.name.to_lowercase().contains(&query)
+                    || script.desc.join(" ").to_lowercase().contains(&query)
+                    || script.tag.iter().any(|t| t.to_lowercase().contains(&query))
+            };
+
+            if tag_match && search_match {
+                indices.push(i);
+            }
         }
+
+        indices
     }
 
     fn next_script(&mut self) {
@@ -63,38 +101,27 @@ impl App {
     }
 
     fn select_script_by_letter(&mut self, letter: char) -> bool {
-        let mut found = false;
-        let iter = self.loader.script_list.iter();
-        let cur_sel_script = self.cur_sel_script;
+        let indices = self.get_filtered_indices();
+        if indices.is_empty() {
+            return false;
+        }
 
-        let mut do_select = |iter: &mut dyn Iterator<Item = (usize, &Script)>| {
-            for (i, script) in &mut *iter {
-                if i == cur_sel_script {
+        let search_letter = letter.to_ascii_lowercase();
+
+        let start_index = (self.cur_sel_script + 1) % indices.len();
+        let mut found = false;
+
+        for i in 0..indices.len() {
+            let index = (start_index + i) % indices.len();
+            let script_index = indices[index];
+            let script = &self.loader.script_list[script_index];
+            if let Some(first_char) = script.name.chars().next() {
+                if first_char.to_ascii_lowercase() == search_letter {
+                    self.cur_sel_script = index;
+                    found = true;
                     break;
                 }
-
-                if !script.name.is_empty() {
-                    let script_letter = script.name.chars().next().unwrap().to_ascii_lowercase();
-                    if script_letter == letter {
-                        self.cur_sel_script = i;
-                        found = true;
-                        break;
-                    }
-                }
             }
-        };
-
-        if self.cur_sel_tag.is_some() {
-            let cur_tag = &self.loader.tag_list[self.cur_sel_tag.unwrap()];
-            do_select(
-                &mut iter
-                    .filter(|script| script.tag.contains(cur_tag))
-                    .enumerate()
-                    .cycle()
-                    .skip(cur_sel_script + 1),
-            );
-        } else {
-            do_select(&mut iter.enumerate().cycle().skip(cur_sel_script + 1));
         }
 
         found
@@ -155,6 +182,15 @@ impl App {
 
     fn ui_title_bar(&mut self, ui: &mut egui::Ui, title_bar_rect: egui::Rect) {
         eapp_utils::borderless::title_bar(ui, title_bar_rect, |ui| {
+            ui.add_space(8.0);
+
+            let button = egui::Button::new(eapp_utils::codicons::ICON_SETTINGS_GEAR.to_string())
+                .frame(false);
+
+            if ui.add(button).on_hover_text("Settings").clicked() {
+                self.show_settings = !self.show_settings;
+            }
+
             ui.painter().text(
                 title_bar_rect.center(),
                 egui::Align2::CENTER_CENTER,
@@ -206,6 +242,14 @@ impl App {
         }
 
         ui.horizontal(|ui| {
+            ui.add(egui::TextEdit::singleline(&mut self.search_query).desired_width(f32::INFINITY));
+        });
+
+        if self.load_error.is_some() {
+            return;
+        }
+
+        ui.horizontal(|ui| {
             egui::ScrollArea::horizontal().show(ui, |ui| {
                 let cur_sel_tag = &mut self.cur_sel_tag;
                 Self::auto_selectable(ui, cur_sel_tag, None, "ALL", t_changed);
@@ -217,23 +261,32 @@ impl App {
 
         egui::ScrollArea::vertical().show(ui, |ui| {
             ui.with_layout(egui::Layout::top_down_justified(egui::Align::LEFT), |ui| {
-                let iter = self.loader.script_list.iter();
-                let show_selectable = |(i, script): (usize, &Script)| {
-                    Self::auto_selectable(ui, &mut self.cur_sel_script, i, &script.name, s_changed);
-                };
-                if self.cur_sel_tag.is_some() {
-                    let cur_tag = &self.loader.tag_list[self.cur_sel_tag.unwrap()];
-                    iter.filter(|script| script.tag.contains(cur_tag))
-                        .enumerate()
-                        .for_each(show_selectable);
-                } else {
-                    iter.enumerate().for_each(show_selectable);
+                let indices = self.get_filtered_indices();
+
+                if indices.is_empty() {
+                    return;
+                }
+
+                for (display_index, &script_index) in indices.iter().enumerate() {
+                    let script = &self.loader.script_list[script_index];
+                    Self::auto_selectable(
+                        ui,
+                        &mut self.cur_sel_script,
+                        display_index,
+                        &script.name,
+                        s_changed,
+                    );
                 }
             })
         });
     }
 
     fn ui_right_panel(&mut self, ui: &mut egui::Ui) {
+        if let Some(err) = &self.load_error {
+            ui.label(err);
+            return;
+        }
+
         let script = self.get_cur_script();
         if script.is_none() {
             ui.heading("No script selected");
@@ -311,6 +364,61 @@ impl App {
             });
         }
     }
+
+    fn ui_settings(&mut self, ctx: &egui::Context) {
+        let mut show_settings = self.show_settings;
+
+        egui::Window::new("Settings")
+            .open(&mut show_settings)
+            .collapsible(false)
+            .show(ctx, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label("info.json");
+
+                    let mut path_str = self.info_json_path.clone().unwrap_or_default();
+                    if ui.text_edit_singleline(&mut path_str).changed() {
+                        self.info_json_path = if path_str.is_empty() {
+                            None
+                        } else {
+                            Some(path_str.clone())
+                        };
+                    }
+
+                    let button = egui::Button::new(eapp_utils::codicons::ICON_SEARCH.to_string())
+                        .frame(false);
+                    if ui.add(button).clicked() {
+                        if let Some(open_path) = rfd::FileDialog::new()
+                            .add_filter("JSON files", &["json"])
+                            .set_directory(std::env::current_dir().unwrap_or_default())
+                            .pick_file()
+                        {
+                            self.info_json_path = Some(open_path.to_string_lossy().to_string());
+                        }
+                    }
+                });
+
+                ui.separator();
+
+                ui.horizontal(|ui| {
+                    if ui.button("Cancel").clicked() {
+                        self.show_settings = false;
+                    }
+
+                    if ui.button("Reload").clicked() {
+                        (self.loader, self.load_error) =
+                            match script::Loader::load(self.info_json_path.as_deref()) {
+                                Ok(loader) => (loader, None),
+                                Err(err) => (script::Loader::default(), Some(err.to_string())),
+                            };
+
+                        self.cur_sel_tag = None;
+                        self.cur_sel_script = 0;
+                    }
+                });
+            });
+
+        self.show_settings = show_settings;
+    }
 }
 
 impl eframe::App for App {
@@ -318,7 +426,15 @@ impl eframe::App for App {
         egui::Rgba::TRANSPARENT.to_array()
     }
 
+    fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        eframe::set_value(storage, "info_json_path", &self.info_json_path);
+    }
+
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
+        if self.show_settings {
+            self.ui_settings(ctx);
+        }
+
         eapp_utils::borderless::window_frame(ctx, None).show(ctx, |ui| {
             eapp_utils::borderless::handle_resize(ui);
 

@@ -1,8 +1,7 @@
 use eapp_utils::easy_mark;
 use eframe::egui::{self, CollapsingHeader};
 use serde::Deserialize;
-use serde_json::Value;
-use std::{collections::HashSet, fmt::Write};
+use std::{collections::HashSet, fmt::Write, path::Path};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "snake_case")]
@@ -183,7 +182,7 @@ impl Script {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Default, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Loader {
     pub tag_list: Vec<String>,
@@ -194,37 +193,30 @@ pub struct Loader {
 }
 
 impl Loader {
-    const FILENAME: &'static str = "python_path.json";
     const INFO_FILENAME: &'static str = "info.json";
 
-    pub fn load() -> std::io::Result<Self> {
-        let path = std::env::current_exe()?
-            .parent()
-            .unwrap()
-            .join(Self::FILENAME);
+    pub fn load(info_json_path: Option<&str>) -> anyhow::Result<Self> {
+        let script_path = info_json_path
+            .map(|path| {
+                if let Some(parent) = Path::new(path).parent() {
+                    parent.to_string_lossy().to_string()
+                } else {
+                    String::new()
+                }
+            })
+            .ok_or(anyhow::anyhow!("Invalid info json path"))?;
 
-        let script_path =
-            serde_json::from_str::<Value>(&std::fs::read_to_string(path)?)?["python_path"]
-                .as_str()
-                .ok_or(std::io::Error::other("Cannot found 'script_path' in json"))?
-                .to_owned();
-
-        let mut this = serde_json::from_str::<Loader>(&std::fs::read_to_string(format!(
-            "{}/{}",
-            script_path,
-            Self::INFO_FILENAME
-        ))?)?;
-
-        this.script_list.iter_mut().for_each(|script| {
+        let info_path = format!("{}/{}", script_path, Self::INFO_FILENAME);
+        let json = std::fs::read_to_string(&info_path)?;
+        let mut loader = serde_json::from_str::<Loader>(&json)?;
+        loader.script_list.iter_mut().for_each(|script| {
             script
                 .args
                 .iter_mut()
                 .for_each(|arg| arg.initialize_value())
         });
-
-        this.script_path = script_path;
-
-        Ok(this)
+        loader.script_path = script_path;
+        Ok(loader)
     }
 }
 
@@ -263,10 +255,8 @@ pub fn runas_admin(script_path: &str, args: &str) -> anyhow::Result<()> {
             hProcess: 0,
         };
 
-        ShellExecuteExW(std::ptr::from_mut(&mut info));
-
-        let error_code = GetLastError();
-        if error_code != 0 {
+        if ShellExecuteExW(&mut info) == 0 {
+            let error_code = GetLastError();
             anyhow::bail!("error with code: {error_code}");
         }
     }
@@ -288,20 +278,4 @@ pub fn runas_normal(script_path: &str, args: &str) -> anyhow::Result<()> {
         .spawn()?;
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    pub fn load_test() -> std::io::Result<()> {
-        let loader = Loader::load()?;
-        println!("{:?}", loader);
-        println!("\n\n");
-        for script in &loader.script_list {
-            println!("{}", script.generate_args_string());
-        }
-        Ok(())
-    }
 }

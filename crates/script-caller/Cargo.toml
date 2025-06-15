@@ -13,6 +13,7 @@ eframe.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 anyhow.workspace = true
+rfd = "0.13"
 
 [target.'cfg(windows)'.dependencies.windows-sys]
 version = "0.52"
