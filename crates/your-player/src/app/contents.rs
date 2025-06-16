@@ -1,7 +1,10 @@
 use crate::mpv::{self, player::PlayState};
-use eapp_utils::widgets::{
-    progress_bar::{ProgressBar, draw_progress_bar_background, value_from_x},
-    simple_widgets::{PlainButton, popup_animated, text_in_center_bottom_of_rect},
+use eapp_utils::{
+    codicons::{ICON_TRIANGLE_LEFT, ICON_TRIANGLE_RIGHT},
+    widgets::{
+        progress_bar::{ProgressBar, draw_progress_bar_background, value_from_x},
+        simple_widgets::{PlainButton, popup_animated, text_in_center_bottom_of_rect},
+    },
 };
 use eframe::egui::{
     self, Align2, Color32, CornerRadius, FontId, Frame, Id, Rect, UiBuilder, ViewportCommand,
@@ -65,9 +68,9 @@ impl super::App {
         sense_rect: eframe::epaint::Rect,
     ) {
         let btn_text = if self.state.playlist_open {
-            eapp_utils::codicons::ICON_TRIANGLE_LEFT
+            ICON_TRIANGLE_LEFT
         } else {
-            eapp_utils::codicons::ICON_TRIANGLE_RIGHT
+            ICON_TRIANGLE_RIGHT
         };
 
         let opacity = ui.ctx().animate_bool(

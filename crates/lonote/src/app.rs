@@ -1,5 +1,8 @@
 use crate::codec;
 use chardetng::EncodingDetector;
+use eapp_utils::codicons::{
+    ICON_GITHUB, ICON_GITHUB_INVERTED, ICON_TRIANGLE_DOWN, ICON_TRIANGLE_UP,
+};
 use eframe::egui::{
     self, Button, Margin, UiBuilder, Vec2,
     text::{CCursor, CCursorRange},
@@ -417,9 +420,9 @@ impl App {
 
                 let is_dark = ui.visuals().dark_mode;
                 let theme_icon = if is_dark {
-                    eapp_utils::codicons::ICON_GITHUB_INVERTED
+                    ICON_GITHUB_INVERTED
                 } else {
-                    eapp_utils::codicons::ICON_GITHUB
+                    ICON_GITHUB
                 };
 
                 if ui
@@ -451,9 +454,9 @@ impl App {
 
                         ui.label(format!(
                             " {}[{}] {}[{}]",
-                            eapp_utils::codicons::ICON_TRIANGLE_DOWN,
+                            ICON_TRIANGLE_DOWN,
                             ui.ctx().format_shortcut(&Self::SEARCH_DOWN),
-                            eapp_utils::codicons::ICON_TRIANGLE_UP,
+                            ICON_TRIANGLE_UP,
                             ui.ctx().format_shortcut(&Self::SEARCH_UP)
                         ));
                     });

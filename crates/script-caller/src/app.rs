@@ -1,4 +1,5 @@
 use crate::script::{self, Script};
+use eapp_utils::codicons::{ICON_FOLDER, ICON_FOLDER_OPENED, ICON_SEARCH, ICON_SETTINGS_GEAR};
 use eframe::egui::{self, Event, Key, Margin, UiBuilder, Vec2, Vec2b};
 
 #[derive(PartialEq, Eq)]
@@ -192,17 +193,16 @@ impl App {
         eapp_utils::borderless::title_bar(ui, title_bar_rect, |ui| {
             ui.add_space(8.0);
 
-            let button = egui::Button::new(eapp_utils::codicons::ICON_SETTINGS_GEAR.to_string())
-                .frame(false);
+            let button = egui::Button::new(ICON_SETTINGS_GEAR.to_string()).frame(false);
 
             if ui.add(button).on_hover_text("Settings").clicked() {
                 self.show_settings = !self.show_settings;
             }
 
             let button_icon = if self.show_cwd {
-                eapp_utils::codicons::ICON_FOLDER_OPENED.to_string()
+                ICON_FOLDER_OPENED.to_string()
             } else {
-                eapp_utils::codicons::ICON_FOLDER.to_string()
+                ICON_FOLDER.to_string()
             };
             let response = ui.add(egui::Button::new(button_icon).frame(false));
 
@@ -411,8 +411,7 @@ impl App {
                         };
                     }
 
-                    let button = egui::Button::new(eapp_utils::codicons::ICON_SEARCH.to_string())
-                        .frame(false);
+                    let button = egui::Button::new(ICON_SEARCH.to_string()).frame(false);
                     if ui.add(button).clicked() {
                         if let Some(open_path) = rfd::FileDialog::new()
                             .add_filter("JSON files", &["json"])
