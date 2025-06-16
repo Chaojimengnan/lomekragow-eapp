@@ -59,7 +59,7 @@ impl Note {
         detector.feed(&data, true);
         let encoding = detector.guess(None, true);
 
-        let codec_list = codec::get_codec_list();
+        let codec_list = codec::supported_encodings();
         let codec_idx = codec_list.iter().position(|&e| e == encoding).unwrap_or(0); // 默认使用 UTF-8
 
         let contents = if codec_idx == 0 {
@@ -79,7 +79,7 @@ impl Note {
             return Ok(std::fs::write(path, &self.contents)?);
         }
 
-        let encoding = codec::get_codec_list()[self.codec_idx];
+        let encoding = codec::supported_encodings()[self.codec_idx];
         Ok(std::fs::write(
             path,
             codec::encode_from_utf8(encoding, &self.contents),
@@ -408,8 +408,8 @@ impl App {
             egui::ComboBox::from_id_salt("codec").show_index(
                 ui,
                 &mut self.note.borrow_mut().codec_idx,
-                codec::get_codec_list().len(),
-                |i| codec::get_codec_list()[i].name(),
+                codec::supported_encodings().len(),
+                |i| codec::supported_encodings()[i].name(),
             );
 
             ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
@@ -526,7 +526,7 @@ impl App {
                 note.update_title();
                 note.state_msg = format!(
                     "Open successfully (Encoding: {})",
-                    codec::get_codec_list()[codec_idx].name()
+                    codec::supported_encodings()[codec_idx].name()
                 );
             }
         });
@@ -550,7 +550,7 @@ impl App {
             note.update_title();
             note.state_msg = format!(
                 "Reopen successfully (Encoding: {})",
-                codec::get_codec_list()[codec_idx].name()
+                codec::supported_encodings()[codec_idx].name()
             );
         });
     }

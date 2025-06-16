@@ -1,6 +1,6 @@
 use encoding_rs::Encoding;
 
-pub fn get_codec_list() -> &'static [&'static Encoding] {
+pub fn supported_encodings() -> &'static [&'static Encoding] {
     use encoding_rs::*;
     static LIST: &[&Encoding; 40] = &[
         UTF_8,

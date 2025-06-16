@@ -521,7 +521,7 @@ impl App {
                     }
 
                     self.img_finder = Self::search_from_cwd(
-                        self.img_finder.clone(),
+                        std::mem::take(&mut self.img_finder),
                         Some(path.to_string_lossy().as_ref()),
                     );
                 }

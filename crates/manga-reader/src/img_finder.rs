@@ -43,14 +43,13 @@ impl ImgFinder {
 
     pub fn search_from_cwd(mut self, opt_img: Option<&str>) -> std::io::Result<Self> {
         let cwd = std::env::current_dir()?;
-
         let cwd_str = cwd.to_string_lossy().into_owned();
+
         if self.search_dir.as_ref() != Some(&cwd_str) {
             self = Self::default();
             self.search_dir = Some(cwd_str.clone());
 
-            for item in WalkDir::new(&cwd) {
-                let item = item?;
+            for item in WalkDir::new(&cwd).into_iter().filter_map(|e| e.ok()) {
                 let item_path = item.path();
                 if item_path.is_dir() && Self::is_dir_has_supported_image(item_path)? {
                     self.cur_dir_set
@@ -160,21 +159,29 @@ impl ImgFinder {
             self.cur_image_set.0.clear();
             self.dir_changed = true;
 
-            if let Ok(dir_items) = std::fs::read_dir(&self.cur_dir_set.0[dir]) {
-                for item in dir_items {
-                    if item.is_err() {
-                        log::warn!("read dir item fails: {}", item.err().unwrap());
-                        continue;
-                    }
+            let dir_path = &self.cur_dir_set.0[dir];
+            match std::fs::read_dir(dir_path) {
+                Ok(dir_items) => {
+                    for item in dir_items {
+                        if item.is_err() {
+                            log::warn!("read dir item fails: {}", item.err().unwrap());
+                            continue;
+                        }
 
-                    let item = item.unwrap().path();
-                    if item.is_file()
-                        && item
-                            .extension()
-                            .is_some_and(|ext| Self::is_supported_ext(ext.to_str().unwrap()))
-                    {
-                        self.cur_image_set.push(item.to_string_lossy().into_owned());
+                        let item = item.unwrap().path();
+                        if item.is_file()
+                            && item
+                                .extension()
+                                .is_some_and(|ext| Self::is_supported_ext(ext.to_str().unwrap()))
+                        {
+                            self.cur_image_set.push(item.to_string_lossy().into_owned());
+                        }
                     }
+                }
+                Err(e) => {
+                    log::error!("Error reading directory {}: {}", dir_path, e);
+                    self.cur_dir = None;
+                    self.cur_image = None;
                 }
             }
 
