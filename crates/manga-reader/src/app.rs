@@ -1,39 +1,49 @@
-use crate::{img_finder::ImgFinder, tex_loader::TexLoader};
-use eapp_utils::widgets::{
-    progress_bar::{ProgressBar, draw_progress_bar_background, value_from_x},
-    simple_widgets::{PlainButton, text_in_center_bottom_of_rect},
+use crate::{img_finder::ImgFinder, img_translation::ImgTranslation, tex_loader::TexLoader};
+use eapp_utils::{
+    codicons::{
+        ICON_CHROME_RESTORE, ICON_INSPECT, ICON_NEW_FILE, ICON_TRIANGLE_LEFT, ICON_TRIANGLE_RIGHT,
+    },
+    widgets::{
+        progress_bar::{ProgressBar, draw_progress_bar_background, value_from_x},
+        simple_widgets::{PlainButton, text_in_center_bottom_of_rect},
+    },
 };
 use eframe::egui::{
     self, Align2, Color32, CornerRadius, FontId, Frame, Id, Layout, Rect, UiBuilder, Vec2b,
     Widget as _, pos2, vec2,
 };
 use serde::{Deserialize, Serialize};
-pub struct App {
-    state: State,
-    img_finder: ImgFinder,
-    tex_loader: TexLoader,
-}
 
 #[derive(Deserialize, Serialize)]
 #[serde(default)]
-pub struct State {
+struct State {
+    search_key: String,
     left_panel_open: bool,
     #[serde(skip)]
-    is_loading: bool,
+    is_cur_image_loading: bool,
     #[serde(skip)]
     last_cur_dir: Option<usize>,
-    search_key: String,
+    #[serde(skip)]
+    last_image_name: Option<String>,
 }
 
 impl Default for State {
     fn default() -> Self {
         Self {
             left_panel_open: true,
-            is_loading: true,
+            is_cur_image_loading: true,
             last_cur_dir: None,
             search_key: String::default(),
+            last_image_name: None,
         }
     }
+}
+
+pub struct App {
+    state: State,
+    img_finder: ImgFinder,
+    tex_loader: TexLoader,
+    translation: ImgTranslation,
 }
 
 impl App {
@@ -54,11 +64,13 @@ impl App {
         img_finder.consume_dir_changed_flag();
 
         let tex_loader = TexLoader::new(&cc.egui_ctx);
+        let translation = ImgTranslation::default();
 
         Self {
             state,
             img_finder,
             tex_loader,
+            translation,
         }
     }
 
@@ -231,15 +243,16 @@ impl App {
                 ui.visuals().text_color(),
             )
         };
-        let opacity = ui
-            .ctx()
-            .animate_bool(Id::new("state.is_loading"), !self.state.is_loading);
+        let opacity = ui.ctx().animate_bool(
+            Id::new("state.is_cur_image_loading"),
+            !self.state.is_cur_image_loading,
+        );
 
         if let Some(cur_image_name) = self.img_finder.cur_image_name() {
             self.tex_loader.load(cur_image_name);
 
             if let Some(texture) = self.tex_loader.textures().get(cur_image_name).unwrap() {
-                self.state.is_loading = false;
+                self.state.is_cur_image_loading = false;
 
                 use crate::tex_loader::Texture::*;
                 let handle = match texture {
@@ -247,24 +260,74 @@ impl App {
                     Animated(animated) => &animated.frames[animated.current].0,
                 };
 
-                let mut tex = egui::Image::from_texture(handle)
-                    .show_loading_spinner(false)
-                    .maintain_aspect_ratio(true)
-                    .fit_to_fraction(vec2(1.0, 1.0));
+                let image_size = handle.size_vec2();
+                let available_size = rect.size();
 
-                let size = tex.calc_size(rect.size(), Some(handle.size_vec2()));
-                let diff = rect.size() - size;
-                let mut corner_radius = CornerRadius::same(0);
-                if diff.x <= 16.0 && diff.y <= 16.0 {
-                    corner_radius = CornerRadius::same(8);
+                let fit_scale = {
+                    let width_scale = available_size.x / image_size.x;
+                    let height_scale = available_size.y / image_size.y;
+                    width_scale.min(height_scale)
+                };
+                self.translation.min_scale = fit_scale.min(1.0);
+                self.translation.scale = self.translation.scale.max(self.translation.min_scale);
+
+                if self.translation.image_fit_space_size {
+                    self.translation.scale = fit_scale;
+                    self.translation.image_fit_space_size = false;
                 }
 
-                tex = tex
-                    .corner_radius(self.adjust_corner_radius_match_left_panel(corner_radius))
-                    .tint(Color32::WHITE.linear_multiply(opacity));
-                tex.paint_at(ui, Rect::from_center_size(rect.center(), size));
+                let scaled_size = image_size * self.translation.scale;
+
+                self.translation.image_exceeds_space = (
+                    scaled_size.x > available_size.x,
+                    scaled_size.y > available_size.y,
+                );
+
+                let current_offset = self.translation.image_offset;
+
+                if let Some(mouse_pos) = ui.input(|i| i.pointer.hover_pos()) {
+                    if let Some(scale_old) = self.translation.scale_old_for_calculate {
+                        let image_pos =
+                            rect.center() - (image_size * scale_old) * 0.5 + current_offset;
+                        let mouse_in_image = (mouse_pos - image_pos) / (image_size * scale_old);
+                        let image_pos_new = rect.center() - scaled_size * 0.5 + current_offset;
+                        let target_pos = image_pos_new + mouse_in_image * scaled_size;
+                        let offset_delta = mouse_pos - target_pos;
+
+                        self.translation.image_offset = current_offset + offset_delta;
+                        self.translation.scale_old_for_calculate = None;
+                    }
+                }
+
+                self.translation.max_offset =
+                    ((scaled_size - available_size) * 0.5).max(egui::Vec2::ZERO);
+                self.translation.image_offset =
+                    self.translation.clamp_offset(self.translation.image_offset);
+
+                let tex = egui::Image::from_texture(handle)
+                    .show_loading_spinner(false)
+                    .maintain_aspect_ratio(true)
+                    .fit_to_exact_size(scaled_size);
+
+                let image_pos = rect.center() - scaled_size * 0.5 + self.translation.image_offset;
+                let image_rect = Rect::from_min_size(image_pos, scaled_size);
+
+                let diff = available_size - scaled_size;
+                let corner_radius = if diff.x <= 16.0 && diff.y <= 16.0 {
+                    CornerRadius::same(8)
+                } else {
+                    CornerRadius::same(0)
+                };
+
+                tex.corner_radius(self.adjust_corner_radius_match_left_panel(corner_radius))
+                    .tint(Color32::WHITE.linear_multiply(opacity))
+                    .paint_at(ui, image_rect);
+
+                if self.translation.is_dragging {
+                    ui.ctx().set_cursor_icon(egui::CursorIcon::Grab);
+                }
             } else {
-                self.state.is_loading = true;
+                self.state.is_cur_image_loading = true;
                 show_center_text("Maiden in Prayer...");
             }
         } else {
@@ -279,9 +342,9 @@ impl App {
         sense_rect: eframe::epaint::Rect,
     ) {
         let btn_text = if self.state.left_panel_open {
-            eapp_utils::codicons::ICON_TRIANGLE_LEFT
+            ICON_TRIANGLE_LEFT
         } else {
-            eapp_utils::codicons::ICON_TRIANGLE_RIGHT
+            ICON_TRIANGLE_RIGHT
         };
 
         let opacity = ui.ctx().animate_bool(
@@ -360,7 +423,12 @@ impl App {
                     Static(v) => v.size(),
                     Animated(v) => v.frames[v.current].0.size(),
                 };
-                size_info = format!("{} x {}", size_number[0], size_number[1]);
+                size_info = format!(
+                    "{} x {} ({:.0}%)",
+                    size_number[0],
+                    size_number[1],
+                    self.translation.scale * 100.0
+                );
             }
         }
 
@@ -426,23 +494,50 @@ impl App {
                 });
             });
 
-            let rect = Rect::from_center_size(
-                pos2(rect.center().x, rect.bottom() - 22.0),
-                vec2(32.0, 32.0),
+            let btn_size = vec2(32.0, 32.0);
+            let rect_size = vec2(
+                btn_size.x * 3.0 + ui.style_mut().spacing.item_spacing.x * 2.0,
+                btn_size.y,
             );
 
-            ui.allocate_new_ui(UiBuilder::new().max_rect(rect), |ui| {
-                let response = PlainButton::new(
-                    vec2(32.0, 32.0),
-                    eapp_utils::codicons::ICON_NEW_FILE.to_string(),
-                )
-                .corner_radius(CornerRadius::same(2))
-                .hover(Color32::LIGHT_GREEN)
-                .ui(ui);
+            let rect =
+                Rect::from_center_size(pos2(rect.center().x, rect.bottom() - 22.0), rect_size);
 
-                if response.clicked() {
-                    self.spawn();
-                }
+            ui.allocate_new_ui(UiBuilder::new().max_rect(rect), |ui| {
+                ui.horizontal(|ui| {
+                    if PlainButton::new(btn_size, ICON_NEW_FILE.to_string())
+                        .corner_radius(CornerRadius::same(2))
+                        .hover(Color32::LIGHT_GREEN)
+                        .ui(ui)
+                        .on_hover_text("Spawn from this")
+                        .clicked()
+                    {
+                        self.spawn();
+                    }
+
+                    if PlainButton::new(btn_size, ICON_CHROME_RESTORE.to_string())
+                        .corner_radius(CornerRadius::same(2))
+                        .hover(Color32::LIGHT_GREEN)
+                        .ui(ui)
+                        .on_hover_text("Reset image translation")
+                        .clicked()
+                    {
+                        self.translation.scale = 1.0;
+                        self.translation.image_offset = egui::Vec2::ZERO;
+                        ui.ctx().request_repaint();
+                    }
+
+                    if PlainButton::new(btn_size, ICON_INSPECT.to_string())
+                        .corner_radius(CornerRadius::same(2))
+                        .hover(Color32::LIGHT_GREEN)
+                        .ui(ui)
+                        .on_hover_text("Fit the image size with the available space size")
+                        .clicked()
+                    {
+                        self.translation.image_fit_space_size = true;
+                        ui.ctx().request_repaint();
+                    }
+                });
             });
 
             if response.dragged() {
@@ -505,6 +600,63 @@ impl App {
                     }
                 }
             }
+
+            let scroll_delta = ui.input(|i| i.smooth_scroll_delta.y);
+
+            let zoom_delta = if scroll_delta != 0.0 {
+                scroll_delta * 0.005
+            } else {
+                0.0
+            };
+
+            let no_need_to_zoom_out = self.translation.image_fully_contained()
+                && zoom_delta < 0.0
+                && self.translation.scale < 1.0;
+
+            if zoom_delta != 0.0 && !no_need_to_zoom_out {
+                self.translation.scale_old_for_calculate = Some(self.translation.scale);
+                self.translation.scale =
+                    (self.translation.scale + zoom_delta).clamp(self.translation.min_scale, 5.0);
+                ui.ctx().request_repaint();
+            }
+
+            if let Some(pos) = ui.input(|i| i.pointer.interact_pos()) {
+                let is_over_image = self.img_finder.cur_image_name().is_some();
+
+                if ui.input(|i| i.pointer.primary_pressed()) && is_over_image {
+                    let can_drag_x = self.translation.image_exceeds_space.0;
+                    let can_drag_y = self.translation.image_exceeds_space.1;
+
+                    if can_drag_x || can_drag_y {
+                        self.translation.is_dragging = true;
+                        self.translation.drag_start_offset = self.translation.image_offset;
+                    }
+                }
+
+                if self.translation.is_dragging {
+                    if let Some(click_pos) = ui.input(|i| i.pointer.press_origin()) {
+                        let mut delta = pos - click_pos;
+
+                        if !self.translation.image_exceeds_space.0 {
+                            delta.x = 0.0;
+                        }
+                        if !self.translation.image_exceeds_space.1 {
+                            delta.y = 0.0;
+                        }
+
+                        self.translation.image_offset = self
+                            .translation
+                            .clamp_offset(self.translation.drag_start_offset + delta);
+                        ui.ctx().request_repaint();
+                    }
+
+                    if ui.input(|i| i.pointer.primary_released()) {
+                        self.translation.is_dragging = false;
+                    }
+                }
+            } else if self.translation.is_dragging {
+                self.translation.is_dragging = false;
+            }
         }
 
         ui.ctx().input(|i| {
@@ -530,6 +682,15 @@ impl App {
 
         if self.img_finder.consume_dir_changed_flag() {
             self.tex_loader.forget_all();
+        }
+
+        if let Some(cur_image) = self.img_finder.cur_image_name() {
+            if self.state.last_image_name.as_deref() != Some(cur_image) {
+                self.state.last_image_name = Some(cur_image.to_string());
+                self.translation.reset_translation();
+            }
+        } else {
+            self.state.last_image_name = None;
         }
     }
 }
