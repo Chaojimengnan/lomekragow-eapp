@@ -1,4 +1,5 @@
 use crate::sync::{self, ItemCmd, Syncer};
+use eapp_utils::widgets::simple_widgets::toggle_ui;
 use eframe::egui::{self, Color32, RichText, UiBuilder, Vec2, Widget};
 use serde::{Deserialize, Serialize};
 use std::thread::JoinHandle;
@@ -120,10 +121,9 @@ impl App {
         ui.set_clip_rect(ui.max_rect());
 
         let corner_radius = egui::CornerRadius {
-            nw: 0,
-            ne: 0,
             sw: 8,
             se: 8,
+            ..egui::CornerRadius::ZERO
         };
 
         egui::TopBottomPanel::bottom("bottom_panel")
@@ -230,7 +230,7 @@ impl App {
 
         for i in range {
             ui.horizontal(|ui| {
-                eapp_utils::widgets::toggle_ui(ui, &mut self.state.items[i].ignore);
+                toggle_ui(ui, &mut self.state.items[i].ignore);
 
                 let item = &self.state.items[i];
 

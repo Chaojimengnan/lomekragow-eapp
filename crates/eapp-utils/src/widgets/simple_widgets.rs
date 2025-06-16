@@ -1,7 +1,9 @@
 //! Contains widgets related utils
 
 use crate::animation::color_lerp;
-use eframe::egui::{self, Align2, Color32, CornerRadius, FontId, Sense, Vec2, Widget, WidgetText};
+use eframe::egui::{
+    self, Align2, Color32, CornerRadius, FontId, Rect, Sense, Vec2, Widget, WidgetText, pos2,
+};
 
 /// Just a button, with plain style
 pub struct PlainButton {
@@ -157,4 +159,20 @@ pub fn toggle_ui(ui: &mut egui::Ui, on: &mut bool) -> egui::Response {
     }
 
     response
+}
+
+pub fn text_in_center_bottom_of_rect(ui: &egui::Ui, text: String, rect: &Rect) {
+    let galley = ui
+        .painter()
+        .layout(text, FontId::proportional(16.0), Color32::WHITE, 256.0);
+    let pos = {
+        let pos = rect.center_bottom();
+        pos2(pos.x - galley.size().x / 2.0, pos.y - galley.size().y)
+    };
+    ui.painter().rect_filled(
+        Rect::from_min_max(pos, pos + galley.size()),
+        CornerRadius::ZERO,
+        Color32::from_black_alpha(160),
+    );
+    ui.painter().galley(pos, galley, Color32::WHITE);
 }

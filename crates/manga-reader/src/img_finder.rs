@@ -115,6 +115,10 @@ impl ImgFinder {
         self.cur_image_set.iter()
     }
 
+    pub fn image_at(&self, idx: usize) -> Option<&String> {
+        self.cur_image_set.0.get(idx)
+    }
+
     pub fn cur_image_set(&self) -> &NatOrdSet {
         &self.cur_image_set
     }

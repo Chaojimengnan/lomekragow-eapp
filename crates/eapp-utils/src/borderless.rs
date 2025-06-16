@@ -1,6 +1,6 @@
 //! Contains borderless application related utils
 
-use crate::{codicons, widgets::PlainButton};
+use crate::{codicons, widgets::simple_widgets::PlainButton};
 use eframe::egui::{self, Color32, CursorIcon, ResizeDirection, UiBuilder, ViewportCommand, vec2};
 
 // https://github.com/emilk/egui/pull/3762

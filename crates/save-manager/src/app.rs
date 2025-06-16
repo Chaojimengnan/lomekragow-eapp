@@ -54,10 +54,9 @@ impl App {
         ui.set_clip_rect(ui.max_rect());
 
         let corner_radius = egui::CornerRadius {
-            nw: 0,
-            ne: 0,
             sw: 8,
             se: 8,
+            ..egui::CornerRadius::ZERO
         };
 
         egui::TopBottomPanel::bottom("bottom_panel")

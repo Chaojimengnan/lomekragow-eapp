@@ -17,6 +17,8 @@ pub struct App {
     show_settings: bool,
     search_query: String,
     load_error: Option<String>,
+    cwd: Option<String>,
+    show_cwd: bool,
 }
 
 impl App {
@@ -34,6 +36,10 @@ impl App {
             Err(err) => (script::Loader::default(), Some(err.to_string())),
         };
 
+        let cwd = std::env::current_dir()
+            .ok()
+            .map(|path| path.to_string_lossy().into_owned());
+
         Self {
             loader,
             cur_sel_tag: None,
@@ -43,6 +49,8 @@ impl App {
             show_settings: false,
             search_query: String::new(),
             load_error,
+            cwd,
+            show_cwd: false,
         }
     }
 
@@ -191,6 +199,23 @@ impl App {
                 self.show_settings = !self.show_settings;
             }
 
+            let button_icon = if self.show_cwd {
+                eapp_utils::codicons::ICON_FOLDER_OPENED.to_string()
+            } else {
+                eapp_utils::codicons::ICON_FOLDER.to_string()
+            };
+            let response = ui.add(egui::Button::new(button_icon).frame(false));
+
+            if let Some(cwd) = self.cwd.as_ref() {
+                if self.show_cwd {
+                    response.show_tooltip_text(cwd);
+                }
+
+                if response.clicked() {
+                    self.show_cwd = !self.show_cwd;
+                }
+            }
+
             ui.painter().text(
                 title_bar_rect.center(),
                 egui::Align2::CENTER_CENTER,
@@ -241,9 +266,11 @@ impl App {
             });
         }
 
-        ui.horizontal(|ui| {
-            ui.add(egui::TextEdit::singleline(&mut self.search_query).desired_width(f32::INFINITY));
-        });
+        ui.add(
+            egui::TextEdit::singleline(&mut self.search_query)
+                .hint_text("Search Query")
+                .desired_width(f32::INFINITY),
+        );
 
         if self.load_error.is_some() {
             return;
@@ -389,7 +416,7 @@ impl App {
                     if ui.add(button).clicked() {
                         if let Some(open_path) = rfd::FileDialog::new()
                             .add_filter("JSON files", &["json"])
-                            .set_directory(std::env::current_dir().unwrap_or_default())
+                            .set_directory(self.cwd.clone().unwrap_or_default())
                             .pick_file()
                         {
                             self.info_json_path = Some(open_path.to_string_lossy().to_string());
@@ -431,9 +458,7 @@ impl eframe::App for App {
     }
 
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
-        if self.show_settings {
-            self.ui_settings(ctx);
-        }
+        self.ui_settings(ctx);
 
         eapp_utils::borderless::window_frame(ctx, None).show(ctx, |ui| {
             eapp_utils::borderless::handle_resize(ui);

@@ -16,8 +16,7 @@ impl super::App {
                     CornerRadius {
                         nw: 8,
                         sw: 8,
-                        ne: 0,
-                        se: 0,
+                        ..egui::CornerRadius::ZERO
                     },
                 )),
             )

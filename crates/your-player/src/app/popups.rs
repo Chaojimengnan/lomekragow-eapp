@@ -2,6 +2,7 @@ use crate::{
     app::{END_REACHED_LIST, opts_highlight},
     mpv,
 };
+use eapp_utils::widgets::simple_widgets::toggle_ui;
 use eframe::egui::{self, Vec2b};
 
 impl super::App {
@@ -95,7 +96,7 @@ impl super::App {
             Play => {
                 ui.label("subtitle");
                 let mut sub_visibility = self.player.state().sub_visibility;
-                if eapp_utils::widgets::toggle_ui(ui, &mut sub_visibility).changed() {
+                if toggle_ui(ui, &mut sub_visibility).changed() {
                     self.player.set_sub_visibility(sub_visibility);
                 }
                 ui.end_row();
@@ -167,7 +168,7 @@ impl super::App {
 
     fn ui_setting_popup_contents_danmu(&mut self, ui: &mut egui::Ui) {
         ui.label("danmu");
-        eapp_utils::widgets::toggle_ui(ui, &mut self.state.enable_danmu);
+        toggle_ui(ui, &mut self.state.enable_danmu);
         ui.end_row();
 
         ui.label("danmu alpha");

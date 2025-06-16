@@ -1,8 +1,11 @@
 use crate::mpv::{self, player::PlayState};
-use eapp_utils::widgets::PlainButton;
+use eapp_utils::widgets::{
+    progress_bar::{ProgressBar, draw_progress_bar_background, value_from_x},
+    simple_widgets::{PlainButton, popup_animated, text_in_center_bottom_of_rect},
+};
 use eframe::egui::{
-    self, Align2, Color32, CornerRadius, FontId, Frame, Id, Rect, Sense, Stroke, UiBuilder,
-    ViewportCommand, load::SizedTexture, pos2, vec2,
+    self, Align2, Color32, CornerRadius, FontId, Frame, Id, Rect, UiBuilder, ViewportCommand,
+    Widget as _, load::SizedTexture, pos2, vec2,
 };
 
 impl super::App {
@@ -109,163 +112,87 @@ impl super::App {
 
         ui.set_opacity(opacity);
 
-        // draw background for progress bar
-        let mesh_rect = {
+        let background_rect = {
             let mut rect = sense_rect;
             rect.set_top(rect.bottom() - 160.0);
-            rect.set_bottom(rect.bottom() - 16.0);
             rect
         };
 
-        let mesh_top_color = Color32::TRANSPARENT;
-        let mesh_bottom_color = Color32::from_black_alpha(140);
-
-        let painter = ui.painter();
-
-        painter.rect_filled(
-            {
-                let mut rect = sense_rect;
-                rect.set_top(rect.bottom() - 16.0);
-                rect
-            },
-            self.adjust_fullscreen(
-                ui,
-                self.adjust(CornerRadius {
-                    se: 8,
-                    sw: 8,
-                    nw: 0,
-                    ne: 0,
-                }),
-            ),
-            mesh_bottom_color,
+        let corner_radius = self.adjust_fullscreen(
+            ui,
+            self.adjust(CornerRadius {
+                se: 8,
+                sw: 8,
+                ..egui::CornerRadius::ZERO
+            }),
         );
 
-        let mut mesh = eframe::egui::Mesh::default();
-        mesh.colored_vertex(mesh_rect.left_top(), mesh_top_color);
-        mesh.colored_vertex(mesh_rect.right_top(), mesh_top_color);
-        mesh.colored_vertex(mesh_rect.left_bottom(), mesh_bottom_color);
-        mesh.colored_vertex(mesh_rect.right_bottom(), mesh_bottom_color);
-        mesh.add_triangle(0, 1, 2);
-        mesh.add_triangle(1, 2, 3);
-        painter.add(mesh);
+        draw_progress_bar_background(
+            ui,
+            background_rect,
+            Color32::from_black_alpha(140),
+            corner_radius,
+        );
 
         ui.allocate_new_ui(UiBuilder::new().max_rect(rect), |ui| {
             ui.visuals_mut().override_text_color = Some(Color32::WHITE);
 
-            let progress_bar_rect = {
-                let mut rect_new = rect;
-                rect_new.set_bottom(rect.top() + 16.0);
-                rect_new.translate(vec2(0.0, 32.0))
-            };
-            let response = ui.interact(progress_bar_rect, Id::new("progress_bar"), Sense::drag());
-            let mut progress_bar_color = Self::INACTIVE_COL;
-
             let duration = self.player.state().duration;
-            let mut playback_time = self.player.state().playback_time;
+            let playback_time = self.player.state().playback_time;
 
-            let map_into_playback_time = |pointer_position| {
-                egui::emath::remap_clamp(pointer_position, progress_bar_rect.x_range(), 0.0..=1.0)
-                    as f64
-                    * duration
-            };
+            ui.add(
+                egui::Label::new(&self.player.state().media_title)
+                    .wrap_mode(egui::TextWrapMode::Truncate),
+            );
+            ui.advance_cursor_after_rect(Rect::from_min_max(
+                pos2(rect.left(), rect.top()),
+                pos2(rect.right(), rect.top() + 28.0),
+            ));
 
-            if let Some(pointer) = response.hover_pos() {
-                if self.player.state().play_state != PlayState::Stop {
-                    let hover_playback_time = map_into_playback_time(pointer.x);
-                    let size = self.preview.size();
-                    let size = vec2(size.0 as _, size.1 as _);
-
-                    egui::Area::new("preview_area".into())
-                        .order(egui::Order::Tooltip)
-                        .constrain(true)
-                        .fixed_pos(pointer + vec2(0.0, -5.0))
-                        .pivot(Align2::CENTER_BOTTOM)
-                        .show(ui.ctx(), |ui| {
-                            let (_, rect) = ui.allocate_space(size);
-
-                            if !self.player.state().is_audio {
-                                if let Some(tex) = self.preview.get(hover_playback_time) {
-                                    if let Some(tex_id) = self.tex_register.get(*tex) {
-                                        egui::Image::from_texture(SizedTexture::new(tex_id, size))
-                                            .corner_radius(4)
-                                            .paint_at(ui, rect);
-                                    }
+            let response = ProgressBar::new(playback_time, duration)
+                .height(16.0)
+                .background_color(Color32::from_rgba_premultiplied(100, 100, 100, 106))
+                .fill_color(Self::INACTIVE_COL)
+                .active_color(Self::ACTIVE_COL)
+                .knob_radius(7.0)
+                .preview(|ui, hover_time| {
+                    if self.player.state().play_state != PlayState::Stop {
+                        let size = self.preview.size();
+                        let size = vec2(size.0 as _, size.1 as _);
+                        let (_, rect) = ui.allocate_space(size);
+                        if !self.player.state().is_audio {
+                            if let Some(tex) = self.preview.get(hover_time) {
+                                if let Some(tex_id) = self.tex_register.get(*tex) {
+                                    egui::Image::from_texture(SizedTexture::new(tex_id, size))
+                                        .corner_radius(4)
+                                        .paint_at(ui, rect);
                                 }
                             }
+                        }
+                        let text = mpv::make_time_string(hover_time);
+                        text_in_center_bottom_of_rect(ui, text, &rect);
+                    }
+                })
+                .ui(ui);
 
-                            let galley = ui.painter().layout(
-                                mpv::make_time_string(hover_playback_time),
-                                FontId::proportional(16.0),
-                                Color32::WHITE,
-                                size.x,
-                            );
+            let progress_bar_rect = response.rect;
 
-                            let pos = {
-                                let pos = rect.center_bottom();
-                                pos2(pos.x - galley.size().x / 2.0, pos.y - galley.size().y)
-                            };
+            if response.dragged() {
+                if let Some(pointer) = response.interact_pointer_pos() {
+                    let new_playback_time =
+                        value_from_x(duration, progress_bar_rect, pointer.x as _);
 
-                            ui.painter().rect_filled(
-                                Rect::from_min_max(pos, pos + galley.size()),
-                                CornerRadius::ZERO,
-                                Color32::from_black_alpha(160),
-                            );
-                            ui.painter().galley(pos, galley, Color32::WHITE);
-                        });
-                }
-            }
-
-            if let Some(pointer) = response.interact_pointer_pos() {
-                progress_bar_color = Self::ACTIVE_COL;
-
-                playback_time = map_into_playback_time(pointer.x);
-                if (self.player.state().playback_time - playback_time).abs() < 0.05 {
-                    self.player.set_play_state(PlayState::Pause);
-                } else {
-                    self.player.seek(playback_time, false);
+                    let seek_threshold = duration * 0.001;
+                    if (playback_time - new_playback_time).abs() < seek_threshold.max(0.05) {
+                        self.player.set_play_state(PlayState::Pause);
+                    } else {
+                        self.player.seek(new_playback_time, false);
+                    }
                 }
             }
 
             if response.drag_stopped() {
                 self.player.set_play_state(PlayState::Play);
-            }
-
-            if ui.is_rect_visible(rect) {
-                let painter = ui.painter().with_clip_rect(rect);
-
-                painter.text(
-                    pos2(rect.left(), rect.top() + 1.0),
-                    Align2::LEFT_TOP,
-                    &self.player.state().media_title,
-                    FontId::proportional(16.0),
-                    ui.visuals().text_color(),
-                );
-
-                let painter = ui.painter();
-
-                painter.line_segment(
-                    [
-                        progress_bar_rect.left_center(),
-                        progress_bar_rect.right_center(),
-                    ],
-                    Stroke::new(3.0, Color32::from_rgba_premultiplied(100, 100, 100, 106)),
-                );
-
-                if duration != 0.0 {
-                    let position_in_progress_bar = {
-                        let mut pos = progress_bar_rect.left_center();
-                        pos.x = progress_bar_rect.width() * (playback_time / duration) as f32;
-                        pos.x += progress_bar_rect.left();
-                        pos
-                    };
-
-                    painter.line_segment(
-                        [progress_bar_rect.left_center(), position_in_progress_bar],
-                        Stroke::new(3.0, progress_bar_color),
-                    );
-
-                    painter.circle_filled(position_in_progress_bar, 7.0, progress_bar_color);
-                }
             }
 
             self.ui_progress_bar_items(ui, rect, opacity);
@@ -357,7 +284,7 @@ impl super::App {
                     if volume_res.clicked() {
                         self.state.volume_popup_open = !self.state.volume_popup_open;
                     }
-                    self.state.volume_popup_open = eapp_utils::widgets::popup_animated(
+                    self.state.volume_popup_open = popup_animated(
                         ui,
                         self.state.volume_popup_open,
                         parent_opacity,
@@ -396,7 +323,7 @@ impl super::App {
                             if res.clicked() {
                                 self.state.$state = !self.state.$state;
                             }
-                            self.state.$state = eapp_utils::widgets::popup_animated(
+                            self.state.$state = popup_animated(
                                 ui,
                                 self.state.$state,
                                 parent_opacity,

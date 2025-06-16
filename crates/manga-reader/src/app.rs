@@ -1,7 +1,11 @@
 use crate::{img_finder::ImgFinder, tex_loader::TexLoader};
-use eapp_utils::widgets::PlainButton;
+use eapp_utils::widgets::{
+    progress_bar::{ProgressBar, draw_progress_bar_background, value_from_x},
+    simple_widgets::{PlainButton, text_in_center_bottom_of_rect},
+};
 use eframe::egui::{
-    self, Align2, Color32, CornerRadius, FontId, Frame, Id, Rect, UiBuilder, Vec2b, pos2, vec2,
+    self, Align2, Color32, CornerRadius, FontId, Frame, Id, Layout, Rect, UiBuilder, Vec2b,
+    Widget as _, pos2, vec2,
 };
 use serde::{Deserialize, Serialize};
 pub struct App {
@@ -15,6 +19,8 @@ pub struct App {
 pub struct State {
     left_panel_open: bool,
     #[serde(skip)]
+    is_loading: bool,
+    #[serde(skip)]
     last_cur_dir: Option<usize>,
     search_key: String,
 }
@@ -23,6 +29,7 @@ impl Default for State {
     fn default() -> Self {
         Self {
             left_panel_open: true,
+            is_loading: true,
             last_cur_dir: None,
             search_key: String::default(),
         }
@@ -93,8 +100,7 @@ impl App {
                 Frame::side_top_panel(ui.style()).corner_radius(CornerRadius {
                     nw: 8,
                     sw: 8,
-                    ne: 0,
-                    se: 0,
+                    ..egui::CornerRadius::ZERO
                 }),
             )
             .width_range(200.0..=max_width)
@@ -115,22 +121,11 @@ impl App {
                             .search_dir()
                             .map(|str| str.len() + 1)
                             .unwrap_or(0);
-                        let prefix = self
-                            .img_finder
-                            .cur_dir_name()
-                            .map(|str| str.len() + 1)
-                            .unwrap_or(0);
                         let mut cur_dir = self.img_finder.cur_dir();
-                        let mut cur_image = self.img_finder.cur_image();
                         const ACTIVE_COL: Color32 =
                             Color32::from_rgba_premultiplied(80, 138, 214, 160);
 
-                        let dir_changed = if self.state.last_cur_dir != cur_dir {
-                            self.state.last_cur_dir = cur_dir;
-                            true
-                        } else {
-                            false
-                        };
+                        self.state.last_cur_dir = cur_dir;
 
                         for (dir, dir_name) in self.img_finder.cur_dir_set().iter().enumerate() {
                             let dir_str = if dir_name.len() != dir_prefix - 1 {
@@ -148,57 +143,14 @@ impl App {
                             }
 
                             let is_cur_dir = cur_dir == Some(dir);
-                            let (str, open) = if is_cur_dir {
-                                (
-                                    egui::RichText::new(dir_str).color(ACTIVE_COL),
-                                    if dir_changed { Some(true) } else { None },
-                                )
+                            let str = if is_cur_dir {
+                                egui::RichText::new(dir_str).color(ACTIVE_COL)
                             } else {
-                                (egui::RichText::new(dir_str), Some(false))
+                                egui::RichText::new(dir_str)
                             };
 
-                            if egui::CollapsingHeader::new(str)
-                                .open(open)
-                                .show(ui, |ui| {
-                                    for (img, img_name) in
-                                        self.img_finder.cur_image_set().iter().enumerate()
-                                    {
-                                        let res = ui
-                                            .selectable_label(
-                                                cur_image == Some(img),
-                                                &img_name[prefix..],
-                                            )
-                                            .on_hover_ui_at_pointer(|ui| {
-                                                ui.set_min_size(vec2(64.0, 64.0));
-                                                if let Some(Some(texture)) =
-                                                    self.tex_loader.textures().get(img_name)
-                                                {
-                                                    use crate::tex_loader::Texture::*;
-                                                    let handle = match texture {
-                                                        Static(handle) => handle,
-                                                        Animated(animated) => {
-                                                            &animated.frames[animated.current].0
-                                                        }
-                                                    };
-                                                    ui.add(
-                                                        egui::Image::from_texture(handle)
-                                                            .max_size(vec2(256.0, 256.0)),
-                                                    );
-                                                } else {
-                                                    self.tex_loader.load(img_name);
-                                                    egui::Spinner::new().paint_at(
-                                                        ui,
-                                                        ui.available_rect_before_wrap(),
-                                                    );
-                                                }
-                                            });
-
-                                        if res.clicked() {
-                                            cur_image = Some(img.to_owned());
-                                        }
-                                    }
-                                })
-                                .header_response
+                            if ui
+                                .selectable_label(is_cur_dir, str)
                                 .on_hover_text(dir_str)
                                 .clicked()
                             {
@@ -208,10 +160,6 @@ impl App {
 
                         if let Some(dir) = cur_dir {
                             self.img_finder.set_cur_dir_idx(dir);
-                        }
-
-                        if let Some(image) = cur_image {
-                            self.img_finder.set_cur_image_idx(image);
                         }
                     });
             });
@@ -283,10 +231,16 @@ impl App {
                 ui.visuals().text_color(),
             )
         };
+        let opacity = ui
+            .ctx()
+            .animate_bool(Id::new("state.is_loading"), !self.state.is_loading);
+
         if let Some(cur_image_name) = self.img_finder.cur_image_name() {
             self.tex_loader.load(cur_image_name);
 
             if let Some(texture) = self.tex_loader.textures().get(cur_image_name).unwrap() {
+                self.state.is_loading = false;
+
                 use crate::tex_loader::Texture::*;
                 let handle = match texture {
                     Static(handle) => handle,
@@ -305,9 +259,12 @@ impl App {
                     corner_radius = CornerRadius::same(8);
                 }
 
-                tex = tex.corner_radius(self.adjust_corner_radius_match_left_panel(corner_radius));
+                tex = tex
+                    .corner_radius(self.adjust_corner_radius_match_left_panel(corner_radius))
+                    .tint(Color32::WHITE.linear_multiply(opacity));
                 tex.paint_at(ui, Rect::from_center_size(rect.center(), size));
             } else {
+                self.state.is_loading = true;
                 show_center_text("Maiden in Prayer...");
             }
         } else {
@@ -370,32 +327,32 @@ impl App {
 
         ui.set_opacity(opacity);
 
-        ui.painter().rect_filled(
-            {
-                let mut rect = sense_rect;
-                rect.set_top(rect.bottom() - 130.0);
-                rect
-            },
-            self.adjust_corner_radius_match_left_panel(CornerRadius {
-                se: 8,
-                sw: 8,
-                nw: 0,
-                ne: 0,
-            }),
-            Color32::from_black_alpha(180),
-        );
+        let bg_rect = {
+            let mut rect = sense_rect;
+            rect.set_top(rect.bottom() - 160.0);
+            rect
+        };
 
-        let mut name = String::from("None");
-        let mut page = String::from("None");
-        let mut size = String::from("? x ?");
+        let corner_radius = self.adjust_corner_radius_match_left_panel(CornerRadius {
+            se: 8,
+            sw: 8,
+            ..egui::CornerRadius::ZERO
+        });
+
+        draw_progress_bar_background(ui, bg_rect, Color32::from_black_alpha(180), corner_radius);
+
+        let mut name = "None".to_owned();
+        let mut page_info = "None".to_owned();
+        let mut size_info = "? x ?".to_owned();
+        let total_pages = self.img_finder.cur_image_set().0.len();
+        let current_page = self.img_finder.cur_image().unwrap_or(0);
 
         if let Some(img) = self.img_finder.cur_image() {
             let prefix = self.img_finder.search_dir().unwrap().len() + 1;
             let img_name = self.img_finder.cur_image_name().unwrap();
             name = img_name[prefix..].to_owned();
 
-            let len = self.img_finder.cur_image_set().0.len();
-            page = format!("{} / {}", img + 1, len);
+            page_info = format!("{} / {}", img + 1, total_pages);
 
             if let Some(texture) = self.tex_loader.textures().get(img_name).unwrap() {
                 use crate::tex_loader::Texture::*;
@@ -403,50 +360,123 @@ impl App {
                     Static(v) => v.size(),
                     Animated(v) => v.frames[v.current].0.size(),
                 };
-                size = format!("{} x {}", size_number[0], size_number[1]);
+                size_info = format!("{} x {}", size_number[0], size_number[1]);
             }
         }
 
         ui.allocate_new_ui(UiBuilder::new().max_rect(rect), |ui| {
-            egui::ScrollArea::vertical().show(ui, |ui| {
-                egui::Grid::new("info_grid")
-                    .num_columns(2)
-                    .spacing([16.0, 4.0])
-                    .max_col_width(rect.width())
-                    .show(ui, |ui| {
-                        ui.visuals_mut().override_text_color = Some(Color32::WHITE);
-                        ui.label("Name");
-                        ui.label(name);
-                        ui.end_row();
-                        ui.label("Page");
-                        ui.label(page);
-                        ui.end_row();
-                        ui.label("Size");
-                        ui.label(size);
-                        ui.end_row();
+            ui.visuals_mut().override_text_color = Some(Color32::WHITE);
 
-                        ui.label("Action");
-                        if ui.button("Spawn from this").clicked() {
-                            self.spawn();
+            ui.advance_cursor_after_rect(Rect::from_min_max(
+                pos2(rect.left(), rect.top()),
+                pos2(rect.right(), rect.bottom() - 92.0),
+            ));
+
+            ui.style_mut().spacing.item_spacing = vec2(6.0, 12.0);
+
+            ui.add(egui::Label::new(name).wrap_mode(egui::TextWrapMode::Truncate));
+
+            let response = ProgressBar::new((current_page + 1) as f64, total_pages as f64)
+                .height(16.0)
+                .background_color(Color32::from_rgba_premultiplied(100, 100, 100, 106))
+                .fill_color(Color32::DARK_GREEN)
+                .active_color(Color32::LIGHT_GREEN)
+                .knob_radius(7.0)
+                .preview(|ui, hover_img| {
+                    let new_page = (hover_img as usize).min(total_pages.saturating_sub(1));
+                    let size = vec2(256.0, 256.0);
+                    let (_, rect) = ui.allocate_space(size);
+
+                    if let Some(img_name) = self.img_finder.image_at(new_page) {
+                        if let Some(Some(texture)) = self.tex_loader.textures().get(img_name) {
+                            use crate::tex_loader::Texture::*;
+                            let handle = match texture {
+                                Static(handle) => handle,
+                                Animated(animated) => &animated.frames[animated.current].0,
+                            };
+
+                            let image = egui::Image::from_texture(handle)
+                                .max_size(vec2(256.0, 256.0))
+                                .corner_radius(4);
+                            let image_size = image.calc_size(size, image.size());
+                            let center = pos2(
+                                rect.center().x,
+                                rect.center().y + (256.0 - image_size.y) / 2.0,
+                            );
+                            image.paint_at(ui, Rect::from_center_size(center, image_size));
+                        } else {
+                            self.tex_loader.load(img_name);
                         }
-                        ui.end_row();
-                        ui.visuals_mut().override_text_color = None;
-                    })
+                    }
+
+                    let text = format!("{} / {}", new_page + 1, total_pages);
+                    text_in_center_bottom_of_rect(ui, text, &rect);
+                })
+                .ui(ui);
+
+            let progress_bar_rect = response.rect;
+
+            ui.horizontal(|ui| {
+                ui.with_layout(Layout::left_to_right(egui::Align::Center), |ui| {
+                    ui.label(page_info);
+                });
+
+                ui.with_layout(Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.label(size_info);
+                });
             });
+
+            let rect = Rect::from_center_size(
+                pos2(rect.center().x, rect.bottom() - 22.0),
+                vec2(32.0, 32.0),
+            );
+
+            ui.allocate_new_ui(UiBuilder::new().max_rect(rect), |ui| {
+                let response = PlainButton::new(
+                    vec2(32.0, 32.0),
+                    eapp_utils::codicons::ICON_NEW_FILE.to_string(),
+                )
+                .corner_radius(CornerRadius::same(2))
+                .hover(Color32::LIGHT_GREEN)
+                .ui(ui);
+
+                if response.clicked() {
+                    self.spawn();
+                }
+            });
+
+            if response.dragged() {
+                if let Some(pointer) = response.interact_pointer_pos() {
+                    let new_page =
+                        value_from_x(total_pages as f64, progress_bar_rect, pointer.x as f64)
+                            as usize;
+
+                    let new_page = new_page.min(total_pages.saturating_sub(1));
+                    self.img_finder.set_cur_image_idx(new_page);
+
+                    for page in new_page.saturating_sub(3)..=new_page.saturating_add(3) {
+                        if page < total_pages {
+                            if let Some(img_name) = self.img_finder.image_at(page) {
+                                self.tex_loader.load(img_name);
+                            }
+                        }
+                    }
+                }
+            }
         });
     }
 
     fn process_inputs(&mut self, ui: &mut egui::Ui) {
         if ui.memory(|mem| mem.focused().is_none()) {
-            if ui.input(|i| i.key_pressed(egui::Key::ArrowLeft)) {
+            if ui.input(|i| i.key_pressed(egui::Key::ArrowUp)) {
                 self.img_finder.prev_dir();
             }
 
-            if ui.input(|i| i.key_pressed(egui::Key::ArrowRight)) {
+            if ui.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
                 self.img_finder.next_dir();
             }
 
-            if ui.input(|i| i.key_pressed(egui::Key::ArrowUp)) {
+            if ui.input(|i| i.key_pressed(egui::Key::ArrowLeft)) {
                 self.img_finder.prev_image();
 
                 if let Some(cur_image) = self.img_finder.cur_image() {
@@ -461,7 +491,7 @@ impl App {
                 }
             }
 
-            if ui.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
+            if ui.input(|i| i.key_pressed(egui::Key::ArrowRight)) {
                 self.img_finder.next_image();
                 if let Some(cur_image) = self.img_finder.cur_image() {
                     for item in self

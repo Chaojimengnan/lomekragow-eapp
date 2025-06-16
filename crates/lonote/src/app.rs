@@ -366,10 +366,9 @@ impl App {
         egui::TopBottomPanel::bottom("bottom_panel")
             .exact_height(32.0)
             .frame(egui::Frame::default().corner_radius(egui::CornerRadius {
-                nw: 0,
-                ne: 0,
                 sw: 8,
                 se: 8,
+                ..egui::CornerRadius::ZERO
             }))
             .show_inside(ui, |ui| self.ui_bottom_panel(ui));
 
