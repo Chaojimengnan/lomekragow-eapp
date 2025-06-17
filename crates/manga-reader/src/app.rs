@@ -1,7 +1,7 @@
 use crate::{img_finder::ImgFinder, img_translation::ImgTranslation, tex_loader::TexLoader};
 use eapp_utils::{
     codicons::{
-        ICON_CHROME_RESTORE, ICON_INSPECT, ICON_NEW_FILE, ICON_TRIANGLE_LEFT, ICON_TRIANGLE_RIGHT,
+        ICON_INSPECT, ICON_NEW_FILE, ICON_REFRESH, ICON_TRIANGLE_LEFT, ICON_TRIANGLE_RIGHT,
     },
     widgets::{
         progress_bar::{ProgressBar, draw_progress_bar_background, value_from_x},
@@ -515,7 +515,7 @@ impl App {
                         self.spawn();
                     }
 
-                    if PlainButton::new(btn_size, ICON_CHROME_RESTORE.to_string())
+                    if PlainButton::new(btn_size, ICON_REFRESH.to_string())
                         .corner_radius(CornerRadius::same(2))
                         .hover(Color32::LIGHT_GREEN)
                         .ui(ui)
