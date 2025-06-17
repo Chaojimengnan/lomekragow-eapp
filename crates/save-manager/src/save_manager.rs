@@ -70,18 +70,13 @@ impl SaveManager {
         if self.regex_str.is_empty() {
             self.regex = None;
             self.regex_err_str = None;
-        } else {
-            self.regex = match regex::Regex::new(&self.regex_str) {
-                Ok(v) => {
-                    self.regex_err_str = None;
-                    Some(v)
-                }
-                Err(err) => {
-                    self.regex_err_str = Some(err.to_string());
-                    None
-                }
-            };
+            return;
         }
+
+        (self.regex, self.regex_err_str) = match regex::Regex::new(&self.regex_str) {
+            Ok(regex) => (Some(regex), None),
+            Err(e) => (None, Some(e.to_string())),
+        };
     }
 
     fn search_dir_items<P: AsRef<Path>>(path: P) -> std::io::Result<Vec<String>> {
@@ -106,11 +101,9 @@ impl SaveManager {
             ));
         }
 
-        if main_dir.parent().is_none() {
-            return Err(std::io::Error::other(
-                "Main save directory should not be root directory",
-            ));
-        }
+        main_dir.parent().ok_or_else(|| {
+            std::io::Error::other("Main save directory should not be root directory")
+        })?;
 
         Ok(())
     }
@@ -232,7 +225,9 @@ impl SaveManager {
             }
         }
 
-        std::fs::create_dir_all(to_dir)?;
+        if !to_dir.exists() {
+            std::fs::create_dir_all(to_dir)?;
+        }
 
         for item in std::fs::read_dir(from_dir)? {
             let path = item?.path();

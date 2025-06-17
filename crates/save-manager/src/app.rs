@@ -95,9 +95,7 @@ impl App {
                         );
                     }
 
-                    if res.changed() {
-                        self.manager.build_regex_from_str();
-                    }
+                    res.changed().then(|| self.manager.build_regex_from_str());
                 });
 
                 ui.horizontal(|ui| {
