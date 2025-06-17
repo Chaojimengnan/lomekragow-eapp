@@ -4,7 +4,7 @@ use eapp_utils::codicons::{
     ICON_GITHUB, ICON_GITHUB_INVERTED, ICON_TRIANGLE_DOWN, ICON_TRIANGLE_UP,
 };
 use eframe::egui::{
-    self, Button, Margin, UiBuilder, Vec2,
+    self, Button, Margin, Rect, UiBuilder, Vec2,
     text::{CCursor, CCursorRange},
     text_edit::TextEditOutput,
     text_selection::text_cursor_state::{byte_index_from_char_index, cursor_rect},
@@ -389,12 +389,23 @@ impl App {
                                     egui::TextEdit::multiline(&mut self.note.borrow_mut().contents)
                                         .frame(false)
                                         .margin(Margin::ZERO)
+                                        .code_editor()
                                         .id(id)
                                         .show(ui);
 
                                 if output.response.changed() && !self.note.borrow().modified {
                                     self.note.borrow_mut().modified = true;
                                     self.note.borrow_mut().update_title();
+                                }
+
+                                if output.response.dragged() {
+                                    let pointer = ui.input(|i| i.pointer.clone());
+                                    if let Some(mouse_pos) = pointer.interact_pos() {
+                                        ui.scroll_to_rect(
+                                            Rect::from_min_max(mouse_pos, mouse_pos),
+                                            None,
+                                        );
+                                    }
                                 }
 
                                 self.try_search(ui, id, output);
