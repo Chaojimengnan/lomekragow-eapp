@@ -1,5 +1,8 @@
 use crate::sync::{self, ItemCmd, Syncer};
-use eapp_utils::widgets::simple_widgets::toggle_ui;
+use eapp_utils::{
+    codicons::{ICON_SEARCH, ICON_SETTINGS_GEAR},
+    widgets::simple_widgets::toggle_ui,
+};
 use eframe::egui::{self, Color32, RichText, UiBuilder, Vec2, Widget};
 use serde::{Deserialize, Serialize};
 use std::thread::JoinHandle;
@@ -101,7 +104,7 @@ impl App {
             let synchronizing = self.syncer.as_ref().unwrap().synchronizing();
 
             ui.add_enabled_ui(!synchronizing, |ui| {
-                ui.menu_button("Setting", |ui| {
+                ui.menu_button(ICON_SETTINGS_GEAR.to_string(), |ui| {
                     ui.checkbox(&mut self.state.only_sync, "Only sync");
                     ui.checkbox(&mut self.state.allow_delete, "Allow delete");
                 });
@@ -151,7 +154,10 @@ impl App {
                 fn directory_line(ui: &mut egui::Ui, path: &mut String, label: &str) {
                     ui.horizontal(|ui| {
                         ui.label(label);
-                        if ui.button("...").clicked() {
+                        if ui
+                            .add(egui::Button::new(ICON_SEARCH.to_string()).frame(false))
+                            .clicked()
+                        {
                             if let Some(dir_path) = rfd::FileDialog::new().pick_folder() {
                                 *path = dir_path.to_string_lossy().into_owned();
                             }

@@ -1,5 +1,5 @@
 use crate::script::{self, Script};
-use eapp_utils::codicons::{ICON_FOLDER, ICON_FOLDER_OPENED, ICON_SEARCH, ICON_SETTINGS_GEAR};
+use eapp_utils::codicons::{ICON_FOLDER, ICON_SEARCH, ICON_SETTINGS_GEAR};
 use eframe::egui::{self, Event, Key, Margin, UiBuilder, Vec2, Vec2b};
 
 #[derive(PartialEq, Eq)]
@@ -15,11 +15,9 @@ pub struct App {
     cur_sel_script: usize,
     run_mode: RunMode,
     info_json_path: Option<String>,
-    show_settings: bool,
     search_query: String,
     load_error: Option<String>,
     cwd: Option<String>,
-    show_cwd: bool,
 }
 
 impl App {
@@ -47,11 +45,9 @@ impl App {
             cur_sel_script: 0,
             run_mode: RunMode::Config,
             info_json_path,
-            show_settings: false,
             search_query: String::new(),
             load_error,
             cwd,
-            show_cwd: false,
         }
     }
 
@@ -191,30 +187,61 @@ impl App {
 
     fn ui_title_bar(&mut self, ui: &mut egui::Ui, title_bar_rect: egui::Rect) {
         eapp_utils::borderless::title_bar(ui, title_bar_rect, |ui| {
+            ui.visuals_mut().button_frame = false;
+
             ui.add_space(8.0);
 
-            let button = egui::Button::new(ICON_SETTINGS_GEAR.to_string()).frame(false);
+            ui.menu_button(ICON_SETTINGS_GEAR.to_string(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.label("info.json");
 
-            if ui.add(button).on_hover_text("Settings").clicked() {
-                self.show_settings = !self.show_settings;
-            }
+                    if ui.button(ICON_SEARCH.to_string()).clicked() {
+                        if let Some(open_path) = rfd::FileDialog::new()
+                            .add_filter("JSON files", &["json"])
+                            .set_directory(self.cwd.clone().unwrap_or_default())
+                            .pick_file()
+                        {
+                            self.info_json_path = Some(open_path.to_string_lossy().to_string());
+                        }
+                    }
 
-            let button_icon = if self.show_cwd {
-                ICON_FOLDER_OPENED.to_string()
-            } else {
-                ICON_FOLDER.to_string()
-            };
-            let response = ui.add(egui::Button::new(button_icon).frame(false));
+                    let mut path_str = self.info_json_path.clone().unwrap_or_default();
+                    if ui.text_edit_singleline(&mut path_str).changed() {
+                        self.info_json_path = if path_str.is_empty() {
+                            None
+                        } else {
+                            Some(path_str.clone())
+                        };
+                    }
+                });
 
-            if let Some(cwd) = self.cwd.as_ref() {
-                if self.show_cwd {
-                    response.show_tooltip_text(cwd);
-                }
+                ui.separator();
 
-                if response.clicked() {
-                    self.show_cwd = !self.show_cwd;
-                }
-            }
+                ui.horizontal(|ui| {
+                    if ui.button("Cancel").clicked() {
+                        ui.close_menu();
+                    }
+
+                    if ui.button("Reload").clicked() {
+                        (self.loader, self.load_error) =
+                            match script::Loader::load(self.info_json_path.as_deref()) {
+                                Ok(loader) => (loader, None),
+                                Err(err) => (script::Loader::default(), Some(err.to_string())),
+                            };
+
+                        self.cur_sel_tag = None;
+                        self.cur_sel_script = 0;
+                    }
+                });
+            });
+
+            ui.menu_button(ICON_FOLDER.to_string(), |ui| {
+                let msg = match self.cwd.as_ref() {
+                    Some(cwd) => cwd,
+                    None => "Cannot read current work directory",
+                };
+                ui.label(msg);
+            });
 
             ui.painter().text(
                 title_bar_rect.center(),
@@ -391,60 +418,6 @@ impl App {
             });
         }
     }
-
-    fn ui_settings(&mut self, ctx: &egui::Context) {
-        let mut show_settings = self.show_settings;
-
-        egui::Window::new("Settings")
-            .open(&mut show_settings)
-            .collapsible(false)
-            .show(ctx, |ui| {
-                ui.horizontal(|ui| {
-                    ui.label("info.json");
-
-                    let mut path_str = self.info_json_path.clone().unwrap_or_default();
-                    if ui.text_edit_singleline(&mut path_str).changed() {
-                        self.info_json_path = if path_str.is_empty() {
-                            None
-                        } else {
-                            Some(path_str.clone())
-                        };
-                    }
-
-                    let button = egui::Button::new(ICON_SEARCH.to_string()).frame(false);
-                    if ui.add(button).clicked() {
-                        if let Some(open_path) = rfd::FileDialog::new()
-                            .add_filter("JSON files", &["json"])
-                            .set_directory(self.cwd.clone().unwrap_or_default())
-                            .pick_file()
-                        {
-                            self.info_json_path = Some(open_path.to_string_lossy().to_string());
-                        }
-                    }
-                });
-
-                ui.separator();
-
-                ui.horizontal(|ui| {
-                    if ui.button("Cancel").clicked() {
-                        self.show_settings = false;
-                    }
-
-                    if ui.button("Reload").clicked() {
-                        (self.loader, self.load_error) =
-                            match script::Loader::load(self.info_json_path.as_deref()) {
-                                Ok(loader) => (loader, None),
-                                Err(err) => (script::Loader::default(), Some(err.to_string())),
-                            };
-
-                        self.cur_sel_tag = None;
-                        self.cur_sel_script = 0;
-                    }
-                });
-            });
-
-        self.show_settings = show_settings;
-    }
 }
 
 impl eframe::App for App {
@@ -457,8 +430,6 @@ impl eframe::App for App {
     }
 
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
-        self.ui_settings(ctx);
-
         eapp_utils::borderless::window_frame(ctx, None).show(ctx, |ui| {
             eapp_utils::borderless::handle_resize(ui);
 
