@@ -11,8 +11,9 @@ impl egui::util::cache::ComputerMut<&str, egui::text::LayoutJob> for Highlighter
         let font_id = egui::FontId::monospace(16.0);
         let comment_format = egui::TextFormat::simple(font_id.clone(), Color32::from_gray(120));
         let key_format =
-            egui::TextFormat::simple(font_id.clone(), Color32::from_rgb(156, 220, 254));
-        let value_format = egui::TextFormat::simple(font_id.clone(), Color32::WHITE);
+            egui::TextFormat::simple(font_id.clone(), Color32::from_rgb(225, 120, 164));
+        let value_format =
+            egui::TextFormat::simple(font_id.clone(), Color32::from_rgb(80, 80, 160));
         let spliter_format =
             egui::TextFormat::simple(font_id.clone(), Color32::from_rgb(229, 227, 65));
 

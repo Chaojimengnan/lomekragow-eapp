@@ -1,5 +1,9 @@
 use crate::save_manager::SaveManager;
-use eapp_utils::codicons::ICON_SEARCH;
+use eapp_utils::{
+    borderless,
+    codicons::ICON_SEARCH,
+    widgets::simple_widgets::{get_theme_button, theme_button},
+};
 use eframe::egui::{self, Color32, UiBuilder, Vec2, collapsing_header::CollapsingState};
 use serde::{Deserialize, Serialize};
 
@@ -40,7 +44,11 @@ impl App {
 
 impl App {
     fn ui_title_bar(&mut self, ui: &mut egui::Ui, title_bar_rect: egui::Rect) {
-        eapp_utils::borderless::title_bar(ui, title_bar_rect, |ui| {
+        borderless::title_bar(ui, title_bar_rect, |ui| {
+            ui.add_space(8.0);
+
+            theme_button(ui, get_theme_button(ui));
+
             ui.painter().text(
                 title_bar_rect.center(),
                 egui::Align2::CENTER_CENTER,
@@ -54,33 +62,24 @@ impl App {
     fn ui_contents(&mut self, ui: &mut egui::Ui) {
         ui.set_clip_rect(ui.max_rect());
 
-        let corner_radius = egui::CornerRadius {
-            sw: 8,
-            se: 8,
-            ..egui::CornerRadius::ZERO
-        };
-
         egui::TopBottomPanel::bottom("bottom_panel")
             .exact_height(32.0)
-            .frame(egui::Frame::default().corner_radius(corner_radius))
+            .frame(egui::Frame::side_top_panel(ui.style()).fill(Color32::TRANSPARENT))
             .show_animated_inside(ui, !self.msg.is_empty(), |ui| {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.add_space(8.0);
-
                     if ui.button("Clear").clicked() {
                         self.msg.clear();
                     }
 
                     ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
                         ui.set_clip_rect(ui.max_rect());
-                        ui.add_space(8.0);
                         ui.label(&self.msg);
                     });
                 });
             });
 
         egui::CentralPanel::default()
-            .frame(egui::Frame::central_panel(ui.style()).corner_radius(corner_radius))
+            .frame(egui::Frame::central_panel(ui.style()).fill(Color32::TRANSPARENT))
             .show_inside(ui, |ui| {
                 ui.horizontal(|ui| {
                     ui.label("regex");
@@ -92,7 +91,7 @@ impl App {
 
                     if let Some(err_str) = &self.manager.regex_err_str {
                         res = res.on_hover_text_at_pointer(
-                            egui::RichText::new(err_str).color(Color32::DARK_RED),
+                            egui::RichText::new(err_str).color(ui.visuals().error_fg_color),
                         );
                     }
 
@@ -214,7 +213,7 @@ impl App {
 
                                     if let Some(reg) = self.manager.regex.as_ref() {
                                         if !reg.is_match(&self.manager.main_save_dir_items[i]) {
-                                            text = text.color(egui::Color32::from_gray(60));
+                                            text = text.color(ui.visuals().weak_text_color());
                                         }
                                     }
 
@@ -234,8 +233,8 @@ impl eframe::App for App {
     }
 
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
-        eapp_utils::borderless::window_frame(ctx, None).show(ctx, |ui| {
-            eapp_utils::borderless::handle_resize(ui);
+        borderless::window_frame(ctx, Some(ctx.style().visuals.window_fill)).show(ctx, |ui| {
+            borderless::handle_resize(ui);
 
             let app_rect = ui.max_rect();
 

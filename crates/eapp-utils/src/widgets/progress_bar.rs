@@ -36,13 +36,13 @@ pub struct ProgressBar<'a> {
     height: f32,
 
     /// Background color of the track
-    background_color: Color32,
+    background_color: Option<Color32>,
 
     /// Color of the filled portion
-    fill_color: Color32,
+    fill_color: Option<Color32>,
 
     /// Color used when actively dragging
-    active_color: Color32,
+    active_color: Option<Color32>,
 
     /// Radius of the draggable knob
     knob_radius: f32,
@@ -67,9 +67,9 @@ impl<'a> ProgressBar<'a> {
             value,
             max,
             height: 16.0,
-            background_color: Color32::from_rgba_premultiplied(100, 100, 100, 106),
-            fill_color: Color32::LIGHT_BLUE,
-            active_color: Color32::LIGHT_BLUE,
+            background_color: None,
+            fill_color: None,
+            active_color: None,
             knob_radius: 7.0,
             show_knob: true,
             preview: None,
@@ -84,19 +84,19 @@ impl<'a> ProgressBar<'a> {
 
     /// Sets the background color of the track
     pub fn background_color(mut self, color: impl Into<Color32>) -> Self {
-        self.background_color = color.into();
+        self.background_color = Some(color.into());
         self
     }
 
     /// Sets the color of the filled progress portion
     pub fn fill_color(mut self, color: impl Into<Color32>) -> Self {
-        self.fill_color = color.into();
+        self.fill_color = Some(color.into());
         self
     }
 
     /// Sets the color used when actively dragging the progress bar
     pub fn active_color(mut self, color: impl Into<Color32>) -> Self {
-        self.active_color = color.into();
+        self.active_color = Some(color.into());
         self
     }
 
@@ -134,15 +134,18 @@ impl<'a> Widget for ProgressBar<'a> {
         if ui.is_rect_visible(rect) {
             let is_active = response.dragged();
             let fill_color = if is_active {
-                self.active_color
+                self.active_color.unwrap_or(Color32::GOLD)
             } else {
-                self.fill_color
+                self.fill_color.unwrap_or(ui.visuals().selection.bg_fill)
             };
+            let background_color = self
+                .background_color
+                .unwrap_or(ui.visuals().widgets.active.bg_fill);
 
             // Draw background track
             ui.painter().line_segment(
                 [rect.left_center(), rect.right_center()],
-                Stroke::new(3.0, self.background_color),
+                Stroke::new(3.0, background_color),
             );
 
             // Draw filled portion if we have valid values

@@ -1,6 +1,10 @@
 use crate::script::{self, Script};
-use eapp_utils::codicons::{ICON_FOLDER, ICON_SEARCH, ICON_SETTINGS_GEAR};
-use eframe::egui::{self, Event, Key, Margin, UiBuilder, Vec2, Vec2b};
+use eapp_utils::{
+    borderless,
+    codicons::{ICON_FOLDER, ICON_SEARCH, ICON_SETTINGS_GEAR},
+    widgets::simple_widgets::{get_theme_button, theme_button},
+};
+use eframe::egui::{self, Color32, Event, Key, UiBuilder, Vec2, Vec2b};
 
 #[derive(PartialEq, Eq)]
 enum RunMode {
@@ -176,20 +180,23 @@ impl App {
         let max_width = ui.available_width() * 0.65;
 
         egui::SidePanel::left("left_panel")
+            .frame(egui::Frame::side_top_panel(ui.style()).fill(Color32::TRANSPARENT))
             .default_width(200.0)
             .width_range(200.0..=max_width)
             .show_inside(ui, |ui| self.ui_left_panel(ui));
 
         egui::CentralPanel::default()
-            .frame(egui::Frame::default().inner_margin(Margin::symmetric(8, 2)))
+            .frame(egui::Frame::central_panel(ui.style()).fill(Color32::TRANSPARENT))
             .show_inside(ui, |ui| self.ui_right_panel(ui));
     }
 
     fn ui_title_bar(&mut self, ui: &mut egui::Ui, title_bar_rect: egui::Rect) {
-        eapp_utils::borderless::title_bar(ui, title_bar_rect, |ui| {
+        borderless::title_bar(ui, title_bar_rect, |ui| {
             ui.visuals_mut().button_frame = false;
 
             ui.add_space(8.0);
+
+            theme_button(ui, get_theme_button(ui));
 
             ui.menu_button(ICON_SETTINGS_GEAR.to_string(), |ui| {
                 ui.horizontal(|ui| {
@@ -430,8 +437,8 @@ impl eframe::App for App {
     }
 
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
-        eapp_utils::borderless::window_frame(ctx, None).show(ctx, |ui| {
-            eapp_utils::borderless::handle_resize(ui);
+        borderless::window_frame(ctx, Some(ctx.style().visuals.window_fill)).show(ctx, |ui| {
+            borderless::handle_resize(ui);
 
             let app_rect = ui.max_rect();
 

@@ -1,7 +1,8 @@
 use crate::sync::{self, ItemCmd, Syncer};
 use eapp_utils::{
+    borderless,
     codicons::{ICON_SEARCH, ICON_SETTINGS_GEAR},
-    widgets::simple_widgets::toggle_ui,
+    widgets::simple_widgets::{get_theme_button, theme_button, toggle_ui},
 };
 use eframe::egui::{self, Color32, RichText, UiBuilder, Vec2, Widget};
 use serde::{Deserialize, Serialize};
@@ -97,9 +98,11 @@ impl App {
 
 impl App {
     fn ui_title_bar(&mut self, ui: &mut egui::Ui, title_bar_rect: egui::Rect) {
-        eapp_utils::borderless::title_bar(ui, title_bar_rect, |ui| {
+        borderless::title_bar(ui, title_bar_rect, |ui| {
             ui.add_space(8.0);
             ui.visuals_mut().button_frame = false;
+
+            theme_button(ui, get_theme_button(ui));
 
             let synchronizing = self.syncer.as_ref().unwrap().synchronizing();
 
@@ -123,33 +126,24 @@ impl App {
     fn ui_contents(&mut self, ui: &mut egui::Ui) {
         ui.set_clip_rect(ui.max_rect());
 
-        let corner_radius = egui::CornerRadius {
-            sw: 8,
-            se: 8,
-            ..egui::CornerRadius::ZERO
-        };
-
         egui::TopBottomPanel::bottom("bottom_panel")
             .exact_height(32.0)
-            .frame(egui::Frame::default().corner_radius(corner_radius))
+            .frame(egui::Frame::side_top_panel(ui.style()).fill(Color32::TRANSPARENT))
             .show_animated_inside(ui, !self.state.msg.is_empty(), |ui| {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.add_space(8.0);
-
                     if ui.button("Clear").clicked() {
                         self.state.msg.clear();
                     }
 
                     ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
                         ui.set_clip_rect(ui.max_rect());
-                        ui.add_space(8.0);
                         ui.label(&self.state.msg);
                     });
                 });
             });
 
         egui::CentralPanel::default()
-            .frame(egui::Frame::central_panel(ui.style()).corner_radius(corner_radius))
+            .frame(egui::Frame::central_panel(ui.style()).fill(Color32::TRANSPARENT))
             .show_inside(ui, |ui| {
                 fn directory_line(ui: &mut egui::Ui, path: &mut String, label: &str) {
                     ui.horizontal(|ui| {
@@ -254,13 +248,13 @@ impl App {
                         .ui(ui);
                 } else {
                     let bg_col = match item.cmd {
-                        ItemCmd::Create => Color32::from_rgb(0, 80, 0),
-                        ItemCmd::Replace => Color32::from_rgb(80, 80, 0),
-                        ItemCmd::Delete => Color32::from_rgb(80, 0, 0),
+                        ItemCmd::Create => Color32::from_rgb(0, 156, 0),
+                        ItemCmd::Replace => Color32::from_rgb(156, 156, 0),
+                        ItemCmd::Delete => Color32::from_rgb(200, 40, 40),
                         ItemCmd::Keep => ui.visuals().window_fill,
                     };
                     let col = if bg_col != ui.visuals().window_fill {
-                        Color32::from_gray(200)
+                        ui.visuals().strong_text_color()
                     } else {
                         Color32::PLACEHOLDER
                     };
@@ -287,8 +281,8 @@ impl eframe::App for App {
     }
 
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
-        eapp_utils::borderless::window_frame(ctx, None).show(ctx, |ui| {
-            eapp_utils::borderless::handle_resize(ui);
+        borderless::window_frame(ctx, Some(ctx.style().visuals.window_fill)).show(ctx, |ui| {
+            borderless::handle_resize(ui);
 
             let app_rect = ui.max_rect();
 

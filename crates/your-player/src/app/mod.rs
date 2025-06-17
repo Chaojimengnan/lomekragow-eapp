@@ -4,7 +4,8 @@ use crate::{
     playlist::Playlist,
     tex_register::TexRegister,
 };
-use eframe::egui::{self, Color32, CornerRadius, TextBuffer, ViewportCommand};
+use eapp_utils::borderless;
+use eframe::egui::{self, CornerRadius, TextBuffer, ViewportCommand};
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -152,9 +153,6 @@ impl App {
     pub const MPV_KEY: &'static str = "mpv_state";
     pub const PLAYLIST_KEY: &'static str = "playlist_state";
     pub const DANMU_KEY: &'static str = "danmu_state";
-
-    pub const ACTIVE_COL: Color32 = Color32::from_rgba_premultiplied(80, 138, 214, 160);
-    pub const INACTIVE_COL: Color32 = Color32::from_rgba_premultiplied(40, 74, 122, 160);
 
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         eapp_utils::setup_fonts(&cc.egui_ctx);
@@ -371,8 +369,8 @@ impl eframe::App for App {
     }
 
     fn update(&mut self, ctx: &eframe::egui::Context, frame: &mut eframe::Frame) {
-        eapp_utils::borderless::window_frame(ctx, Some(Color32::BLACK)).show(ctx, |ui| {
-            eapp_utils::borderless::handle_resize(ui);
+        borderless::window_frame(ctx, Some(ctx.style().visuals.extreme_bg_color)).show(ctx, |ui| {
+            borderless::handle_resize(ui);
 
             self.prevent_sleep_if_media_playing();
 

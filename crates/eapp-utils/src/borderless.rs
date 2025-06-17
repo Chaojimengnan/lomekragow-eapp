@@ -1,7 +1,9 @@
 //! Contains borderless application related utils
 
 use crate::{codicons, widgets::simple_widgets::PlainButton};
-use eframe::egui::{self, Color32, CursorIcon, ResizeDirection, UiBuilder, ViewportCommand, vec2};
+use eframe::egui::{
+    self, Color32, CursorIcon, ResizeDirection, StrokeKind, UiBuilder, ViewportCommand, vec2,
+};
 
 // https://github.com/emilk/egui/pull/3762
 pub fn handle_resize(ui: &mut egui::Ui) -> bool {
@@ -174,7 +176,8 @@ pub fn title_bar_animated(ui: &mut egui::Ui, title_bar_rect: eframe::epaint::Rec
     ui.allocate_new_ui(UiBuilder::new().max_rect(title_bar_rect), |ui| {
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             ui.set_opacity(opacity);
-            close_maximize_minimize(ui, width, height, Color32::from_rgb(40, 40, 40));
+
+            close_maximize_minimize(ui, width, height, ui.visuals().panel_fill);
         });
     });
 }
@@ -202,24 +205,27 @@ pub fn close_maximize_minimize(
             start.set_bottom(start.top() + height);
             start
         };
+        let corner_radius = egui::CornerRadius {
+            ne: 8,
+            ..egui::CornerRadius::ZERO
+        };
 
-        ui.painter().rect_filled(
-            frame_rect,
-            egui::CornerRadius {
-                ne: 8,
-                ..egui::CornerRadius::ZERO
-            },
-            f_col,
-        );
+        ui.painter().rect_filled(frame_rect, corner_radius, f_col);
+
+        if f_col != Color32::TRANSPARENT {
+            ui.painter().rect_stroke(
+                frame_rect,
+                corner_radius,
+                ui.visuals().window_stroke,
+                StrokeKind::Outside,
+            );
+        }
 
         if ui
             .add(
                 new_button(codicons::ICON_CHROME_CLOSE.to_string())
-                    .corner_radius(egui::CornerRadius {
-                        ne: 8,
-                        ..egui::CornerRadius::ZERO
-                    })
-                    .hover(Color32::from_rgb(200, 5, 5)),
+                    .corner_radius(corner_radius)
+                    .hover(Color32::from_rgb(200, 30, 30)),
             )
             .clicked()
         {

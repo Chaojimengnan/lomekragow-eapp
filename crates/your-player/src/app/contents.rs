@@ -1,5 +1,6 @@
 use crate::mpv::{self, player::PlayState};
 use eapp_utils::{
+    borderless,
     codicons::{ICON_TRIANGLE_LEFT, ICON_TRIANGLE_RIGHT},
     widgets::{
         progress_bar::{ProgressBar, draw_progress_bar_background, value_from_x},
@@ -7,20 +8,14 @@ use eapp_utils::{
     },
 };
 use eframe::egui::{
-    self, Align2, Color32, CornerRadius, FontId, Frame, Id, Rect, UiBuilder, ViewportCommand,
-    Widget as _, load::SizedTexture, pos2, vec2,
+    self, Align2, CornerRadius, FontId, Frame, Id, Rect, UiBuilder, ViewportCommand, Widget as _,
+    load::SizedTexture, pos2, vec2,
 };
 
 impl super::App {
     pub fn ui_contents(&mut self, ui: &mut egui::Ui) {
-        let corner_radius = self.adjust_fullscreen(ui, self.adjust(CornerRadius::same(8)));
-
         egui::CentralPanel::default()
-            .frame(
-                Frame::default()
-                    .corner_radius(corner_radius)
-                    .fill(Color32::TRANSPARENT),
-            )
+            .frame(Frame::NONE)
             .show_inside(ui, |ui| {
                 let app_rect = ui.max_rect();
                 self.state.content_rect = app_rect;
@@ -31,7 +26,7 @@ impl super::App {
                     rect.max.y = rect.min.y + title_bar_height;
                     rect
                 };
-                eapp_utils::borderless::title_bar_animated(ui, title_bar_rect);
+                borderless::title_bar_animated(ui, title_bar_rect);
 
                 let size = 20.0;
                 let playlist_button_rect = Rect::from_center_size(
@@ -75,7 +70,7 @@ impl super::App {
 
         let opacity = ui.ctx().animate_bool(
             Id::new("playlist_button_hover_area"),
-            eapp_utils::borderless::rect_contains_pointer(ui, sense_rect),
+            borderless::rect_contains_pointer(ui, sense_rect),
         );
 
         if opacity == 0.0 {
@@ -106,7 +101,7 @@ impl super::App {
     ) {
         let opacity = ui.ctx().animate_bool(
             Id::new("progress_bar_hover_area"),
-            eapp_utils::borderless::rect_contains_pointer(ui, sense_rect),
+            borderless::rect_contains_pointer(ui, sense_rect),
         );
 
         if opacity == 0.0 {
@@ -115,9 +110,9 @@ impl super::App {
 
         ui.set_opacity(opacity);
 
-        let background_rect = {
+        let bg_rect = {
             let mut rect = sense_rect;
-            rect.set_top(rect.bottom() - 160.0);
+            rect.set_top(rect.bottom() - 190.0);
             rect
         };
 
@@ -130,15 +125,10 @@ impl super::App {
             }),
         );
 
-        draw_progress_bar_background(
-            ui,
-            background_rect,
-            Color32::from_black_alpha(140),
-            corner_radius,
-        );
+        draw_progress_bar_background(ui, bg_rect, ui.visuals().extreme_bg_color, corner_radius);
 
         ui.allocate_new_ui(UiBuilder::new().max_rect(rect), |ui| {
-            ui.visuals_mut().override_text_color = Some(Color32::WHITE);
+            ui.visuals_mut().override_text_color = Some(ui.visuals().strong_text_color());
 
             let duration = self.player.state().duration;
             let playback_time = self.player.state().playback_time;
@@ -154,9 +144,6 @@ impl super::App {
 
             let response = ProgressBar::new(playback_time, duration)
                 .height(16.0)
-                .background_color(Color32::from_rgba_premultiplied(100, 100, 100, 106))
-                .fill_color(Self::INACTIVE_COL)
-                .active_color(Self::ACTIVE_COL)
                 .knob_radius(7.0)
                 .preview(|ui, hover_time| {
                     if self.player.state().play_state != PlayState::Stop {
@@ -224,11 +211,13 @@ impl super::App {
 
         ui.scope(|ui| {
             ui.spacing_mut().item_spacing.x = 0.0;
+            let hover_color = ui.visuals().selection.bg_fill;
+
             let new_button = |font_size, str| {
                 PlainButton::new(vec2(btn_size, btn_size), str)
                     .font_size(font_size)
                     .corner_radius(CornerRadius::same(2))
-                    .hover(Self::ACTIVE_COL)
+                    .hover(hover_color)
             };
 
             let center_btns_rect = Rect::from_center_size(

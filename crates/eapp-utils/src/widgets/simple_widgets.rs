@@ -1,6 +1,9 @@
 //! Contains widgets related utils
 
-use crate::animation::color_lerp;
+use crate::{
+    animation::color_lerp,
+    codicons::{ICON_GITHUB, ICON_GITHUB_INVERTED},
+};
 use eframe::egui::{
     self, Align2, Color32, CornerRadius, FontId, Rect, Sense, Vec2, Widget, WidgetText, pos2,
 };
@@ -11,8 +14,8 @@ pub struct PlainButton {
     size: Vec2,
     font_size: f32,
     corner_radius: CornerRadius,
-    fill: Color32,
-    hover: Color32,
+    fill: Option<Color32>,
+    hover: Option<Color32>,
 }
 
 impl PlainButton {
@@ -22,8 +25,8 @@ impl PlainButton {
             size,
             font_size: 16.0,
             corner_radius: Default::default(),
-            fill: Default::default(),
-            hover: Color32::DARK_GRAY,
+            fill: None,
+            hover: None,
         }
     }
 
@@ -35,13 +38,13 @@ impl PlainButton {
 
     #[inline]
     pub fn fill(mut self, fill: impl Into<Color32>) -> Self {
-        self.fill = fill.into();
+        self.fill = Some(fill.into());
         self
     }
 
     #[inline]
     pub fn hover(mut self, hover: impl Into<Color32>) -> Self {
-        self.hover = hover.into();
+        self.hover = Some(hover.into());
         self
     }
 
@@ -60,11 +63,15 @@ impl Widget for PlainButton {
             let hovered = response.hovered();
             let factor = ui.ctx().animate_bool(response.id, hovered);
 
-            ui.painter().rect_filled(
-                rect,
-                self.corner_radius,
-                color_lerp(self.fill, self.hover, factor),
-            );
+            let (fill, hover) = {
+                (
+                    self.fill.unwrap_or(Color32::TRANSPARENT),
+                    self.hover.unwrap_or(ui.visuals().widgets.hovered.bg_fill),
+                )
+            };
+
+            ui.painter()
+                .rect_filled(rect, self.corner_radius, color_lerp(fill, hover, factor));
 
             let text_color = ui.style().visuals.text_color();
             let strong_text_color = ui.style().visuals.strong_text_color();
@@ -162,9 +169,10 @@ pub fn toggle_ui(ui: &mut egui::Ui, on: &mut bool) -> egui::Response {
 }
 
 pub fn text_in_center_bottom_of_rect(ui: &egui::Ui, text: String, rect: &Rect) {
+    let color = ui.visuals().strong_text_color();
     let galley = ui
         .painter()
-        .layout(text, FontId::proportional(16.0), Color32::WHITE, 256.0);
+        .layout(text, FontId::proportional(16.0), color, 256.0);
     let pos = {
         let pos = rect.center_bottom();
         pos2(pos.x - galley.size().x / 2.0, pos.y - galley.size().y)
@@ -172,7 +180,30 @@ pub fn text_in_center_bottom_of_rect(ui: &egui::Ui, text: String, rect: &Rect) {
     ui.painter().rect_filled(
         Rect::from_min_max(pos, pos + galley.size()),
         CornerRadius::ZERO,
-        Color32::from_black_alpha(160),
+        ui.visuals().panel_fill.gamma_multiply(0.8),
     );
-    ui.painter().galley(pos, galley, Color32::WHITE);
+    ui.painter().galley(pos, galley, color);
+}
+
+pub fn get_theme_button_icon(ui: &egui::Ui) -> String {
+    if ui.visuals().dark_mode {
+        ICON_GITHUB_INVERTED
+    } else {
+        ICON_GITHUB
+    }
+    .to_string()
+}
+
+pub fn get_theme_button(ui: &egui::Ui) -> egui::Button<'static> {
+    egui::Button::new(get_theme_button_icon(ui)).frame(false)
+}
+
+pub fn theme_button<Btn: Widget>(ui: &mut egui::Ui, btn: Btn) {
+    if ui.add(btn).clicked() {
+        ui.ctx().set_visuals(if ui.visuals().dark_mode {
+            egui::Visuals::light()
+        } else {
+            egui::Visuals::dark()
+        });
+    }
 }

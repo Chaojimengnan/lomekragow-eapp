@@ -1,11 +1,14 @@
 use crate::{img_finder::ImgFinder, img_translation::ImgTranslation, tex_loader::TexLoader};
 use eapp_utils::{
+    borderless,
     codicons::{
         ICON_INSPECT, ICON_NEW_FILE, ICON_REFRESH, ICON_TRIANGLE_LEFT, ICON_TRIANGLE_RIGHT,
     },
     widgets::{
         progress_bar::{ProgressBar, draw_progress_bar_background, value_from_x},
-        simple_widgets::{PlainButton, text_in_center_bottom_of_rect},
+        simple_widgets::{
+            PlainButton, get_theme_button, text_in_center_bottom_of_rect, theme_button,
+        },
     },
 };
 use eframe::egui::{
@@ -117,6 +120,8 @@ impl App {
             )
             .width_range(200.0..=max_width)
             .show_animated_inside(ui, self.state.left_panel_open, |ui| {
+                theme_button(ui, get_theme_button(ui));
+
                 ui.add(
                     egui::TextEdit::singleline(&mut self.state.search_key)
                         .desired_width(f32::INFINITY)
@@ -134,8 +139,6 @@ impl App {
                             .map(|str| str.len() + 1)
                             .unwrap_or(0);
                         let mut cur_dir = self.img_finder.cur_dir();
-                        const ACTIVE_COL: Color32 =
-                            Color32::from_rgba_premultiplied(80, 138, 214, 160);
 
                         self.state.last_cur_dir = cur_dir;
 
@@ -156,7 +159,7 @@ impl App {
 
                             let is_cur_dir = cur_dir == Some(dir);
                             let str = if is_cur_dir {
-                                egui::RichText::new(dir_str).color(ACTIVE_COL)
+                                egui::RichText::new(dir_str).color(ui.visuals().strong_text_color())
                             } else {
                                 egui::RichText::new(dir_str)
                             };
@@ -178,16 +181,16 @@ impl App {
     }
 
     fn ui_contents(&mut self, ui: &mut egui::Ui) {
-        let corner_radius = self.adjust_corner_radius_match_left_panel(CornerRadius::same(8));
-
         egui::CentralPanel::default()
-            .frame(
-                Frame::default()
-                    .corner_radius(corner_radius)
-                    .fill(Color32::BLACK),
-            )
+            .frame(Frame::NONE)
             .show_inside(ui, |ui| {
                 let app_rect = ui.max_rect();
+
+                let rect_contains = borderless::rect_contains_pointer(ui, app_rect);
+                let no_focuse = ui.memory(|m| m.focused().is_none());
+                if rect_contains && no_focuse {
+                    self.handle_scroll_and_drag(ui);
+                }
 
                 self.process_inputs(ui);
                 self.ui_show_cur_image(ui, app_rect);
@@ -198,7 +201,7 @@ impl App {
                     rect.max.y = rect.min.y + title_bar_height;
                     rect
                 };
-                eapp_utils::borderless::title_bar_animated(ui, title_bar_rect);
+                borderless::title_bar_animated(ui, title_bar_rect);
 
                 let size = 20.0;
                 let left_panel_button_rect = Rect::from_center_size(
@@ -349,7 +352,7 @@ impl App {
 
         let opacity = ui.ctx().animate_bool(
             Id::new("left_panel_button_hover_area"),
-            eapp_utils::borderless::rect_contains_pointer(ui, sense_rect),
+            borderless::rect_contains_pointer(ui, sense_rect),
         );
 
         if opacity == 0.0 {
@@ -381,7 +384,7 @@ impl App {
     ) {
         let opacity = ui.ctx().animate_bool(
             Id::new("info_hover_area"),
-            eapp_utils::borderless::rect_contains_pointer(ui, sense_rect),
+            borderless::rect_contains_pointer(ui, sense_rect),
         );
 
         if opacity == 0.0 {
@@ -392,7 +395,7 @@ impl App {
 
         let bg_rect = {
             let mut rect = sense_rect;
-            rect.set_top(rect.bottom() - 160.0);
+            rect.set_top(rect.bottom() - 190.0);
             rect
         };
 
@@ -402,7 +405,7 @@ impl App {
             ..egui::CornerRadius::ZERO
         });
 
-        draw_progress_bar_background(ui, bg_rect, Color32::from_black_alpha(180), corner_radius);
+        draw_progress_bar_background(ui, bg_rect, ui.visuals().extreme_bg_color, corner_radius);
 
         let mut name = "None".to_owned();
         let mut page_info = "None".to_owned();
@@ -433,7 +436,7 @@ impl App {
         }
 
         ui.allocate_new_ui(UiBuilder::new().max_rect(rect), |ui| {
-            ui.visuals_mut().override_text_color = Some(Color32::WHITE);
+            ui.visuals_mut().override_text_color = Some(ui.visuals().strong_text_color());
 
             ui.advance_cursor_after_rect(Rect::from_min_max(
                 pos2(rect.left(), rect.top()),
@@ -446,9 +449,6 @@ impl App {
 
             let response = ProgressBar::new((current_page + 1) as f64, total_pages as f64)
                 .height(16.0)
-                .background_color(Color32::from_rgba_premultiplied(100, 100, 100, 106))
-                .fill_color(Color32::DARK_GREEN)
-                .active_color(Color32::LIGHT_GREEN)
                 .knob_radius(7.0)
                 .preview(|ui, hover_img| {
                     let new_page = (hover_img as usize).min(total_pages.saturating_sub(1));
@@ -505,9 +505,11 @@ impl App {
 
             ui.allocate_new_ui(UiBuilder::new().max_rect(rect), |ui| {
                 ui.horizontal(|ui| {
+                    let hover_color = ui.visuals().selection.bg_fill;
+
                     if PlainButton::new(btn_size, ICON_NEW_FILE.to_string())
                         .corner_radius(CornerRadius::same(2))
-                        .hover(Color32::LIGHT_GREEN)
+                        .hover(hover_color)
                         .ui(ui)
                         .on_hover_text("Spawn from this")
                         .clicked()
@@ -517,7 +519,7 @@ impl App {
 
                     if PlainButton::new(btn_size, ICON_REFRESH.to_string())
                         .corner_radius(CornerRadius::same(2))
-                        .hover(Color32::LIGHT_GREEN)
+                        .hover(hover_color)
                         .ui(ui)
                         .on_hover_text("Reset image translation")
                         .clicked()
@@ -529,7 +531,7 @@ impl App {
 
                     if PlainButton::new(btn_size, ICON_INSPECT.to_string())
                         .corner_radius(CornerRadius::same(2))
-                        .hover(Color32::LIGHT_GREEN)
+                        .hover(hover_color)
                         .ui(ui)
                         .on_hover_text("Fit the image size with the available space size")
                         .clicked()
@@ -559,6 +561,65 @@ impl App {
                 }
             }
         });
+    }
+
+    fn handle_scroll_and_drag(&mut self, ui: &mut egui::Ui) {
+        let scroll_delta = ui.input(|i| i.smooth_scroll_delta.y);
+
+        let zoom_delta = if scroll_delta != 0.0 {
+            scroll_delta * 0.005
+        } else {
+            0.0
+        };
+
+        let no_need_to_zoom_out = self.translation.image_fully_contained()
+            && zoom_delta < 0.0
+            && self.translation.scale < 1.0;
+
+        if zoom_delta != 0.0 && !no_need_to_zoom_out {
+            self.translation.scale_old_for_calculate = Some(self.translation.scale);
+            self.translation.scale =
+                (self.translation.scale + zoom_delta).clamp(self.translation.min_scale, 5.0);
+            ui.ctx().request_repaint();
+        }
+
+        if let Some(pos) = ui.input(|i| i.pointer.interact_pos()) {
+            let is_over_image = self.img_finder.cur_image_name().is_some();
+
+            if ui.input(|i| i.pointer.primary_pressed()) && is_over_image {
+                let can_drag_x = self.translation.image_exceeds_space.0;
+                let can_drag_y = self.translation.image_exceeds_space.1;
+
+                if can_drag_x || can_drag_y {
+                    self.translation.is_dragging = true;
+                    self.translation.drag_start_offset = self.translation.image_offset;
+                }
+            }
+
+            if self.translation.is_dragging {
+                if let Some(click_pos) = ui.input(|i| i.pointer.press_origin()) {
+                    let mut delta = pos - click_pos;
+
+                    if !self.translation.image_exceeds_space.0 {
+                        delta.x = 0.0;
+                    }
+                    if !self.translation.image_exceeds_space.1 {
+                        delta.y = 0.0;
+                    }
+
+                    self.translation.image_offset = self
+                        .translation
+                        .clamp_offset(self.translation.drag_start_offset + delta);
+                    ui.ctx().request_repaint();
+                }
+
+                if ui.input(|i| i.pointer.primary_released()) {
+                    self.translation.is_dragging = false;
+                }
+            }
+        } else if self.translation.is_dragging {
+            self.translation.is_dragging = false;
+        }
     }
 
     fn process_inputs(&mut self, ui: &mut egui::Ui) {
@@ -599,63 +660,6 @@ impl App {
                         self.tex_loader.load(item);
                     }
                 }
-            }
-
-            let scroll_delta = ui.input(|i| i.smooth_scroll_delta.y);
-
-            let zoom_delta = if scroll_delta != 0.0 {
-                scroll_delta * 0.005
-            } else {
-                0.0
-            };
-
-            let no_need_to_zoom_out = self.translation.image_fully_contained()
-                && zoom_delta < 0.0
-                && self.translation.scale < 1.0;
-
-            if zoom_delta != 0.0 && !no_need_to_zoom_out {
-                self.translation.scale_old_for_calculate = Some(self.translation.scale);
-                self.translation.scale =
-                    (self.translation.scale + zoom_delta).clamp(self.translation.min_scale, 5.0);
-                ui.ctx().request_repaint();
-            }
-
-            if let Some(pos) = ui.input(|i| i.pointer.interact_pos()) {
-                let is_over_image = self.img_finder.cur_image_name().is_some();
-
-                if ui.input(|i| i.pointer.primary_pressed()) && is_over_image {
-                    let can_drag_x = self.translation.image_exceeds_space.0;
-                    let can_drag_y = self.translation.image_exceeds_space.1;
-
-                    if can_drag_x || can_drag_y {
-                        self.translation.is_dragging = true;
-                        self.translation.drag_start_offset = self.translation.image_offset;
-                    }
-                }
-
-                if self.translation.is_dragging {
-                    if let Some(click_pos) = ui.input(|i| i.pointer.press_origin()) {
-                        let mut delta = pos - click_pos;
-
-                        if !self.translation.image_exceeds_space.0 {
-                            delta.x = 0.0;
-                        }
-                        if !self.translation.image_exceeds_space.1 {
-                            delta.y = 0.0;
-                        }
-
-                        self.translation.image_offset = self
-                            .translation
-                            .clamp_offset(self.translation.drag_start_offset + delta);
-                        ui.ctx().request_repaint();
-                    }
-
-                    if ui.input(|i| i.pointer.primary_released()) {
-                        self.translation.is_dragging = false;
-                    }
-                }
-            } else if self.translation.is_dragging {
-                self.translation.is_dragging = false;
             }
         }
 
@@ -705,8 +709,8 @@ impl eframe::App for App {
     }
 
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
-        eapp_utils::borderless::window_frame(ctx, None).show(ctx, |ui| {
-            eapp_utils::borderless::handle_resize(ui);
+        borderless::window_frame(ctx, Some(ctx.style().visuals.extreme_bg_color)).show(ctx, |ui| {
+            borderless::handle_resize(ui);
 
             self.tex_loader
                 .update(ctx, self.img_finder.cur_image_name());

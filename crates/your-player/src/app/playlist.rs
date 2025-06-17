@@ -1,6 +1,7 @@
 use crate::danmu::DanmuData;
 
 use super::PlaylistType;
+use eapp_utils::widgets::simple_widgets::{get_theme_button, theme_button};
 use eframe::egui::{self, Color32, CornerRadius, Frame};
 use std::path::Path;
 
@@ -23,6 +24,8 @@ impl super::App {
             .width_range(200.0..=max_width)
             .show_animated_inside(ui, self.state.playlist_open, |ui| {
                 ui.horizontal(|ui| {
+                    theme_button(ui, get_theme_button(ui));
+
                     for (v, str) in [
                         (PlaylistType::Playlist, "Playlist"),
                         (PlaylistType::Danmu, "Danmu"),
@@ -111,7 +114,7 @@ impl super::App {
                                     if tuple_as_ref!(current_play) == Some((list_name, media_name))
                                     {
                                         ui.visuals_mut().override_text_color =
-                                            Some(Self::ACTIVE_COL);
+                                            Some(ui.visuals().strong_text_color());
                                     }
 
                                     let res = ui
@@ -184,7 +187,8 @@ impl super::App {
         );
 
         if let Some(err_str) = &self.state.danmu_regex_err_str {
-            res = res.on_hover_text(egui::RichText::new(err_str).color(Color32::DARK_RED));
+            res =
+                res.on_hover_text(egui::RichText::new(err_str).color(ui.visuals().error_fg_color));
         }
 
         if res.changed() {
@@ -221,9 +225,13 @@ impl super::App {
                             let mut color =
                                 Color32::from_rgb(danmu.color.0, danmu.color.1, danmu.color.2);
 
+                            if color == Color32::WHITE {
+                                color = ui.visuals().strong_text_color();
+                            }
+
                             if let Some(regex) = &self.state.danmu_regex {
                                 if regex.is_match(&danmu.text) {
-                                    color = Color32::GRAY;
+                                    color = ui.visuals().weak_text_color();
                                 }
                             }
 

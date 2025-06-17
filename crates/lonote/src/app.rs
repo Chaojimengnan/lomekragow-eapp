@@ -1,14 +1,15 @@
 use crate::codec;
 use chardetng::EncodingDetector;
-use eapp_utils::codicons::{
-    ICON_GITHUB, ICON_GITHUB_INVERTED, ICON_TRIANGLE_DOWN, ICON_TRIANGLE_UP,
+use eapp_utils::{
+    borderless,
+    codicons::{ICON_TRIANGLE_DOWN, ICON_TRIANGLE_UP},
+    widgets::simple_widgets::{get_theme_button, theme_button},
 };
 use eframe::egui::{
-    self, Button, Margin, Rect, UiBuilder, Vec2,
+    self, Color32, Margin, Rect, UiBuilder, Vec2,
     text::{CCursor, CCursorRange},
     text_edit::TextEditOutput,
     text_selection::text_cursor_state::{byte_index_from_char_index, cursor_rect},
-    vec2,
 };
 use std::{
     borrow::Cow,
@@ -323,7 +324,7 @@ impl App {
     }
 
     fn ui_title_bar(&mut self, ui: &mut egui::Ui, title_bar_rect: egui::Rect) {
-        eapp_utils::borderless::title_bar(ui, title_bar_rect, |ui| {
+        borderless::title_bar(ui, title_bar_rect, |ui| {
             ui.add_space(8.0);
             ui.visuals_mut().button_frame = false;
 
@@ -368,18 +369,14 @@ impl App {
 
         egui::TopBottomPanel::bottom("bottom_panel")
             .exact_height(32.0)
-            .frame(egui::Frame::default().corner_radius(egui::CornerRadius {
-                sw: 8,
-                se: 8,
-                ..egui::CornerRadius::ZERO
-            }))
+            .frame(egui::Frame::side_top_panel(ui.style()).fill(Color32::TRANSPARENT))
             .show_inside(ui, |ui| self.ui_bottom_panel(ui));
 
         egui::CentralPanel::default()
-            .frame(egui::Frame::default().fill(ui.style().visuals.extreme_bg_color))
+            .frame(egui::Frame::central_panel(ui.style()).fill(ui.style().visuals.extreme_bg_color))
             .show_inside(ui, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| {
-                    let rect = ui.max_rect().shrink2(vec2(8.0, 0.0));
+                    let rect = ui.max_rect();
                     ui.allocate_new_ui(UiBuilder::new().max_rect(rect), |ui| {
                         ui.with_layout(
                             egui::Layout::centered_and_justified(egui::Direction::LeftToRight),
@@ -418,7 +415,6 @@ impl App {
 
     fn ui_bottom_panel(&mut self, ui: &mut egui::Ui) {
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            ui.add_space(8.0);
             egui::ComboBox::from_id_salt("codec").show_index(
                 ui,
                 &mut self.note.borrow_mut().codec_idx,
@@ -427,27 +423,9 @@ impl App {
             );
 
             ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                ui.add_space(8.0);
+                theme_button(ui, get_theme_button(ui));
 
-                let is_dark = ui.visuals().dark_mode;
-                let theme_icon = if is_dark {
-                    ICON_GITHUB_INVERTED
-                } else {
-                    ICON_GITHUB
-                };
-
-                if ui
-                    .add(Button::new(theme_icon.to_string()).frame(false))
-                    .clicked()
-                {
-                    ui.ctx().set_visuals(if is_dark {
-                        egui::Visuals::light()
-                    } else {
-                        egui::Visuals::dark()
-                    });
-                }
                 ui.set_clip_rect(ui.max_rect());
-
                 ui.label(&self.note.borrow().state_msg);
             });
         });
@@ -644,8 +622,8 @@ impl eframe::App for App {
     }
 
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
-        eapp_utils::borderless::window_frame(ctx, None).show(ctx, |ui| {
-            eapp_utils::borderless::handle_resize(ui);
+        borderless::window_frame(ctx, Some(ctx.style().visuals.window_fill)).show(ctx, |ui| {
+            borderless::handle_resize(ui);
 
             let app_rect = ui.max_rect();
 
