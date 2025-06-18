@@ -273,40 +273,22 @@ impl Iterator for Parser<'_> {
                 return Some(item);
             }
 
-            if let Some(rest) = self.s.strip_prefix('*') {
+            if let Some(rest) = self.s.strip_prefix("**") {
                 self.s = rest;
                 self.start_of_line = false;
                 self.style.strong = !self.style.strong;
                 continue;
             }
-            if let Some(rest) = self.s.strip_prefix('_') {
-                self.s = rest;
-                self.start_of_line = false;
-                self.style.underline = !self.style.underline;
-                continue;
-            }
-            if let Some(rest) = self.s.strip_prefix('~') {
+            if let Some(rest) = self.s.strip_prefix("~~") {
                 self.s = rest;
                 self.start_of_line = false;
                 self.style.strikethrough = !self.style.strikethrough;
                 continue;
             }
-            if let Some(rest) = self.s.strip_prefix('/') {
+            if let Some(rest) = self.s.strip_prefix('*') {
                 self.s = rest;
                 self.start_of_line = false;
                 self.style.italics = !self.style.italics;
-                continue;
-            }
-            if let Some(rest) = self.s.strip_prefix('$') {
-                self.s = rest;
-                self.start_of_line = false;
-                self.style.small = !self.style.small;
-                continue;
-            }
-            if let Some(rest) = self.s.strip_prefix('^') {
-                self.s = rest;
-                self.start_of_line = false;
-                self.style.raised = !self.style.raised;
                 continue;
             }
 
@@ -315,15 +297,17 @@ impl Iterator for Parser<'_> {
                 return Some(item);
             }
 
-            // Swallow everything up to the next special character:
-            let end = self
-                .s
-                .find(&['*', '`', '~', '_', '/', '$', '^', '\\', '<', '[', '\n'][..])
-                .map_or_else(|| self.s.len(), |special| special.max(1));
+            let specials = ['*', '`', '~', '_', '/', '$', '^', '\\', '<', '[', '\n'];
+            let end = match self.s.find(specials) {
+                Some(pos) => pos.max(1),
+                None => self.s.len(),
+            };
 
             let item = Item::Text(self.style, self.s[..end].to_owned());
+
             self.s = &self.s[end..];
             self.start_of_line = false;
+
             return Some(item);
         }
     }
