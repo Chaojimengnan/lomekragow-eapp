@@ -49,14 +49,13 @@ pub fn setup_fonts(ctx: &egui::Context) {
         .append(&mut vec!["unifont".to_owned(), "codicon".to_owned()]);
 
     ctx.set_fonts(fonts);
+    ctx.style_mut(setup_text_size);
+}
 
-    let mut style = ctx.style().as_ref().clone();
+pub fn setup_text_size(style: &mut egui::Style) {
     for id in &mut style.text_styles.values_mut() {
         id.size = 16.0;
     }
-    ctx.set_style(style);
-
-    ctx.set_theme(egui::Theme::Dark);
 }
 
 pub fn setup_loggers(log_filename: &str) -> Result<(), Box<dyn std::error::Error>> {
