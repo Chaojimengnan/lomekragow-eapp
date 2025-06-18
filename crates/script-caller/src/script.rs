@@ -99,6 +99,10 @@ impl Arg {
     }
 
     pub fn initialize_value(&mut self) {
+        if matches!(self.r#type, ArgType::StoreTrue(_)) {
+            self.optional = false;
+        }
+
         if !self.optional {
             self.enabled = true;
         }
