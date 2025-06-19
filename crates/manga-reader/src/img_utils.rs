@@ -14,7 +14,11 @@ pub struct ImgTranslation {
 }
 
 impl ImgTranslation {
-    pub fn reset_translation(&mut self) {
+    pub fn reset_translation(&mut self, mode: InitialScalingMode) {
+        if matches!(mode, InitialScalingMode::KeepScale) {
+            return;
+        }
+
         self.scale = 1.0;
         self.image_offset = egui::Vec2::ZERO;
     }
@@ -29,9 +33,9 @@ impl ImgTranslation {
 
     pub fn fit_space_if_need(&mut self, mode: InitialScalingMode) {
         self.image_fit_space_size = match mode {
+            InitialScalingMode::KeepScale => false,
             InitialScalingMode::OriginalSize => false,
             InitialScalingMode::FitToSpace => true,
-            InitialScalingMode::SmartFit => true,
         };
     }
 }
@@ -54,16 +58,15 @@ impl Default for ImgTranslation {
 
 #[derive(Deserialize, Serialize, PartialEq, Eq, Clone, Copy, Default)]
 pub enum InitialScalingMode {
+    /// Do nothing with scale or offset, just keep it
+    #[default]
+    KeepScale,
+
     /// Display in the original size of the image
     OriginalSize,
 
     /// The image will automatically adapt to the available space size
     FitToSpace,
-
-    /// When the image is smaller than the available space size,
-    /// display it in its original size; otherwise, the behavior is equal to [`ImgScaleMode::Fit`]
-    #[default]
-    SmartFit,
 }
 
 #[derive(Clone, Copy, Debug)]

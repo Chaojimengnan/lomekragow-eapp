@@ -6,7 +6,7 @@ use crate::{
 use eapp_utils::{
     borderless,
     codicons::{
-        ICON_INSPECT, ICON_NEW_FILE, ICON_REFRESH, ICON_SCREEN_FULL, ICON_SCREEN_NORMAL,
+        ICON_COFFEE, ICON_NEW_FILE, ICON_REFRESH, ICON_SCREEN_FULL, ICON_SCREEN_NORMAL,
         ICON_TRIANGLE_LEFT, ICON_TRIANGLE_RIGHT,
     },
     widgets::{
@@ -137,9 +137,10 @@ impl App {
                     theme_button(ui, get_theme_button(ui));
                     ui.selectable_value(
                         &mut self.state.initial_scaling_mode,
-                        InitialScalingMode::SmartFit,
-                        ICON_INSPECT.to_string(),
-                    ).on_hover_text("When the image is smaller than the available space size, display it in its original size; otherwise, the behavior is equal to `FitToSpace`");
+                        InitialScalingMode::KeepScale,
+                        ICON_COFFEE.to_string(),
+                    )
+                    .on_hover_text("Do nothing with scale or offset, just keep it");
                     ui.selectable_value(
                         &mut self.state.initial_scaling_mode,
                         InitialScalingMode::OriginalSize,
@@ -293,6 +294,11 @@ impl App {
                 let image_size = handle.size_vec2();
                 let available_size = rect.size();
 
+                let keep_min_scale = matches!(
+                    self.state.initial_scaling_mode,
+                    InitialScalingMode::KeepScale
+                ) && self.translation.min_scale == self.translation.scale;
+
                 let fit_scale = {
                     let width_scale = available_size.x / image_size.x;
                     let height_scale = available_size.y / image_size.y;
@@ -301,18 +307,13 @@ impl App {
                 self.translation.min_scale = fit_scale.min(1.0);
                 self.translation.scale = self.translation.scale.max(self.translation.min_scale);
 
+                if keep_min_scale {
+                    self.translation.scale = self.translation.min_scale;
+                }
+
                 if self.translation.image_fit_space_size {
                     self.translation.image_fit_space_size = false;
-
-                    let small_enough = matches!(
-                        self.state.initial_scaling_mode,
-                        InitialScalingMode::SmartFit
-                    ) && image_size.x <= available_size.x
-                        && image_size.y <= available_size.y;
-
-                    if !small_enough {
-                        self.translation.scale = fit_scale;
-                    }
+                    self.translation.scale = fit_scale;
                 }
 
                 let scaled_size = image_size * self.translation.scale;
@@ -366,10 +367,6 @@ impl App {
                 tex.corner_radius(self.adjust_corner_radius_match_left_panel(corner_radius))
                     .tint(Color32::WHITE.gamma_multiply(opacity))
                     .paint_at(ui, image_rect);
-
-                if self.translation.is_dragging {
-                    ui.ctx().set_cursor_icon(egui::CursorIcon::Grab);
-                }
             } else {
                 self.state.is_cur_image_loading = true;
                 if let Some(info) = self.state.last_image_info.as_ref() {
@@ -742,7 +739,8 @@ impl App {
         if let Some(cur_image) = self.img_finder.cur_image_name() {
             if self.state.last_image_name.as_deref() != Some(cur_image) {
                 self.state.last_image_name = Some(cur_image.to_string());
-                self.translation.reset_translation();
+                self.translation
+                    .reset_translation(self.state.initial_scaling_mode);
                 self.translation
                     .fit_space_if_need(self.state.initial_scaling_mode);
             }
