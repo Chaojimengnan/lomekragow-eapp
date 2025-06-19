@@ -26,6 +26,14 @@ impl ImgTranslation {
     pub fn image_fully_contained(&self) -> bool {
         !self.image_exceeds_space.0 && !self.image_exceeds_space.1
     }
+
+    pub fn fit_space_if_need(&mut self, mode: InitialScalingMode) {
+        self.image_fit_space_size = match mode {
+            InitialScalingMode::OriginalSize => false,
+            InitialScalingMode::FitToSpace => true,
+            InitialScalingMode::SmartFit => true,
+        };
+    }
 }
 
 impl Default for ImgTranslation {

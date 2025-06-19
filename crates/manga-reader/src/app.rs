@@ -36,6 +36,8 @@ struct State {
     last_cur_dir: Option<usize>,
     #[serde(skip)]
     last_image_name: Option<String>,
+    #[serde(skip)]
+    last_window_size: egui::Vec2,
 }
 
 impl Default for State {
@@ -48,6 +50,7 @@ impl Default for State {
             is_cur_image_loading: true,
             last_cur_dir: None,
             last_image_name: None,
+            last_window_size: egui::Vec2::ZERO,
         }
     }
 }
@@ -299,15 +302,16 @@ impl App {
                 self.translation.scale = self.translation.scale.max(self.translation.min_scale);
 
                 if self.translation.image_fit_space_size {
-                    self.translation.scale = fit_scale;
                     self.translation.image_fit_space_size = false;
-                    if matches!(
+
+                    let small_enough = matches!(
                         self.state.initial_scaling_mode,
                         InitialScalingMode::SmartFit
                     ) && image_size.x <= available_size.x
-                        && image_size.y <= available_size.y
-                    {
-                        self.translation.scale = 1.0;
+                        && image_size.y <= available_size.y;
+
+                    if !small_enough {
+                        self.translation.scale = fit_scale;
                     }
                 }
 
@@ -721,6 +725,13 @@ impl App {
             }
         });
 
+        let current_size = ui.ctx().input(|i| i.viewport().inner_rect.unwrap().size());
+        if self.state.last_window_size != current_size {
+            self.state.last_window_size = current_size;
+            self.translation
+                .fit_space_if_need(self.state.initial_scaling_mode);
+        }
+
         if self.img_finder.consume_dir_changed_flag() {
             self.tex_loader.forget_all();
             for item in self.img_finder.image_iter().take(3).rev() {
@@ -732,11 +743,8 @@ impl App {
             if self.state.last_image_name.as_deref() != Some(cur_image) {
                 self.state.last_image_name = Some(cur_image.to_string());
                 self.translation.reset_translation();
-                self.translation.image_fit_space_size = match self.state.initial_scaling_mode {
-                    InitialScalingMode::OriginalSize => false,
-                    InitialScalingMode::FitToSpace => true,
-                    InitialScalingMode::SmartFit => true,
-                }
+                self.translation
+                    .fit_space_if_need(self.state.initial_scaling_mode);
             }
         } else {
             self.state.last_image_name = None;
