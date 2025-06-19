@@ -38,6 +38,10 @@ struct State {
     last_image_name: Option<String>,
     #[serde(skip)]
     last_window_size: egui::Vec2,
+    #[serde(skip)]
+    pointer_in_info_rect: bool,
+    #[serde(skip)]
+    last_time_pointer_in_info_rect: f64,
 }
 
 impl Default for State {
@@ -51,6 +55,8 @@ impl Default for State {
             last_cur_dir: None,
             last_image_name: None,
             last_window_size: egui::Vec2::ZERO,
+            pointer_in_info_rect: false,
+            last_time_pointer_in_info_rect: 0.0,
         }
     }
 }
@@ -428,10 +434,20 @@ impl App {
         rect: eframe::epaint::Rect,
         sense_rect: eframe::epaint::Rect,
     ) {
-        let opacity = ui.ctx().animate_bool(
-            Id::new("info_hover_area"),
-            borderless::rect_contains_pointer(ui, sense_rect),
-        );
+        let current_time = ui.input(|i| i.time);
+
+        if borderless::rect_contains_pointer(ui, sense_rect) {
+            self.state.pointer_in_info_rect = true;
+            self.state.last_time_pointer_in_info_rect = current_time;
+        }
+
+        if current_time - self.state.last_time_pointer_in_info_rect >= 2.0 {
+            self.state.pointer_in_info_rect = false;
+        }
+
+        let opacity = ui
+            .ctx()
+            .animate_bool(Id::new("info_hover_area"), self.state.pointer_in_info_rect);
 
         if opacity == 0.0 {
             return;
