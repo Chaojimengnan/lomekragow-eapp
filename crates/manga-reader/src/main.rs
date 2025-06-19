@@ -2,7 +2,7 @@
 
 pub mod app;
 pub mod img_finder;
-pub mod img_translation;
+pub mod img_utils;
 pub mod lifo;
 pub mod tex_loader;
 

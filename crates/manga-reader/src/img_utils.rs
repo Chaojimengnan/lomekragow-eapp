@@ -1,4 +1,5 @@
 use eframe::egui;
+use serde::{Deserialize, Serialize};
 
 pub struct ImgTranslation {
     pub scale_old_for_calculate: Option<f32>,
@@ -16,7 +17,6 @@ impl ImgTranslation {
     pub fn reset_translation(&mut self) {
         self.scale = 1.0;
         self.image_offset = egui::Vec2::ZERO;
-        self.image_fit_space_size = true;
     }
 
     pub fn clamp_offset(&self, offset: egui::Vec2) -> egui::Vec2 {
@@ -42,4 +42,24 @@ impl Default for ImgTranslation {
             min_scale: 1.0,
         }
     }
+}
+
+#[derive(Deserialize, Serialize, PartialEq, Eq, Clone, Copy, Default)]
+pub enum InitialScalingMode {
+    /// Display in the original size of the image
+    OriginalSize,
+
+    /// The image will automatically adapt to the available space size
+    FitToSpace,
+
+    /// When the image is smaller than the available space size,
+    /// display it in its original size; otherwise, the behavior is equal to [`ImgScaleMode::Fit`]
+    #[default]
+    SmartFit,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct LastImageInfo {
+    pub average_color: egui::Color32,
+    pub rect: egui::Rect,
 }

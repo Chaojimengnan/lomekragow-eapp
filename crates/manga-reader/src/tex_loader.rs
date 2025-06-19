@@ -17,18 +17,39 @@ enum LoadCommand {
 }
 
 pub enum Texture {
-    Static(egui::TextureHandle),
-    Animated(Animated),
+    Static {
+        handle: egui::TextureHandle,
+        average_color: egui::Color32,
+    },
+    Animated {
+        frames: Vec<(egui::TextureHandle, u64)>,
+        current: usize,
+        next_update: Duration,
+        average_color: egui::Color32,
+    },
 }
 
-pub struct Animated {
-    pub frames: Vec<(egui::TextureHandle, u64)>,
-    pub current: usize,
-    pub next_update: Duration,
+impl Texture {
+    pub fn get_cur_handle(&self) -> &egui::TextureHandle {
+        match self {
+            Self::Static { handle, .. } => handle,
+            Self::Animated {
+                frames, current, ..
+            } => &frames[*current].0,
+        }
+    }
+
+    pub fn get_cur_average_color(&self) -> egui::Color32 {
+        match self {
+            Self::Static { average_color, .. } => *average_color,
+            Self::Animated { average_color, .. } => *average_color,
+        }
+    }
 }
 
 pub struct TexLoader {
     textures: HashMap<String, Option<Texture>>,
+    average_colors: HashMap<String, egui::Color32>,
     sender: lifo::Sender<LoadCommand>,
     receiver: std::sync::mpsc::Receiver<(String, Image)>,
 }
@@ -39,11 +60,35 @@ fn get_duration() -> Duration {
         .unwrap()
 }
 
+fn calculate_average_color(pixels: &[egui::Color32]) -> egui::Color32 {
+    if pixels.is_empty() {
+        return egui::Color32::TRANSPARENT;
+    }
+
+    let step = 8;
+    let (mut r, mut g, mut b, mut count) = (0u32, 0u32, 0u32, 0u32);
+
+    for i in (0..pixels.len()).step_by(step) {
+        let pixel = pixels[i];
+        r += pixel.r() as u32;
+        g += pixel.g() as u32;
+        b += pixel.b() as u32;
+        count += 1;
+    }
+
+    if count == 0 {
+        egui::Color32::TRANSPARENT
+    } else {
+        egui::Color32::from_rgb((r / count) as u8, (g / count) as u8, (b / count) as u8)
+    }
+}
+
 impl TexLoader {
     pub fn new(ctx: &egui::Context) -> Self {
         let (sender, cmd_receiver) = lifo::channel();
         let (image_sender, receiver) = std::sync::mpsc::channel();
         let textures = HashMap::new();
+        let average_colors = HashMap::new();
 
         let ctx = ctx.clone();
         std::thread::spawn(move || {
@@ -59,24 +104,26 @@ impl TexLoader {
                                         let frames = (
                                             image_path.clone(),
                                             Image::Animated(
-                                                image::codecs::gif::GifDecoder::new(std::io::Cursor::new(content))?
-                                                    .into_frames()
-                                                    .collect_frames()?
-                                                    .into_iter()
-                                                    .map(|frame| {
-                                                        let (num, den) = frame.delay().numer_denom_ms();
-                                                        (
-                                                            egui::ColorImage::from_rgba_unmultiplied(
-                                                                [
-                                                                    frame.buffer().width() as _,
-                                                                    frame.buffer().height() as _,
-                                                                ],
-                                                                frame.buffer(),
-                                                            ),
-                                                            (num as f32 * 1000.0 / den as f32) as _,
-                                                        )
-                                                    })
-                                                    .collect(),
+                                                image::codecs::gif::GifDecoder::new(
+                                                    std::io::Cursor::new(content),
+                                                )?
+                                                .into_frames()
+                                                .collect_frames()?
+                                                .into_iter()
+                                                .map(|frame| {
+                                                    let (num, den) = frame.delay().numer_denom_ms();
+                                                    (
+                                                        egui::ColorImage::from_rgba_unmultiplied(
+                                                            [
+                                                                frame.buffer().width() as _,
+                                                                frame.buffer().height() as _,
+                                                            ],
+                                                            frame.buffer(),
+                                                        ),
+                                                        (num as f32 * 1000.0 / den as f32) as _,
+                                                    )
+                                                })
+                                                .collect(),
                                             ),
                                         );
                                         image_sender.send(frames).unwrap();
@@ -87,16 +134,15 @@ impl TexLoader {
                                         let size = [img.width() as _, img.height() as _];
                                         let image_buffer = img.to_rgba8();
                                         let pixels = image_buffer.as_flat_samples();
+                                        let color_image = egui::ColorImage::from_rgba_unmultiplied(
+                                            size,
+                                            pixels.as_slice(),
+                                        );
 
                                         image_sender
                                             .send((
                                                 image_path.clone(),
-                                                Image::Static(
-                                                    egui::ColorImage::from_rgba_unmultiplied(
-                                                        size,
-                                                        pixels.as_slice(),
-                                                    ),
-                                                ),
+                                                Image::Static(color_image),
                                             ))
                                             .unwrap();
                                     }
@@ -112,6 +158,7 @@ impl TexLoader {
 
         Self {
             textures,
+            average_colors,
             sender,
             receiver,
         }
@@ -132,17 +179,21 @@ impl TexLoader {
 
             if let Some(texture) = self.textures.get_mut(cur_img).unwrap() {
                 match texture {
-                    Texture::Static(_) => (),
-                    Texture::Animated(animation) => {
+                    Texture::Static { .. } => (),
+                    Texture::Animated {
+                        frames,
+                        current,
+                        next_update,
+                        ..
+                    } => {
                         let now = get_duration();
-                        if animation.next_update <= now {
-                            let delay =
-                                Duration::from_micros(animation.frames[animation.current].1);
-                            animation.current = (animation.current + 1) % animation.frames.len();
-                            animation.next_update = now + delay;
+                        if *next_update <= now {
+                            let delay = Duration::from_micros(frames[*current].1);
+                            *current = (*current + 1) % frames.len();
+                            *next_update = now + delay;
                             ctx.request_repaint_after(delay);
                         } else {
-                            ctx.request_repaint_after(animation.next_update - now);
+                            ctx.request_repaint_after(*next_update - now);
                         }
                     }
                 }
@@ -151,40 +202,71 @@ impl TexLoader {
 
         loop {
             use std::sync::mpsc::TryRecvError::*;
+            let options = egui::TextureOptions::default();
+
+            macro_rules! get_or_calculate_average_color {
+                ($path:expr, $pixels:expr) => {
+                    match self.average_colors.get($path) {
+                        Some(c) => *c,
+                        None => {
+                            let color = calculate_average_color($pixels);
+                            self.average_colors.insert($path.to_owned(), color);
+                            color
+                        }
+                    }
+                };
+            }
+
             match self.receiver.try_recv() {
-                Ok((name, image)) => {
-                    if let Some(opt_texture) = self.textures.get_mut(&name) {
-                        if opt_texture.is_none() {
-                            let options = egui::TextureOptions::default();
-                            match image {
-                                Image::Static(img) => {
-                                    *opt_texture = Some(Texture::Static(
-                                        ctx.load_texture(&name, img, options),
-                                    ));
-                                }
-                                Image::Animated(imgs) => {
-                                    let current = 0;
-                                    let next_update = get_duration();
-                                    let frames = imgs
-                                        .into_iter()
-                                        .enumerate()
-                                        .map(|(i, (img, delay))| {
-                                            (
-                                                ctx.load_texture(
-                                                    format!("{name}_{i}"),
-                                                    img,
-                                                    options,
-                                                ),
-                                                delay,
-                                            )
-                                        })
-                                        .collect();
-                                    *opt_texture = Some(Texture::Animated(Animated {
-                                        frames,
-                                        current,
-                                        next_update,
-                                    }));
-                                }
+                Ok((image_path, image)) => {
+                    if let Some(opt_texture) = self.textures.get_mut(&image_path) {
+                        if opt_texture.is_some() {
+                            continue;
+                        }
+
+                        match image {
+                            Image::Static(img) => {
+                                let average_color =
+                                    get_or_calculate_average_color!(&image_path, &img.pixels);
+
+                                *opt_texture = Some(Texture::Static {
+                                    handle: ctx.load_texture(&image_path, img, options),
+                                    average_color,
+                                });
+                            }
+                            Image::Animated(imgs) => {
+                                let current = 0;
+                                let next_update = get_duration();
+                                let average_color = if let Some(first_frame) = imgs.first() {
+                                    get_or_calculate_average_color!(
+                                        &image_path,
+                                        &first_frame.0.pixels
+                                    )
+                                } else {
+                                    egui::Color32::TRANSPARENT
+                                };
+
+                                let frames = imgs
+                                    .into_iter()
+                                    .enumerate()
+                                    .map(|(i, (img, delay))| {
+                                        (
+                                            ctx.load_texture(
+                                                format!("{image_path}_{i}"),
+                                                img,
+                                                options,
+                                            ),
+                                            delay,
+                                        )
+                                    })
+                                    .collect();
+
+                                *opt_texture = Some(Texture::Animated {
+                                    frames,
+                                    current,
+                                    next_update,
+                                    average_color,
+                                });
                             }
                         }
                     }

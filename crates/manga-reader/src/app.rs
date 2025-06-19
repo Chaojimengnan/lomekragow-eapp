@@ -1,8 +1,13 @@
-use crate::{img_finder::ImgFinder, img_translation::ImgTranslation, tex_loader::TexLoader};
+use crate::{
+    img_finder::ImgFinder,
+    img_utils::{ImgTranslation, InitialScalingMode, LastImageInfo},
+    tex_loader::TexLoader,
+};
 use eapp_utils::{
     borderless,
     codicons::{
-        ICON_INSPECT, ICON_NEW_FILE, ICON_REFRESH, ICON_TRIANGLE_LEFT, ICON_TRIANGLE_RIGHT,
+        ICON_INSPECT, ICON_NEW_FILE, ICON_REFRESH, ICON_SCREEN_FULL, ICON_SCREEN_NORMAL,
+        ICON_TRIANGLE_LEFT, ICON_TRIANGLE_RIGHT,
     },
     widgets::{
         progress_bar::{ProgressBar, draw_progress_bar_background, value_from_x},
@@ -22,6 +27,9 @@ use serde::{Deserialize, Serialize};
 struct State {
     search_key: String,
     left_panel_open: bool,
+    initial_scaling_mode: InitialScalingMode,
+    #[serde(skip)]
+    last_image_info: Option<LastImageInfo>,
     #[serde(skip)]
     is_cur_image_loading: bool,
     #[serde(skip)]
@@ -33,10 +41,12 @@ struct State {
 impl Default for State {
     fn default() -> Self {
         Self {
+            search_key: String::default(),
             left_panel_open: true,
+            initial_scaling_mode: InitialScalingMode::default(),
+            last_image_info: None,
             is_cur_image_loading: true,
             last_cur_dir: None,
-            search_key: String::default(),
             last_image_name: None,
         }
     }
@@ -120,7 +130,26 @@ impl App {
             )
             .width_range(200.0..=max_width)
             .show_animated_inside(ui, self.state.left_panel_open, |ui| {
-                theme_button(ui, get_theme_button(ui));
+                ui.horizontal(|ui| {
+                    theme_button(ui, get_theme_button(ui));
+                    ui.selectable_value(
+                        &mut self.state.initial_scaling_mode,
+                        InitialScalingMode::SmartFit,
+                        ICON_INSPECT.to_string(),
+                    ).on_hover_text("When the image is smaller than the available space size, display it in its original size; otherwise, the behavior is equal to `FitToSpace`");
+                    ui.selectable_value(
+                        &mut self.state.initial_scaling_mode,
+                        InitialScalingMode::OriginalSize,
+                        ICON_SCREEN_NORMAL.to_string(),
+                    )
+                    .on_hover_text("Display in the original size of the image");
+                    ui.selectable_value(
+                        &mut self.state.initial_scaling_mode,
+                        InitialScalingMode::FitToSpace,
+                        ICON_SCREEN_FULL.to_string(),
+                    )
+                    .on_hover_text("Fit the image size with the available space size");
+                });
 
                 ui.add(
                     egui::TextEdit::singleline(&mut self.state.search_key)
@@ -257,12 +286,7 @@ impl App {
             if let Some(texture) = self.tex_loader.textures().get(cur_image_name).unwrap() {
                 self.state.is_cur_image_loading = false;
 
-                use crate::tex_loader::Texture::*;
-                let handle = match texture {
-                    Static(handle) => handle,
-                    Animated(animated) => &animated.frames[animated.current].0,
-                };
-
+                let handle = texture.get_cur_handle();
                 let image_size = handle.size_vec2();
                 let available_size = rect.size();
 
@@ -277,6 +301,14 @@ impl App {
                 if self.translation.image_fit_space_size {
                     self.translation.scale = fit_scale;
                     self.translation.image_fit_space_size = false;
+                    if matches!(
+                        self.state.initial_scaling_mode,
+                        InitialScalingMode::SmartFit
+                    ) && image_size.x <= available_size.x
+                        && image_size.y <= available_size.y
+                    {
+                        self.translation.scale = 1.0;
+                    }
                 }
 
                 let scaled_size = image_size * self.translation.scale;
@@ -315,6 +347,11 @@ impl App {
                 let image_pos = rect.center() - scaled_size * 0.5 + self.translation.image_offset;
                 let image_rect = Rect::from_min_size(image_pos, scaled_size);
 
+                self.state.last_image_info = Some(LastImageInfo {
+                    average_color: texture.get_cur_average_color(),
+                    rect: image_rect,
+                });
+
                 let diff = available_size - scaled_size;
                 let corner_radius = if diff.x <= 16.0 && diff.y <= 16.0 {
                     CornerRadius::same(8)
@@ -323,7 +360,7 @@ impl App {
                 };
 
                 tex.corner_radius(self.adjust_corner_radius_match_left_panel(corner_radius))
-                    .tint(Color32::WHITE.linear_multiply(opacity))
+                    .tint(Color32::WHITE.gamma_multiply(opacity))
                     .paint_at(ui, image_rect);
 
                 if self.translation.is_dragging {
@@ -331,7 +368,15 @@ impl App {
                 }
             } else {
                 self.state.is_cur_image_loading = true;
-                show_center_text("Maiden in Prayer...");
+                if let Some(info) = self.state.last_image_info.as_ref() {
+                    let fill_color = info.average_color.gamma_multiply(opacity);
+                    ui.painter()
+                        .rect_filled(info.rect, CornerRadius::ZERO, fill_color);
+                }
+
+                if opacity == 0.0 {
+                    show_center_text("Maiden in Prayer...");
+                }
             }
         } else {
             show_center_text("manga-reader :)");
@@ -421,15 +466,11 @@ impl App {
             page_info = format!("{} / {}", img + 1, total_pages);
 
             if let Some(texture) = self.tex_loader.textures().get(img_name).unwrap() {
-                use crate::tex_loader::Texture::*;
-                let size_number = match texture {
-                    Static(v) => v.size(),
-                    Animated(v) => v.frames[v.current].0.size(),
-                };
+                let size = texture.get_cur_handle().size();
                 size_info = format!(
                     "{} x {} ({:.0}%)",
-                    size_number[0],
-                    size_number[1],
+                    size[0],
+                    size[1],
                     self.translation.scale * 100.0
                 );
             }
@@ -457,11 +498,7 @@ impl App {
 
                     if let Some(img_name) = self.img_finder.image_at(new_page) {
                         if let Some(Some(texture)) = self.tex_loader.textures().get(img_name) {
-                            use crate::tex_loader::Texture::*;
-                            let handle = match texture {
-                                Static(handle) => handle,
-                                Animated(animated) => &animated.frames[animated.current].0,
-                            };
+                            let handle = texture.get_cur_handle();
 
                             let image = egui::Image::from_texture(handle)
                                 .max_size(vec2(256.0, 256.0))
@@ -529,7 +566,7 @@ impl App {
                         ui.ctx().request_repaint();
                     }
 
-                    if PlainButton::new(btn_size, ICON_INSPECT.to_string())
+                    if PlainButton::new(btn_size, ICON_SCREEN_FULL.to_string())
                         .corner_radius(CornerRadius::same(2))
                         .hover(hover_color)
                         .ui(ui)
@@ -686,12 +723,20 @@ impl App {
 
         if self.img_finder.consume_dir_changed_flag() {
             self.tex_loader.forget_all();
+            for item in self.img_finder.image_iter().take(3).rev() {
+                self.tex_loader.load(item);
+            }
         }
 
         if let Some(cur_image) = self.img_finder.cur_image_name() {
             if self.state.last_image_name.as_deref() != Some(cur_image) {
                 self.state.last_image_name = Some(cur_image.to_string());
                 self.translation.reset_translation();
+                self.translation.image_fit_space_size = match self.state.initial_scaling_mode {
+                    InitialScalingMode::OriginalSize => false,
+                    InitialScalingMode::FitToSpace => true,
+                    InitialScalingMode::SmartFit => true,
+                }
             }
         } else {
             self.state.last_image_name = None;
