@@ -87,13 +87,8 @@ jobs:
           echo "PKG_CONFIG_PATH=$(brew --prefix)/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
       - name: Build ${{ matrix.crate }}
+        shell: bash
         run: |
-          if [ "${{ matrix.crate }}" == "your-player" ]; then
-            export LIBRARY_PATH="$(brew --prefix)/lib:$LIBRARY_PATH"
-            export DYLD_LIBRARY_PATH="$(brew --prefix)/lib:$DYLD_LIBRARY_PATH"
-            export PKG_CONFIG_PATH="$(brew --prefix)/lib/pkgconfig:$PKG_CONFIG_PATH"
-          fi
-          
           cargo build --release --target ${{ matrix.target }} --bin ${{ matrix.crate }}
         env:
           CARGO_TERM_COLOR: always
@@ -103,6 +98,7 @@ jobs:
           PKG_CONFIG_PATH: ${{ env.PKG_CONFIG_PATH || '' }}
 
       - name: Prepare artifacts
+        shell: bash
         run: |
           mkdir -p release
           EXE_PATH="target/${{ matrix.target }}/release/${{ matrix.crate }}${{ matrix.ext }}"
@@ -112,6 +108,7 @@ jobs:
 
       - name: Strip symbols (Linux/macOS)
         if: matrix.os != 'windows-latest'
+        shell: bash
         run: |
           strip "release/${{ matrix.crate }}-${{ matrix.platform }}"
 
