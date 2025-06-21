@@ -79,12 +79,45 @@ jobs:
       - name: Install macOS dependencies
         if: matrix.os == 'macos-latest'
         run: |
-          brew update
+          # 安装 Rosetta 2（仅当未安装时）
+          if ! /usr/bin/pgrep -q oahd; then
+            echo "Installing Rosetta 2..."
+            softwareupdate --install-rosetta --agree-to-license
+          fi
+          
+          # 在隔离路径安装 x86_64 Homebrew
+          BREW_PREFIX="/usr/local/homebrew-x86"
+          [ -d "$BREW_PREFIX" ] || sudo mkdir -p "$BREW_PREFIX"
+          sudo chown -R $(whoami) "$BREW_PREFIX"
+          
+          # 安装 Homebrew
+          arch -x86_64 /bin/bash -c \
+            "NONINTERACTIVE=1 CI=1 /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"" \
+            </dev/null
+          
+          # 设置环境
+          echo "HOMEBREW_PREFIX=$BREW_PREFIX" >> $GITHUB_ENV
+          echo "PATH=$BREW_PREFIX/bin:$BREW_PREFIX/sbin:$PATH" >> $GITHUB_ENV
+          
+          # 安装 mpv
           brew install mpv
           
-          echo "LIBRARY_PATH=$(brew --prefix)/lib:$LIBRARY_PATH" >> $GITHUB_ENV
-          echo "DYLD_LIBRARY_PATH=$(brew --prefix)/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
-          echo "PKG_CONFIG_PATH=$(brew --prefix)/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+          # 设置库路径
+          echo "LIBRARY_PATH=$BREW_PREFIX/lib:$LIBRARY_PATH" >> $GITHUB_ENV
+          echo "DYLD_LIBRARY_PATH=$BREW_PREFIX/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=$BREW_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+          
+          # 添加链接器搜索路径（保留原有优化标志）
+          echo "RUSTFLAGS=-L$BREW_PREFIX/lib ${{ matrix.RUSTFLAGS }}" >> $GITHUB_ENV
+
+      # 验证库文件架构
+      - name: Verify macOS libraries
+        if: matrix.os == 'macos-latest'
+        run: |
+          echo "Checking mpv library architecture..."
+          file "$HOMEBREW_PREFIX/lib/libmpv.dylib"
+          lipo -archs "$HOMEBREW_PREFIX/lib/libmpv.dylib"
+          echo "Expected architecture: x86_64"
 
       - name: Build ${{ matrix.crate }}
         shell: bash
@@ -92,7 +125,7 @@ jobs:
           cargo build --release --target ${{ matrix.target }} --bin ${{ matrix.crate }}
         env:
           CARGO_TERM_COLOR: always
-          RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
+          RUSTFLAGS: ${{ env.RUSTFLAGS || matrix.RUSTFLAGS }}
           LIBRARY_PATH: ${{ env.LIBRARY_PATH || '' }}
           DYLD_LIBRARY_PATH: ${{ env.DYLD_LIBRARY_PATH || '' }}
           PKG_CONFIG_PATH: ${{ env.PKG_CONFIG_PATH || '' }}
