@@ -11,7 +11,12 @@ default_fonts = ["eframe/default_fonts"]
 
 
 [dependencies]
-eframe = { workspace = true, features = ["glow", "persistence"] }
+eframe = { workspace = true, features = [
+    "glow",
+    "persistence",
+    "wayland",
+    "x11",
+] }
 simplelog.workspace = true
 log.workspace = true
 serde.workspace = true

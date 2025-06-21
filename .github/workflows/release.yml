@@ -31,7 +31,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 添加缓存加速构建
       - name: Cache dependencies
         uses: actions/cache@v4
         with:
@@ -47,77 +46,45 @@ jobs:
           toolchain: stable
           targets: ${{ matrix.target }}
 
-      # 平台特定依赖 - 仅Linux需要
+      # 精简的 Linux 依赖安装
       - name: Install Linux dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            libxcb-render0-dev \
-            libxcb-shape0-dev \
-            libxcb-xfixes0-dev \
-            libxkbcommon-dev \
-            libssl-dev \
+            libx11-dev \
+            libgl1-mesa-dev \
             libasound2-dev \
             libfontconfig1-dev
 
-      # 构建特定crate
+      # 构建
       - name: Build ${{ matrix.crate }}
         run: |
           cargo build --release --target ${{ matrix.target }} --bin ${{ matrix.crate }}
         env:
           CARGO_TERM_COLOR: always
 
-      # 准备发布文件
+      # 准备发布文件（保持原样）
       - name: Prepare artifacts
         run: |
           mkdir -p release
           EXE_PATH="target/${{ matrix.target }}/release/${{ matrix.crate }}${{ matrix.ext }}"
           OUTPUT_NAME="${{ matrix.crate }}-${{ matrix.platform }}${{ matrix.ext }}"
           
-          # Windows特殊处理 - 复制VC++运行时
-          if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            # 尝试多个可能的路径
-            DLL_PATHS=(
-              "C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/Redist/MSVC/14.29.30133/x64/Microsoft.VC142.CRT/vcruntime140.dll"
-              "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Redist/MSVC/14.29.30133/x64/Microsoft.VC142.CRT/vcruntime140.dll"
-              "C:/Program Files (x86)/Microsoft Visual Studio/2022/Enterprise/VC/Redist/MSVC/14.30.30704/x64/Microsoft.VC143.CRT/vcruntime140.dll"
-              "C:/Program Files (x86)/Microsoft Visual Studio/2022/Community/VC/Redist/MSVC/14.30.30704/x64/Microsoft.VC143.CRT/vcruntime140.dll"
-            )
-            
-            DLL_FOUND=false
-            for DLL_PATH in "${DLL_PATHS[@]}"; do
-              if [ -f "$DLL_PATH" ]; then
-                mkdir -p release/deps
-                cp "$DLL_PATH" release/deps/
-                echo "Copied vcruntime140.dll from $DLL_PATH"
-                DLL_FOUND=true
-                break
-              fi
-            done
-            
-            if [ "$DLL_FOUND" = false ]; then
-              echo "WARNING: vcruntime140.dll not found in any known location"
-              echo "NOTE: Windows runners usually have this DLL pre-installed"
-            fi
-          fi
-          
           cp "$EXE_PATH" "release/$OUTPUT_NAME"
 
-      # 符号剥离减少文件大小（仅Linux/macOS）
+      # 符号剥离
       - name: Strip symbols
         if: matrix.os != 'windows-latest'
         run: |
           strip "release/${{ matrix.crate }}-${{ matrix.platform }}"
 
-      # 上传当前crate的构建结果
+      # 上传
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.crate }}-${{ matrix.platform }}
-          path: |
-            release/${{ matrix.crate }}-${{ matrix.platform }}*
-            release/deps/*
+          path: release/${{ matrix.crate }}-${{ matrix.platform }}*
 
   create-release:
     runs-on: ubuntu-latest
@@ -149,10 +116,6 @@ jobs:
             **Build info:**
             - Rust version: stable
             - Build date: ${{ github.run_number }}
-            
-            **Windows note:**
-            If you encounter missing DLL errors on Windows, install:
-            [Microsoft Visual C++ Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe)
           files: artifacts/*
           draft: false
           prerelease: false
