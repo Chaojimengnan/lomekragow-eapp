@@ -83,11 +83,6 @@ jobs:
         run: |
           strip "release/${{ matrix.crate }}-${{ matrix.platform }}"
 
-      - name: Generate checksums
-        run: |
-          cd release
-          sha256sum * > checksums.txt
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
