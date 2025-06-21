@@ -14,6 +14,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        # FIXME: I dont know how to setup mpv on MacOS, so just skip it.
+        exclude:
+          - os: macos-latest
+            crate: your-player
+            
         crate: ["lonote", "manga-reader", "save-manager", "script-caller", "syncer", "your-player"]
         os: [ubuntu-latest, macos-latest, windows-latest]
         include:
@@ -80,50 +85,6 @@ jobs:
             sudo apt-get install -y libmpv-dev
           fi
       
-      - name: Install macOS dependencies
-        if: matrix.os == 'macos-latest' && matrix.crate == 'your-player'
-        shell: bash
-        run: |
-          # 安装 Rosetta 2（仅当未安装时）
-          if ! /usr/bin/pgrep -q oahd; then
-            echo "Installing Rosetta 2..."
-            sudo softwareupdate --install-rosetta --agree-to-license
-          fi
-          
-          # 在用户目录安装 x86_64 Homebrew，避免权限问题
-          BREW_PREFIX="$HOME/homebrew-x86"
-          mkdir -p "$BREW_PREFIX"
-          
-          # 使用临时文件避免引号嵌套问题
-          curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh -o brew-install.sh
-          chmod +x brew-install.sh
-          
-          # 安装 Homebrew - 使用环境变量指定安装路径
-          echo "Installing Homebrew to $BREW_PREFIX..."
-          HOMEBREW_PREFIX="$BREW_PREFIX" \
-          arch -x86_64 /bin/bash -c "NONINTERACTIVE=1 CI=1 ./brew-install.sh"
-          
-          # 将 Homebrew 添加到 PATH
-          echo "$BREW_PREFIX/bin:$BREW_PREFIX/sbin" >> $GITHUB_PATH
-          
-          # 设置环境变量
-          echo "HOMEBREW_PREFIX=$BREW_PREFIX" >> $GITHUB_ENV
-          echo "LIBRARY_PATH=$BREW_PREFIX/lib:$LIBRARY_PATH" >> $GITHUB_ENV
-          echo "DYLD_LIBRARY_PATH=$BREW_PREFIX/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
-          echo "PKG_CONFIG_PATH=$BREW_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
-          
-          # 添加链接器搜索路径
-          echo "RUSTFLAGS=-L$BREW_PREFIX/lib ${{ matrix.RUSTFLAGS }}" >> $GITHUB_ENV
-          
-          # 安装 mpv 并验证
-          brew install mpv
-          
-          # 验证安装
-          echo "验证 mpv 安装:"
-          ls -la "$BREW_PREFIX/lib/libmpv.dylib"
-          file "$BREW_PREFIX/lib/libmpv.dylib"
-          lipo -archs "$BREW_PREFIX/lib/libmpv.dylib"
-
 
       - name: Build ${{ matrix.crate }}
         shell: bash
@@ -131,10 +92,7 @@ jobs:
           cargo build --release --target ${{ matrix.target }} --bin ${{ matrix.crate }}
         env:
           CARGO_TERM_COLOR: always
-          RUSTFLAGS: ${{ env.RUSTFLAGS || matrix.RUSTFLAGS }}
-          LIBRARY_PATH: ${{ env.LIBRARY_PATH || '' }}
-          DYLD_LIBRARY_PATH: ${{ env.DYLD_LIBRARY_PATH || '' }}
-          PKG_CONFIG_PATH: ${{ env.PKG_CONFIG_PATH || '' }}
+          RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
 
       - name: Prepare artifacts
         shell: bash
@@ -143,7 +101,6 @@ jobs:
           EXE_PATH="target/${{ matrix.target }}/release/${{ matrix.crate }}${{ matrix.ext }}"
           OUTPUT_NAME="${{ matrix.crate }}-${{ matrix.platform }}${{ matrix.ext }}"
           
-          # 确保文件存在
           if [ -f "$EXE_PATH" ]; then
             cp "$EXE_PATH" "release/$OUTPUT_NAME"
           else
@@ -203,6 +160,8 @@ jobs:
             
             **Note for your-player on macOS and Linux:**
             Requires [mpv](https://mpv.io/) player installed
+            
+            **Note:** macOS version of your-player is currently not available
           files: artifacts/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
