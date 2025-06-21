@@ -82,7 +82,7 @@ jobs:
           # 安装 Rosetta 2（仅当未安装时）
           if ! /usr/bin/pgrep -q oahd; then
             echo "Installing Rosetta 2..."
-            softwareupdate --install-rosetta --agree-to-license
+            sudo softwareupdate --install-rosetta --agree-to-license
           fi
           
           # 在隔离路径安装 x86_64 Homebrew
@@ -90,10 +90,13 @@ jobs:
           [ -d "$BREW_PREFIX" ] || sudo mkdir -p "$BREW_PREFIX"
           sudo chown -R $(whoami) "$BREW_PREFIX"
           
-          # 安装 Homebrew
-          arch -x86_64 /bin/bash -c \
-            "NONINTERACTIVE=1 CI=1 /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"" \
-            </dev/null
+          # 使用临时文件避免引号嵌套问题
+          curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh -o brew-install.sh
+          chmod +x brew-install.sh
+          
+          # 安装 Homebrew - 使用环境变量指定安装路径
+          echo "Installing Homebrew to $BREW_PREFIX..."
+          HOMEBREW_PREFIX="$BREW_PREFIX" arch -x86_64 /bin/bash -c "NONINTERACTIVE=1 CI=1 ./brew-install.sh"
           
           # 设置环境
           echo "HOMEBREW_PREFIX=$BREW_PREFIX" >> $GITHUB_ENV
@@ -107,7 +110,7 @@ jobs:
           echo "DYLD_LIBRARY_PATH=$BREW_PREFIX/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
           echo "PKG_CONFIG_PATH=$BREW_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
           
-          # 添加链接器搜索路径（保留原有优化标志）
+          # 添加链接器搜索路径（合并原有优化标志）
           echo "RUSTFLAGS=-L$BREW_PREFIX/lib ${{ matrix.RUSTFLAGS }}" >> $GITHUB_ENV
 
       # 验证库文件架构
@@ -115,9 +118,15 @@ jobs:
         if: matrix.os == 'macos-latest'
         run: |
           echo "Checking mpv library architecture..."
-          file "$HOMEBREW_PREFIX/lib/libmpv.dylib"
-          lipo -archs "$HOMEBREW_PREFIX/lib/libmpv.dylib"
-          echo "Expected architecture: x86_64"
+          if [ -f "$HOMEBREW_PREFIX/lib/libmpv.dylib" ]; then
+            file "$HOMEBREW_PREFIX/lib/libmpv.dylib"
+            lipo -archs "$HOMEBREW_PREFIX/lib/libmpv.dylib"
+            echo "Expected architecture: x86_64"
+          else
+            echo "Error: libmpv.dylib not found at $HOMEBREW_PREFIX/lib/"
+            ls -la "$HOMEBREW_PREFIX/lib/" || true
+            exit 1
+          fi
 
       - name: Build ${{ matrix.crate }}
         shell: bash
@@ -137,13 +146,26 @@ jobs:
           EXE_PATH="target/${{ matrix.target }}/release/${{ matrix.crate }}${{ matrix.ext }}"
           OUTPUT_NAME="${{ matrix.crate }}-${{ matrix.platform }}${{ matrix.ext }}"
           
-          cp "$EXE_PATH" "release/$OUTPUT_NAME"
+          # 确保文件存在
+          if [ -f "$EXE_PATH" ]; then
+            cp "$EXE_PATH" "release/$OUTPUT_NAME"
+          else
+            echo "Error: Executable not found at $EXE_PATH"
+            ls -la "target/${{ matrix.target }}/release/" || true
+            exit 1
+          fi
 
       - name: Strip symbols (Linux/macOS)
         if: matrix.os != 'windows-latest'
         shell: bash
         run: |
-          strip "release/${{ matrix.crate }}-${{ matrix.platform }}"
+          FILE="release/${{ matrix.crate }}-${{ matrix.platform }}"
+          if [ -f "$FILE" ]; then
+            strip "$FILE"
+          else
+            echo "Error: File to strip not found: $FILE"
+            exit 1
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
