@@ -47,7 +47,7 @@ jobs:
           toolchain: stable
           targets: ${{ matrix.target }}
 
-      # 平台特定依赖
+      # 平台特定依赖 - 仅Linux需要
       - name: Install Linux dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
@@ -60,10 +60,6 @@ jobs:
             libssl-dev \
             libasound2-dev \
             libfontconfig1-dev
-
-      - name: Install Windows dependencies
-        if: matrix.os == 'windows-latest'
-        run: choco install -y vcredist2019
 
       # 构建特定crate
       - name: Build ${{ matrix.crate }}
@@ -79,15 +75,30 @@ jobs:
           EXE_PATH="target/${{ matrix.target }}/release/${{ matrix.crate }}${{ matrix.ext }}"
           OUTPUT_NAME="${{ matrix.crate }}-${{ matrix.platform }}${{ matrix.ext }}"
           
-          # Windows特殊处理
+          # Windows特殊处理 - 复制VC++运行时
           if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            # 添加VC++运行时依赖
-            DLL_PATH="C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/Redist/MSVC/14.29.30133/x64/Microsoft.VC142.CRT/vcruntime140.dll"
-            if [ -f "$DLL_PATH" ]; then
-              mkdir -p release/deps
-              cp "$DLL_PATH" release/deps/
-            else
-              echo "WARNING: vcruntime140.dll not found at $DLL_PATH"
+            # 尝试多个可能的路径
+            DLL_PATHS=(
+              "C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/Redist/MSVC/14.29.30133/x64/Microsoft.VC142.CRT/vcruntime140.dll"
+              "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Redist/MSVC/14.29.30133/x64/Microsoft.VC142.CRT/vcruntime140.dll"
+              "C:/Program Files (x86)/Microsoft Visual Studio/2022/Enterprise/VC/Redist/MSVC/14.30.30704/x64/Microsoft.VC143.CRT/vcruntime140.dll"
+              "C:/Program Files (x86)/Microsoft Visual Studio/2022/Community/VC/Redist/MSVC/14.30.30704/x64/Microsoft.VC143.CRT/vcruntime140.dll"
+            )
+            
+            DLL_FOUND=false
+            for DLL_PATH in "${DLL_PATHS[@]}"; do
+              if [ -f "$DLL_PATH" ]; then
+                mkdir -p release/deps
+                cp "$DLL_PATH" release/deps/
+                echo "Copied vcruntime140.dll from $DLL_PATH"
+                DLL_FOUND=true
+                break
+              fi
+            done
+            
+            if [ "$DLL_FOUND" = false ]; then
+              echo "WARNING: vcruntime140.dll not found in any known location"
+              echo "NOTE: Windows runners usually have this DLL pre-installed"
             fi
           fi
           
@@ -138,6 +149,10 @@ jobs:
             **Build info:**
             - Rust version: stable
             - Build date: ${{ github.run_number }}
+            
+            **Windows note:**
+            If you encounter missing DLL errors on Windows, install:
+            [Microsoft Visual C++ Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe)
           files: artifacts/*
           draft: false
           prerelease: false
