@@ -108,7 +108,7 @@ jobs:
           echo "PATH=$BREW_PREFIX/bin:$BREW_PREFIX/sbin:$PATH" >> $GITHUB_ENV
           
           # 安装 mpv
-          brew install mpv
+          brew install mpv --cask
           
           # 设置库路径
           echo "LIBRARY_PATH=$BREW_PREFIX/lib:$LIBRARY_PATH" >> $GITHUB_ENV
