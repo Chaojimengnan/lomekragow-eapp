@@ -1,0 +1,145 @@
+name: Multi-Binary Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        crate: ["lonote", "manga-reader", "save-manager", "script-caller", "syncer", "your-player"]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            ext: ""
+            platform: linux
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            ext: ""
+            platform: macos
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            ext: ".exe"
+            platform: windows
+
+    name: Build ${{ matrix.crate }} for ${{ matrix.platform }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 添加缓存加速构建
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+
+      # 平台特定依赖
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            libxkbcommon-dev \
+            libssl-dev \
+            libasound2-dev \
+            libfontconfig1-dev
+
+      - name: Install Windows dependencies
+        if: matrix.os == 'windows-latest'
+        run: choco install -y vcredist2019
+
+      # 构建特定crate
+      - name: Build ${{ matrix.crate }}
+        run: |
+          cargo build --release --target ${{ matrix.target }} --bin ${{ matrix.crate }}
+        env:
+          CARGO_TERM_COLOR: always
+
+      # 准备发布文件
+      - name: Prepare artifacts
+        run: |
+          mkdir -p release
+          EXE_PATH="target/${{ matrix.target }}/release/${{ matrix.crate }}${{ matrix.ext }}"
+          OUTPUT_NAME="${{ matrix.crate }}-${{ matrix.platform }}${{ matrix.ext }}"
+          
+          # Windows特殊处理
+          if [ "${{ matrix.os }}" == "windows-latest" ]; then
+            # 添加VC++运行时依赖
+            DLL_PATH="C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/Redist/MSVC/14.29.30133/x64/Microsoft.VC142.CRT/vcruntime140.dll"
+            if [ -f "$DLL_PATH" ]; then
+              mkdir -p release/deps
+              cp "$DLL_PATH" release/deps/
+            else
+              echo "WARNING: vcruntime140.dll not found at $DLL_PATH"
+            fi
+          fi
+          
+          cp "$EXE_PATH" "release/$OUTPUT_NAME"
+
+      # 符号剥离减少文件大小（仅Linux/macOS）
+      - name: Strip symbols
+        if: matrix.os != 'windows-latest'
+        run: |
+          strip "release/${{ matrix.crate }}-${{ matrix.platform }}"
+
+      # 上传当前crate的构建结果
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.crate }}-${{ matrix.platform }}
+          path: |
+            release/${{ matrix.crate }}-${{ matrix.platform }}*
+            release/deps/*
+
+  create-release:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: '*'
+          merge-multiple: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref }}
+          name: "Release ${{ github.ref_name }}"
+          body: |
+            ## Multi-platform executables
+            
+            **Available applications:**
+            - lonote
+            - manga-reader
+            - save-manager
+            - script-caller
+            - syncer
+            - your-player
+            
+            **Build info:**
+            - Rust version: stable
+            - Build date: ${{ github.run_number }}
+          files: artifacts/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
