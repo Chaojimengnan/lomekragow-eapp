@@ -1,9 +1,13 @@
-name: Multi-Binary Release
+name: Multi-Platform Release Build
 
 on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+
+env:
+  RUST_VERSION: "stable"
 
 jobs:
   build:
@@ -17,14 +21,17 @@ jobs:
             target: x86_64-unknown-linux-gnu
             ext: ""
             platform: linux
+            RUSTFLAGS: "-C opt-level=z -C link-arg=-fuse-ld=lld"
           - os: macos-latest
             target: x86_64-apple-darwin
             ext: ""
             platform: macos
+            RUSTFLAGS: "-C opt-level=z"
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             ext: ".exe"
             platform: windows
+            RUSTFLAGS: "-C target-feature=+crt-static"
 
     name: Build ${{ matrix.crate }} for ${{ matrix.platform }}
     steps:
@@ -38,33 +45,31 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ matrix.target }}
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
+          toolchain: ${{ env.RUST_VERSION }}
           targets: ${{ matrix.target }}
 
-      # 精简的 Linux 依赖安装
       - name: Install Linux dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            libx11-dev \
-            libgl1-mesa-dev \
-            libasound2-dev \
-            libfontconfig1-dev
+            libx11-dev libgl1-mesa-dev libasound2-dev libfontconfig1-dev \
+            libglib2.0-dev libcairo2-dev libpango1.0-dev libatk1.0-dev \
+            libgdk-pixbuf2.0-dev libssl-dev libxcb-shape0-dev \
+            libxcb-xfixes0-dev libxkbcommon-dev pkg-config
 
-      # 构建
       - name: Build ${{ matrix.crate }}
         run: |
           cargo build --release --target ${{ matrix.target }} --bin ${{ matrix.crate }}
         env:
           CARGO_TERM_COLOR: always
+          RUSTFLAGS: ${{ matrix.RUSTFLAGS }}
 
-      # 准备发布文件（保持原样）
       - name: Prepare artifacts
         run: |
           mkdir -p release
@@ -73,24 +78,27 @@ jobs:
           
           cp "$EXE_PATH" "release/$OUTPUT_NAME"
 
-      # 符号剥离
-      - name: Strip symbols
+      - name: Strip symbols (Linux/macOS)
         if: matrix.os != 'windows-latest'
         run: |
           strip "release/${{ matrix.crate }}-${{ matrix.platform }}"
 
-      # 上传
+      - name: Generate checksums
+        run: |
+          cd release
+          sha256sum * > checksums.txt
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.crate }}-${{ matrix.platform }}
-          path: release/${{ matrix.crate }}-${{ matrix.platform }}*
+          path: release/*
 
   create-release:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: Download all artifacts
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -103,9 +111,9 @@ jobs:
           tag_name: ${{ github.ref }}
           name: "Release ${{ github.ref_name }}"
           body: |
-            ## Multi-platform executables
+            ## Multi-platform Executables
             
-            **Available applications:**
+            **Applications:**
             - lonote
             - manga-reader
             - save-manager
@@ -114,10 +122,12 @@ jobs:
             - your-player
             
             **Build info:**
-            - Rust version: stable
-            - Build date: ${{ github.run_number }}
+            - Rust: ${{ env.RUST_VERSION }}
+            - Build: ${{ github.run_number }}
+            
+            **Windows note:**
+            If you encounter missing DLL errors, install:
+            [Microsoft Visual C++ Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe)
           files: artifacts/*
-          draft: false
-          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
