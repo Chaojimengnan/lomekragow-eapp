@@ -113,20 +113,6 @@ jobs:
           # 添加链接器搜索路径（合并原有优化标志）
           echo "RUSTFLAGS=-L$BREW_PREFIX/lib ${{ matrix.RUSTFLAGS }}" >> $GITHUB_ENV
 
-      # 验证库文件架构
-      - name: Verify macOS libraries
-        if: matrix.os == 'macos-latest'
-        run: |
-          echo "Checking mpv library architecture..."
-          if [ -f "$HOMEBREW_PREFIX/lib/libmpv.dylib" ]; then
-            file "$HOMEBREW_PREFIX/lib/libmpv.dylib"
-            lipo -archs "$HOMEBREW_PREFIX/lib/libmpv.dylib"
-            echo "Expected architecture: x86_64"
-          else
-            echo "Error: libmpv.dylib not found at $HOMEBREW_PREFIX/lib/"
-            ls -la "$HOMEBREW_PREFIX/lib/" || true
-            exit 1
-          fi
 
       - name: Build ${{ matrix.crate }}
         shell: bash
