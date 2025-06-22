@@ -9,6 +9,7 @@ use eapp_utils::{
         ICON_COFFEE, ICON_NEW_FILE, ICON_REFRESH, ICON_SCREEN_FULL, ICON_SCREEN_NORMAL,
         ICON_TRIANGLE_LEFT, ICON_TRIANGLE_RIGHT,
     },
+    task::Task,
     widgets::{
         progress_bar::{ProgressBar, draw_progress_bar_background, value_from_x},
         simple_widgets::{
@@ -66,6 +67,7 @@ pub struct App {
     img_finder: ImgFinder,
     tex_loader: TexLoader,
     translation: ImgTranslation,
+    search_task: Option<Task<Option<ImgFinder>>>,
 }
 
 impl App {
@@ -78,35 +80,69 @@ impl App {
         } else {
             State::default()
         };
-
-        let img_path = std::env::args().nth(1);
-
-        let mut img_finder = ImgFinder::new();
-        img_finder = match img_path.as_deref() {
-            Some(path) => Self::search(img_finder, path),
-            None => img_finder,
-        };
-        img_finder.consume_dir_changed_flag();
-
+        let img_finder = ImgFinder::new();
         let tex_loader = TexLoader::new(&cc.egui_ctx);
         let translation = ImgTranslation::default();
+        let search_task = None;
 
-        Self {
+        let mut app = Self {
             state,
             img_finder,
             tex_loader,
             translation,
+            search_task,
+        };
+
+        let opt_path = std::env::args().nth(1);
+
+        if let Some(path) = opt_path {
+            app.start_search(path);
+        }
+
+        app
+    }
+
+    fn start_search(&mut self, path: String) {
+        if self.is_searching() {
+            return;
+        }
+
+        if let Ok(canonicalized_path) = std::path::Path::new(&path).canonicalize() {
+            if self.img_finder.is_subpath(&canonicalized_path) {
+                self.img_finder.set_path(&canonicalized_path);
+                return;
+            }
+
+            let (cancel_sender, cancel_receiver) = std::sync::mpsc::channel();
+            let task = Task::new(cancel_sender, move || {
+                match ImgFinder::from_search(&canonicalized_path, cancel_receiver) {
+                    Ok(finder) => Some(finder),
+                    Err(err) => {
+                        log::error!("load from path '{path}' fails: {err}");
+                        None
+                    }
+                }
+            });
+
+            self.search_task = Some(task);
         }
     }
 
-    fn search(img_finder: ImgFinder, dir_or_img: &str) -> ImgFinder {
-        match img_finder.search(dir_or_img) {
-            Ok(v) => v,
-            Err(err) => {
-                log::error!("load from path '{dir_or_img}' fails: {err}");
-                ImgFinder::new()
-            }
+    fn is_searching(&self) -> bool {
+        self.search_task.is_some()
+    }
+
+    fn try_get_search_result(&mut self) {
+        if !self.is_searching() || !self.search_task.as_ref().unwrap().is_finished() {
+            return;
         }
+
+        match self.search_task.take().unwrap().get_result() {
+            Ok(Some(finder)) => self.img_finder = finder,
+            Err(_) => log::error!("Search thread panicked"),
+            _ => (),
+        }
+        self.state.last_image_info = None;
     }
 
     fn adjust_corner_radius_match_left_panel(&self, corner_radius: CornerRadius) -> CornerRadius {
@@ -126,6 +162,20 @@ impl App {
             }
             cmd.spawn()?;
         });
+    }
+
+    fn ui_show_searching_modal(&mut self, ui: &mut egui::Ui) {
+        if self.is_searching() {
+            egui::Modal::new(egui::Id::new("Searching")).show(ui.ctx(), |ui| {
+                ui.horizontal(|ui| {
+                    ui.spinner();
+                    ui.label("Searching directory...");
+                    if ui.button("Cancel").clicked() {
+                        self.search_task.as_ref().unwrap().cancel();
+                    }
+                });
+            });
+        }
     }
 
     fn ui_left_panel(&mut self, ui: &mut egui::Ui) {
@@ -737,19 +787,18 @@ impl App {
                         log::error!("set current dir '{cwd:?}' fails: {err}");
                     }
 
-                    self.img_finder = Self::search(
-                        std::mem::take(&mut self.img_finder),
-                        path.to_string_lossy().as_ref(),
-                    );
+                    self.start_search(path.to_string_lossy().into_owned());
                 }
             }
         });
 
-        let current_size = ui.ctx().input(|i| i.viewport().inner_rect.unwrap().size());
-        if self.state.last_window_size != current_size {
-            self.state.last_window_size = current_size;
-            self.translation
-                .fit_space_if_need(self.state.initial_scaling_mode);
+        if let Some(current_rect) = ui.ctx().input(|i| i.viewport().inner_rect) {
+            let current_size = current_rect.size();
+            if self.state.last_window_size != current_size {
+                self.state.last_window_size = current_size;
+                self.translation
+                    .fit_space_if_need(self.state.initial_scaling_mode);
+            }
         }
 
         if self.img_finder.consume_dir_changed_flag() {
@@ -786,11 +835,16 @@ impl eframe::App for App {
         borderless::window_frame(ctx, Some(ctx.style().visuals.extreme_bg_color)).show(ctx, |ui| {
             borderless::handle_resize(ui);
 
+            self.try_get_search_result();
             self.tex_loader
                 .update(ctx, self.img_finder.cur_image_name());
 
-            self.ui_left_panel(ui);
-            self.ui_contents(ui);
+            self.ui_show_searching_modal(ui);
+
+            ui.add_enabled_ui(!self.is_searching(), |ui| {
+                self.ui_left_panel(ui);
+                self.ui_contents(ui);
+            });
         });
     }
 }

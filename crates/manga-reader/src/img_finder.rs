@@ -1,5 +1,5 @@
 use eapp_utils::natordset::NatOrdSet;
-use std::{path::Path, slice::Iter};
+use std::{path::Path, slice::Iter, sync::mpsc::Receiver};
 use walkdir::WalkDir;
 
 #[derive(Default, Clone, Debug)]
@@ -37,51 +37,73 @@ impl ImgFinder {
         Ok(false)
     }
 
+    pub fn is_subpath(&self, canonicalized_path: &Path) -> bool {
+        if let Some(search_dir) = &self.search_dir {
+            let search_dir_path = Path::new(search_dir);
+            canonicalized_path.starts_with(search_dir_path)
+        } else {
+            false
+        }
+    }
+
+    pub fn set_path(&mut self, canonicalized_path: &Path) {
+        if canonicalized_path.is_file() {
+            self.set_cur_dir(&canonicalized_path.parent().unwrap().to_string_lossy());
+            self.set_cur_image(&canonicalized_path.to_string_lossy());
+        } else if canonicalized_path.is_dir() {
+            self.set_cur_dir(&canonicalized_path.to_string_lossy());
+        }
+    }
+
     pub fn search_dir(&self) -> Option<&String> {
         self.search_dir.as_ref()
     }
 
-    pub fn search(mut self, dir_or_img: &str) -> std::io::Result<Self> {
-        let path = Path::new(dir_or_img);
-
-        let search_dir = if path.is_file() {
-            path.parent().unwrap_or(Path::new("."))
+    pub fn from_search(
+        canonicalized_path: &Path,
+        cancel_receiver: Receiver<()>,
+    ) -> std::io::Result<Self> {
+        let search_dir = if canonicalized_path.is_file() {
+            canonicalized_path.parent().unwrap()
         } else {
-            path
+            canonicalized_path
         };
 
-        let search_dir = search_dir.canonicalize()?;
         let search_dir_str = search_dir.to_string_lossy().into_owned();
 
-        if self.search_dir.as_ref() == Some(&search_dir_str) {
-            return Ok(self);
-        }
+        let mut finder = Self {
+            search_dir: Some(search_dir_str.clone()),
+            ..Default::default()
+        };
 
-        self = Self::default();
-        self.search_dir = Some(search_dir_str.clone());
-
-        for entry in WalkDir::new(&search_dir)
+        for (i, entry) in WalkDir::new(search_dir)
             .same_file_system(true)
             .contents_first(true)
             .into_iter()
             .filter_map(|e| e.ok())
             .filter(|e| e.file_type().is_dir())
+            .enumerate()
         {
+            if i % 50 == 0 && cancel_receiver.try_recv().is_ok() {
+                return Err(std::io::Error::other("Search canceled"));
+            }
+
             let entry_path = entry.path();
             if Self::is_dir_has_supported_image(entry_path)? {
-                self.cur_dir_set
+                finder
+                    .cur_dir_set
                     .push(entry_path.to_string_lossy().into_owned());
             }
         }
 
-        self.cur_dir_set.sort();
-        self.set_cur_dir(&search_dir_str);
+        finder.cur_dir_set.sort();
+        finder.set_cur_dir(&search_dir_str);
 
-        if path.is_file() {
-            self.set_cur_image(&path.canonicalize()?.to_string_lossy());
+        if canonicalized_path.is_file() {
+            finder.set_cur_image(&canonicalized_path.to_string_lossy());
         }
 
-        Ok(self)
+        Ok(finder)
     }
     pub fn consume_dir_changed_flag(&mut self) -> bool {
         let mut flag = false;

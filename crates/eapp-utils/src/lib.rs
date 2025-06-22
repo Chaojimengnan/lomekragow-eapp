@@ -6,6 +6,7 @@ pub mod codicons;
 pub mod easy_mark;
 pub mod natordset;
 pub mod platform;
+pub mod task;
 pub mod widgets;
 
 #[macro_export]
