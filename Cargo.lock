@@ -595,7 +595,7 @@ checksum = "d8b14ccef22fc6f5a8f4d7d768562a182c04ce9a3b3157b91390b52ddfdf1a76"
 
 [[package]]
 name = "eapp-utils"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "eframe",
  "include-flate",
@@ -1561,7 +1561,7 @@ checksum = "13dc2df351e3202783a1fe0d44375f7295ffb4049267b0f3018346dc122a1d94"
 
 [[package]]
 name = "lonote"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "chardetng",
  "eapp-utils",
@@ -1583,7 +1583,7 @@ dependencies = [
 
 [[package]]
 name = "manga-reader"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "eapp-utils",
  "eframe",
@@ -2470,7 +2470,7 @@ dependencies = [
 
 [[package]]
 name = "save-manager"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "eapp-utils",
  "eframe",
@@ -2495,7 +2495,7 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
 name = "script-caller"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "anyhow",
  "eapp-utils",
@@ -2714,7 +2714,7 @@ dependencies = [
 
 [[package]]
 name = "syncer"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "eapp-utils",
  "eframe",
@@ -3890,7 +3890,7 @@ dependencies = [
 
 [[package]]
 name = "your-player"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "eapp-utils",
  "eframe",

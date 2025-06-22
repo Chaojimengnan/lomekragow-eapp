@@ -32,23 +32,22 @@ impl super::App {
 
         if let Some(tex_id) = self.tex_register.get(*self.player.texture()) {
             let size = self.player.state().media_size;
-            let mut tex = egui::Image::from_texture(SizedTexture::new(
-                tex_id,
-                vec2(size.0 as _, size.1 as _),
-            ))
-            .show_loading_spinner(false)
-            .maintain_aspect_ratio(true)
-            .fit_to_fraction(vec2(1.0, 1.0));
+            let size = vec2(size.0 as _, size.1 as _);
+            let mut tex = egui::Image::from_texture(SizedTexture::new(tex_id, size))
+                .show_loading_spinner(false);
 
-            let size = tex.calc_size(rect.size(), Some(tex.size().unwrap()));
-            let diff = rect.size() - size;
-            let mut corner_radius = CornerRadius::same(0);
-            if diff.x <= 16.0 && diff.y <= 16.0 {
-                corner_radius = CornerRadius::same(8);
-            }
+            let fit_scale = eapp_utils::calculate_fit_scale(rect.size(), size);
+            let scaled_size = size * fit_scale;
+
+            let diff = rect.size() - scaled_size;
+            let corner_radius = if diff.x <= 16.0 && diff.y <= 16.0 {
+                CornerRadius::same(8)
+            } else {
+                CornerRadius::same(0)
+            };
 
             tex = tex.corner_radius(self.adjust_fullscreen(ui, self.adjust(corner_radius)));
-            tex.paint_at(ui, Rect::from_center_size(rect.center(), size));
+            tex.paint_at(ui, Rect::from_center_size(rect.center(), scaled_size));
         }
     }
 

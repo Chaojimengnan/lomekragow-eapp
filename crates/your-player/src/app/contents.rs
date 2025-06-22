@@ -300,7 +300,7 @@ impl super::App {
             });
 
             let right_btns_rect = {
-                let width = btn_size * 4.0;
+                let width = btn_size * 5.0;
                 Rect::from_center_size(
                     pos2(rect.right() - width / 2.0, items_y - 2.0),
                     vec2(width, btn_size),
@@ -358,6 +358,14 @@ impl super::App {
                     if ui.add(new_button(16.0, icon)).clicked() {
                         ui.ctx()
                             .send_viewport_cmd(ViewportCommand::Fullscreen(!is_fullscreen));
+                    }
+
+                    if ui.add(new_button(16.0, ICON_INSPECT.to_string())).clicked()
+                        && self.tex_register.get(*self.player.texture()).is_some()
+                    {
+                        let size = self.player.state().media_size;
+                        let size = vec2(size.0 as _, size.1 as _);
+                        eapp_utils::window_resize_by_fit_scale(ui, size);
                     }
                 })
             });

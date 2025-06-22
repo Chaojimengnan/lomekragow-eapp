@@ -111,3 +111,23 @@ pub fn open_in_explorer(path: &str) {
         .spawn()
         .unwrap();
 }
+
+#[inline]
+pub fn window_resize(ui: &mut egui::Ui, size: egui::Vec2) {
+    ui.ctx()
+        .send_viewport_cmd(egui::ViewportCommand::InnerSize(size));
+}
+
+#[inline]
+pub fn calculate_fit_scale(available_size: egui::Vec2, image_size: egui::Vec2) -> f32 {
+    let width_scale = available_size.x / image_size.x;
+    let height_scale = available_size.y / image_size.y;
+    width_scale.min(height_scale)
+}
+
+#[inline]
+pub fn window_resize_by_fit_scale(ui: &mut egui::Ui, image_size: egui::Vec2) {
+    let fit_scale = calculate_fit_scale(ui.ctx().screen_rect().size(), image_size);
+    window_resize(ui, image_size * fit_scale);
+    ui.ctx().request_repaint();
+}

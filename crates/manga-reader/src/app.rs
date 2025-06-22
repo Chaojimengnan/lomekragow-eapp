@@ -6,8 +6,8 @@ use crate::{
 use eapp_utils::{
     borderless,
     codicons::{
-        ICON_COFFEE, ICON_NEW_FILE, ICON_REFRESH, ICON_SCREEN_FULL, ICON_SCREEN_NORMAL,
-        ICON_TRIANGLE_LEFT, ICON_TRIANGLE_RIGHT,
+        ICON_COFFEE, ICON_INSPECT, ICON_NEW_FILE, ICON_REFRESH, ICON_SCREEN_FULL,
+        ICON_SCREEN_NORMAL, ICON_TRIANGLE_LEFT, ICON_TRIANGLE_RIGHT,
     },
     task::Task,
     widgets::{
@@ -22,6 +22,7 @@ use eframe::egui::{
     Widget as _, pos2, vec2,
 };
 use serde::{Deserialize, Serialize};
+use std::collections::VecDeque;
 
 #[derive(Deserialize, Serialize)]
 #[serde(default)]
@@ -68,6 +69,7 @@ pub struct App {
     tex_loader: TexLoader,
     translation: ImgTranslation,
     search_task: Option<Task<Option<ImgFinder>>>,
+    search_list: VecDeque<String>,
 }
 
 impl App {
@@ -84,22 +86,16 @@ impl App {
         let tex_loader = TexLoader::new(&cc.egui_ctx);
         let translation = ImgTranslation::default();
         let search_task = None;
+        let search_list: VecDeque<_> = std::env::args().skip(1).collect();
 
-        let mut app = Self {
+        Self {
             state,
             img_finder,
             tex_loader,
             translation,
             search_task,
-        };
-
-        let opt_path = std::env::args().nth(1);
-
-        if let Some(path) = opt_path {
-            app.start_search(path);
+            search_list,
         }
-
-        app
     }
 
     fn start_search(&mut self, path: String) {
@@ -133,6 +129,11 @@ impl App {
     }
 
     fn try_get_search_result(&mut self) {
+        if !self.is_searching() && !self.search_list.is_empty() {
+            let path = self.search_list.pop_front().unwrap();
+            self.start_search(path);
+        }
+
         if !self.is_searching() || !self.search_task.as_ref().unwrap().is_finished() {
             return;
         }
@@ -157,6 +158,9 @@ impl App {
     fn spawn(&self) {
         eapp_utils::capture_error!(err => log::error!("spawn error: {err}"), {
             let mut cmd = std::process::Command::new(std::env::current_exe()?);
+            if let Some(search_dir) = self.img_finder.search_dir() {
+                cmd.arg(search_dir);
+            }
             if let Some(cur_image_name) = self.img_finder.cur_image_name() {
                 cmd.arg(cur_image_name);
             }
@@ -358,11 +362,7 @@ impl App {
                     InitialScalingMode::KeepScale
                 ) && self.translation.min_scale == self.translation.scale;
 
-                let fit_scale = {
-                    let width_scale = available_size.x / image_size.x;
-                    let height_scale = available_size.y / image_size.y;
-                    width_scale.min(height_scale)
-                };
+                let fit_scale = eapp_utils::calculate_fit_scale(available_size, image_size);
                 self.translation.min_scale = fit_scale.min(1.0);
                 self.translation.scale = self.translation.scale.max(self.translation.min_scale);
 
@@ -403,10 +403,7 @@ impl App {
                 self.translation.image_offset =
                     self.translation.clamp_offset(self.translation.image_offset);
 
-                let tex = egui::Image::from_texture(handle)
-                    .show_loading_spinner(false)
-                    .maintain_aspect_ratio(true)
-                    .fit_to_exact_size(scaled_size);
+                let tex = egui::Image::from_texture(handle).show_loading_spinner(false);
 
                 let image_pos = rect.center() - scaled_size * 0.5 + self.translation.image_offset;
                 let image_rect = Rect::from_min_size(image_pos, scaled_size);
@@ -607,7 +604,7 @@ impl App {
 
             let btn_size = vec2(32.0, 32.0);
             let rect_size = vec2(
-                btn_size.x * 3.0 + ui.style_mut().spacing.item_spacing.x * 2.0,
+                btn_size.x * 4.0 + ui.style_mut().spacing.item_spacing.x * 3.0,
                 btn_size.y,
             );
 
@@ -626,6 +623,23 @@ impl App {
                         .clicked()
                     {
                         self.spawn();
+                    }
+
+                    if PlainButton::new(btn_size, ICON_INSPECT.to_string())
+                        .corner_radius(CornerRadius::same(2))
+                        .hover(hover_color)
+                        .ui(ui)
+                        .on_hover_text("Change Window size to fit image aspect ratio")
+                        .clicked()
+                    {
+                        if let Some(cur_img_name) = self.img_finder.cur_image_name() {
+                            if let Some(texture) =
+                                self.tex_loader.textures().get(cur_img_name).unwrap()
+                            {
+                                let size = texture.get_cur_handle().size_vec2();
+                                eapp_utils::window_resize_by_fit_scale(ui, size);
+                            }
+                        }
                     }
 
                     if PlainButton::new(btn_size, ICON_REFRESH.to_string())
@@ -787,7 +801,8 @@ impl App {
                         log::error!("set current dir '{cwd:?}' fails: {err}");
                     }
 
-                    self.start_search(path.to_string_lossy().into_owned());
+                    self.search_list
+                        .push_back(path.to_string_lossy().into_owned());
                 }
             }
         });
