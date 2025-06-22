@@ -82,7 +82,10 @@ impl App {
         let img_path = std::env::args().nth(1);
 
         let mut img_finder = ImgFinder::new();
-        img_finder = Self::search_from_cwd(img_finder, img_path.as_deref());
+        img_finder = match img_path.as_deref() {
+            Some(path) => Self::search(img_finder, path),
+            None => img_finder,
+        };
         img_finder.consume_dir_changed_flag();
 
         let tex_loader = TexLoader::new(&cc.egui_ctx);
@@ -96,11 +99,11 @@ impl App {
         }
     }
 
-    fn search_from_cwd(img_finder: ImgFinder, image_path: Option<&str>) -> ImgFinder {
-        match img_finder.search_from_cwd(image_path) {
+    fn search(img_finder: ImgFinder, dir_or_img: &str) -> ImgFinder {
+        match img_finder.search(dir_or_img) {
             Ok(v) => v,
             Err(err) => {
-                log::error!("load from cmd with arg '{image_path:?}' fails: {err}");
+                log::error!("load from path '{dir_or_img}' fails: {err}");
                 ImgFinder::new()
             }
         }
@@ -385,6 +388,10 @@ impl App {
                     show_center_text("Maiden in Prayer...");
                 }
             }
+        } else if self.img_finder.cur_dir_set().0.is_empty()
+            && self.img_finder.cur_image_set().0.is_empty()
+        {
+            show_center_text("Drop file or directory here");
         } else {
             show_center_text("manga-reader :)");
         }
@@ -730,9 +737,9 @@ impl App {
                         log::error!("set current dir '{cwd:?}' fails: {err}");
                     }
 
-                    self.img_finder = Self::search_from_cwd(
+                    self.img_finder = Self::search(
                         std::mem::take(&mut self.img_finder),
-                        Some(path.to_string_lossy().as_ref()),
+                        path.to_string_lossy().as_ref(),
                     );
                 }
             }

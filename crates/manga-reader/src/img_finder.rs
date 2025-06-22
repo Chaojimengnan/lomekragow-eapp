@@ -41,41 +41,48 @@ impl ImgFinder {
         self.search_dir.as_ref()
     }
 
-    pub fn search_from_cwd(mut self, opt_img: Option<&str>) -> std::io::Result<Self> {
-        let cwd = std::env::current_dir()?;
-        let cwd_str = cwd.to_string_lossy().into_owned();
+    pub fn search(mut self, dir_or_img: &str) -> std::io::Result<Self> {
+        let path = Path::new(dir_or_img);
 
-        if self.search_dir.as_ref() != Some(&cwd_str) {
-            self = Self::default();
-            self.search_dir = Some(cwd_str.clone());
+        let search_dir = if path.is_file() {
+            path.parent().unwrap_or(Path::new("."))
+        } else {
+            path
+        };
 
-            for item in WalkDir::new(&cwd).into_iter().filter_map(|e| e.ok()) {
-                let item_path = item.path();
-                if item_path.is_dir() && Self::is_dir_has_supported_image(item_path)? {
-                    self.cur_dir_set
-                        .push(item_path.to_string_lossy().into_owned());
-                }
-            }
+        let search_dir = search_dir.canonicalize()?;
+        let search_dir_str = search_dir.to_string_lossy().into_owned();
 
-            self.cur_dir_set.sort();
+        if self.search_dir.as_ref() == Some(&search_dir_str) {
+            return Ok(self);
         }
 
-        self.set_cur_dir(&cwd_str);
+        self = Self::default();
+        self.search_dir = Some(search_dir_str.clone());
 
-        if let Some(img) = opt_img {
-            self.set_cur_dir(
-                std::path::Path::new(img)
-                    .parent()
-                    .unwrap()
-                    .to_str()
-                    .unwrap(),
-            );
-            self.set_cur_image(img);
+        for entry in WalkDir::new(&search_dir)
+            .same_file_system(true)
+            .contents_first(true)
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_type().is_dir())
+        {
+            let entry_path = entry.path();
+            if Self::is_dir_has_supported_image(entry_path)? {
+                self.cur_dir_set
+                    .push(entry_path.to_string_lossy().into_owned());
+            }
+        }
+
+        self.cur_dir_set.sort();
+        self.set_cur_dir(&search_dir_str);
+
+        if path.is_file() {
+            self.set_cur_image(&path.canonicalize()?.to_string_lossy());
         }
 
         Ok(self)
     }
-
     pub fn consume_dir_changed_flag(&mut self) -> bool {
         let mut flag = false;
         std::mem::swap(&mut flag, &mut self.dir_changed);
