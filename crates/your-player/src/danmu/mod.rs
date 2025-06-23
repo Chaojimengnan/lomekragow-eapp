@@ -373,12 +373,9 @@ impl Manager {
             }
 
             if !remove.contains(danmu) {
-                let mut glyphs = Vec::new();
                 let [tex_w, tex_h] = self.state.atlas.atlas().size();
 
-                self.state
-                    .atlas
-                    .get_glyphs_from_text(&danmu_ref.text, &mut glyphs);
+                let glyphs = self.state.atlas.get_glyphs_from_text(&danmu_ref.text);
 
                 let mut px = emitted.rect.left() - glyphs[0].stroke.left as f32;
                 let py = emitted.rect.top().round() as i32 + emitted.baseline;
@@ -612,10 +609,7 @@ impl Manager {
     fn calculate_size(state: &mut State, ptr: *mut DanmuData) {
         let danmu_ref = unsafe { &mut *ptr };
 
-        let mut glyphs = Vec::new();
-        state
-            .atlas
-            .get_glyphs_from_text(&danmu_ref.text, &mut glyphs);
+        let glyphs = state.atlas.get_glyphs_from_text(&danmu_ref.text);
 
         if !glyphs.is_empty() {
             let mut width = -glyphs[0].stroke.left;

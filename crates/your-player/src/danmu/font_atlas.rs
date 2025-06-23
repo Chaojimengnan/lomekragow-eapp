@@ -58,11 +58,7 @@ impl Default for FontAtlas {
 }
 
 impl FontAtlas {
-    pub fn get_glyphs_from_text<'this>(
-        &'this mut self,
-        text: &str,
-        list: &mut Vec<&'this StrokedGlyph>,
-    ) {
+    pub fn get_glyphs_from_text(&mut self, text: &str) -> Vec<&StrokedGlyph> {
         assert!(
             !self.need_recrate_atlas,
             "Do not change font and stroke size before get glyphs"
@@ -72,8 +68,10 @@ impl FontAtlas {
             self.fallback = self.render_glyph_to_atlas(None);
         }
 
+        let mut list = Vec::new();
+
         if self.fallback.is_none() {
-            return;
+            return list;
         }
 
         for char in text.chars() {
@@ -93,6 +91,8 @@ impl FontAtlas {
                 list.push(self.fallback.as_ref().unwrap());
             }
         }
+
+        list
     }
 
     fn render_glyph_to_atlas(&mut self, char: Option<char>) -> Option<StrokedGlyph> {
