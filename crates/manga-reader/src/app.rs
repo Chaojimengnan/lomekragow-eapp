@@ -44,6 +44,8 @@ struct State {
     pointer_in_info_rect: bool,
     #[serde(skip)]
     last_time_pointer_in_info_rect: f64,
+    #[serde(skip)]
+    scroll_to_current: bool,
 }
 
 impl Default for State {
@@ -59,6 +61,7 @@ impl Default for State {
             last_window_size: egui::Vec2::ZERO,
             pointer_in_info_rect: false,
             last_time_pointer_in_info_rect: 0.0,
+            scroll_to_current: false,
         }
     }
 }
@@ -274,13 +277,16 @@ impl App {
                                 egui::RichText::new(dir_str)
                             };
 
-                            if ui
-                                .selectable_label(is_cur_dir, str)
-                                .on_hover_text(dir_str)
-                                .clicked()
-                            {
+                            let res = ui.selectable_label(is_cur_dir, str).on_hover_text(dir_str);
+
+                            if res.clicked() {
                                 cur_dir = Some(dir);
                             };
+
+                            if self.state.scroll_to_current && is_cur_dir {
+                                self.state.scroll_to_current = false;
+                                res.scroll_to_me(None);
+                            }
                         }
 
                         if let Some(dir) = cur_dir {
@@ -824,6 +830,7 @@ impl App {
         }
 
         if self.img_finder.consume_dir_changed_flag() {
+            self.state.scroll_to_current = true;
             self.tex_loader.forget_all();
             for item in self.img_finder.image_iter().take(3).rev() {
                 self.tex_loader.load(item);
