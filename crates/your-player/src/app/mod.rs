@@ -170,6 +170,7 @@ impl App {
     pub const APP_KEY: &'static str = "app_state";
     pub const MPV_KEY: &'static str = "mpv_state";
     pub const PLAYLIST_KEY: &'static str = "playlist_state";
+    #[cfg(feature = "danmu")]
     pub const DANMU_KEY: &'static str = "danmu_state";
 
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {

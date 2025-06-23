@@ -6,7 +6,7 @@ use crate::{
 use eapp_utils::{
     borderless,
     codicons::{
-        ICON_COFFEE, ICON_INSPECT, ICON_NEW_FILE, ICON_REFRESH, ICON_SCREEN_FULL,
+        ICON_COFFEE, ICON_GO_TO_FILE, ICON_INSPECT, ICON_NEW_FILE, ICON_REFRESH, ICON_SCREEN_FULL,
         ICON_SCREEN_NORMAL, ICON_TRIANGLE_LEFT, ICON_TRIANGLE_RIGHT,
     },
     task::Task,
@@ -534,7 +534,7 @@ impl App {
             let img_name = self.img_finder.cur_image_name().unwrap();
             name = img_name[prefix..].to_owned();
 
-            page_info = format!("{} / {}", img + 1, total_pages);
+            page_info = format!("PAGE ({} / {})", img + 1, total_pages);
 
             if let Some(texture) = self.tex_loader.textures().get(img_name).unwrap() {
                 let size = texture.get_cur_handle().size();
@@ -555,7 +555,7 @@ impl App {
                 pos2(rect.right(), rect.bottom() - 92.0),
             ));
 
-            ui.style_mut().spacing.item_spacing = vec2(6.0, 12.0);
+            ui.style_mut().spacing.item_spacing = vec2(0.0, 12.0);
 
             ui.add(egui::Label::new(name).wrap_mode(egui::TextWrapMode::Truncate));
 
@@ -603,10 +603,7 @@ impl App {
             });
 
             let btn_size = vec2(32.0, 32.0);
-            let rect_size = vec2(
-                btn_size.x * 4.0 + ui.style_mut().spacing.item_spacing.x * 3.0,
-                btn_size.y,
-            );
+            let rect_size = vec2(btn_size.x * 5.0, btn_size.y);
 
             let rect =
                 Rect::from_center_size(pos2(rect.center().x, rect.bottom() - 22.0), rect_size);
@@ -615,23 +612,22 @@ impl App {
                 ui.horizontal(|ui| {
                     let hover_color = ui.visuals().selection.bg_fill;
 
-                    if PlainButton::new(btn_size, ICON_NEW_FILE.to_string())
-                        .corner_radius(CornerRadius::same(2))
-                        .hover(hover_color)
-                        .ui(ui)
-                        .on_hover_text("Spawn from this")
-                        .clicked()
-                    {
+                    macro_rules! btn_clicked {
+                        ($icon:expr, $hover_text:expr) => {
+                            PlainButton::new(btn_size, $icon.to_string())
+                                .corner_radius(CornerRadius::same(2))
+                                .hover(hover_color)
+                                .ui(ui)
+                                .on_hover_text($hover_text)
+                                .clicked()
+                        };
+                    }
+
+                    if btn_clicked!(ICON_NEW_FILE, "Spawn from this") {
                         self.spawn();
                     }
 
-                    if PlainButton::new(btn_size, ICON_INSPECT.to_string())
-                        .corner_radius(CornerRadius::same(2))
-                        .hover(hover_color)
-                        .ui(ui)
-                        .on_hover_text("Change Window size to fit image aspect ratio")
-                        .clicked()
-                    {
+                    if btn_clicked!(ICON_INSPECT, "Change Window size to fit image aspect ratio") {
                         if let Some(cur_img_name) = self.img_finder.cur_image_name() {
                             if let Some(texture) =
                                 self.tex_loader.textures().get(cur_img_name).unwrap()
@@ -642,27 +638,24 @@ impl App {
                         }
                     }
 
-                    if PlainButton::new(btn_size, ICON_REFRESH.to_string())
-                        .corner_radius(CornerRadius::same(2))
-                        .hover(hover_color)
-                        .ui(ui)
-                        .on_hover_text("Reset image translation")
-                        .clicked()
-                    {
+                    if btn_clicked!(ICON_REFRESH, "Reset image translation") {
                         self.translation.scale = 1.0;
                         self.translation.image_offset = egui::Vec2::ZERO;
                         ui.ctx().request_repaint();
                     }
 
-                    if PlainButton::new(btn_size, ICON_SCREEN_FULL.to_string())
-                        .corner_radius(CornerRadius::same(2))
-                        .hover(hover_color)
-                        .ui(ui)
-                        .on_hover_text("Fit the image size with the available space size")
-                        .clicked()
-                    {
+                    if btn_clicked!(
+                        ICON_SCREEN_FULL,
+                        "Fit the image size with the available space size"
+                    ) {
                         self.translation.image_fit_space_size = true;
                         ui.ctx().request_repaint();
+                    }
+
+                    if btn_clicked!(ICON_GO_TO_FILE, "Open in explorer") {
+                        if let Some(cur_img) = self.img_finder.cur_image_name() {
+                            eapp_utils::open_in_explorer(cur_img);
+                        }
                     }
                 });
             });
