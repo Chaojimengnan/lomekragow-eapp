@@ -1,13 +1,17 @@
 use crate::{
-    danmu,
     mpv::{self, player::PlayState},
     playlist::Playlist,
     tex_register::TexRegister,
 };
 use eapp_utils::borderless;
-use eframe::egui::{self, CornerRadius, TextBuffer, ViewportCommand};
+use eframe::egui::{self, CornerRadius, ViewportCommand};
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+#[cfg(feature = "danmu")]
+use crate::danmu;
+#[cfg(feature = "danmu")]
+use eframe::egui::TextBuffer;
 
 mod background;
 mod contents;
@@ -21,6 +25,7 @@ pub struct App {
     player: mpv::player::Player,
     preview: mpv::preview::Preview,
     tex_register: TexRegister,
+    #[cfg(feature = "danmu")]
     danmu: danmu::Manager,
 }
 
@@ -53,15 +58,6 @@ pub struct State {
     #[serde(skip)]
     pub long_setting_type: LongSettingType,
 
-    /// danmu regex string
-    pub danmu_regex_str: String,
-
-    #[serde(skip)]
-    pub danmu_regex: Option<regex::Regex>,
-
-    #[serde(skip)]
-    pub danmu_regex_err_str: Option<String>,
-
     /// filter keywords
     pub playlist_key: String,
 
@@ -80,31 +76,48 @@ pub struct State {
     #[serde(skip)]
     pub content_rect: egui::Rect,
 
+    #[serde(skip)]
+    pub last_prevert_sleep_call: Duration,
+
+    /// danmu regex string
+    #[cfg(feature = "danmu")]
+    pub danmu_regex_str: String,
+
+    #[serde(skip)]
+    #[cfg(feature = "danmu")]
+    pub danmu_regex: Option<regex::Regex>,
+
+    #[serde(skip)]
+    #[cfg(feature = "danmu")]
+    pub danmu_regex_err_str: Option<String>,
+
+    #[cfg(feature = "danmu")]
     pub enable_danmu: bool,
 
     /// used for adding danmu font
+    #[cfg(feature = "danmu")]
     pub danmu_font_path: String,
-
-    #[serde(skip)]
-    pub last_prevert_sleep_call: Duration,
 }
 
 #[derive(PartialEq)]
 pub enum SettingType {
     Play,
     Color,
+    #[cfg(feature = "danmu")]
     Danmu,
 }
 
 #[derive(PartialEq)]
 pub enum LongSettingType {
     MpvOptions,
+    #[cfg(feature = "danmu")]
     DanmuFonts,
 }
 
 #[derive(PartialEq)]
 pub enum PlaylistType {
     Playlist,
+    #[cfg(feature = "danmu")]
     Danmu,
 }
 
@@ -133,17 +146,22 @@ impl Default for State {
             setting_type: SettingType::Play,
             playlist_type: PlaylistType::Playlist,
             long_setting_type: LongSettingType::MpvOptions,
-            danmu_regex_str: String::default(),
-            danmu_regex: None,
-            danmu_regex_err_str: None,
             playlist_key: String::default(),
             playlist_cur_sel: None,
             end_reached: EndReached::Idle,
             last_playback_time: 0.0,
             content_rect: egui::Rect::ZERO,
-            enable_danmu: true,
-            danmu_font_path: String::default(),
             last_prevert_sleep_call: Duration::default(),
+            #[cfg(feature = "danmu")]
+            danmu_regex_str: String::default(),
+            #[cfg(feature = "danmu")]
+            danmu_regex: None,
+            #[cfg(feature = "danmu")]
+            danmu_regex_err_str: None,
+            #[cfg(feature = "danmu")]
+            enable_danmu: true,
+            #[cfg(feature = "danmu")]
+            danmu_font_path: String::default(),
         }
     }
 }
@@ -176,12 +194,6 @@ impl App {
             Playlist::default()
         };
 
-        let danmu_state = if let Some(storage) = cc.storage {
-            eframe::get_value(storage, Self::DANMU_KEY).unwrap_or_default()
-        } else {
-            danmu::State::default()
-        };
-
         let player = loop {
             match mpv::player::Player::new(&state.options, &mpv_state, cc) {
                 Ok(v) => break v,
@@ -199,8 +211,17 @@ impl App {
 
         let tex_register = TexRegister::default();
         let preview = mpv::preview::Preview::new(200, cc).unwrap();
+
+        #[cfg(feature = "danmu")]
+        let danmu_state = if let Some(storage) = cc.storage {
+            eframe::get_value(storage, Self::DANMU_KEY).unwrap_or_default()
+        } else {
+            danmu::State::default()
+        };
+        #[cfg(feature = "danmu")]
         let danmu = danmu::Manager::new(danmu_state, cc).unwrap();
 
+        #[cfg(feature = "danmu")]
         if !state.danmu_regex_str.is_empty() {
             state.danmu_regex = match regex::Regex::new(&state.danmu_regex_str) {
                 Ok(v) => Some(v),
@@ -217,6 +238,7 @@ impl App {
             player,
             preview,
             tex_register,
+            #[cfg(feature = "danmu")]
             danmu,
         };
 
@@ -237,17 +259,20 @@ impl App {
             self.preview.set_media(media_path);
         }
 
-        let mut path = std::path::PathBuf::from(media_path);
-        path.set_extension("json");
+        #[cfg(feature = "danmu")]
+        {
+            let mut path = std::path::PathBuf::from(media_path);
+            path.set_extension("json");
 
-        if path.is_file() {
-            let path_str = path.to_string_lossy();
-            match self.danmu.load_danmu(path.to_string_lossy().as_str()) {
-                Ok(_) => return,
-                Err(err) => log::error!("load danmu '{}' fails: {err}", path_str.as_str()),
+            if path.is_file() {
+                let path_str = path.to_string_lossy();
+                match self.danmu.load_danmu(path.to_string_lossy().as_str()) {
+                    Ok(_) => return,
+                    Err(err) => log::error!("load danmu '{}' fails: {err}", path_str.as_str()),
+                }
             }
+            self.danmu.clear();
         }
-        self.danmu.clear();
     }
 
     fn adjust(&self, corner_radius: CornerRadius) -> CornerRadius {
@@ -361,6 +386,7 @@ impl eframe::App for App {
         eframe::set_value(storage, Self::APP_KEY, &self.state);
         eframe::set_value(storage, Self::MPV_KEY, &self.player.state());
         eframe::set_value(storage, Self::PLAYLIST_KEY, &self.playlist);
+        #[cfg(feature = "danmu")]
         eframe::set_value(storage, Self::DANMU_KEY, &self.danmu.state());
     }
 
@@ -383,6 +409,7 @@ impl eframe::App for App {
 
             self.ui_background(ui);
 
+            #[cfg(feature = "danmu")]
             if self.player.state().play_state.is_playing()
                 && self.state.enable_danmu
                 && !self.danmu.danmu().is_empty()

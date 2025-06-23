@@ -4,6 +4,8 @@ use eframe::egui::{self, Align2, CornerRadius, FontId, Rect, load::SizedTexture,
 impl super::App {
     pub fn ui_background(&mut self, ui: &mut egui::Ui) {
         self.ui_show_cur_video_frame(ui, self.state.content_rect);
+
+        #[cfg(feature = "danmu")]
         if self.state.enable_danmu {
             self.ui_show_danmu(ui, self.state.content_rect);
         }
@@ -51,6 +53,7 @@ impl super::App {
         }
     }
 
+    #[cfg(feature = "danmu")]
     fn ui_show_danmu(&mut self, ui: &mut egui::Ui, rect: egui::Rect) {
         if let Some(tex) = self.tex_register.get(*self.danmu.texture()) {
             let playback_time = self.player.state().playback_time;

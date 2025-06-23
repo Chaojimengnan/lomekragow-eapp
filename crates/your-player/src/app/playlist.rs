@@ -1,8 +1,11 @@
+#[cfg(feature = "danmu")]
 use crate::danmu::DanmuData;
+#[cfg(feature = "danmu")]
+use eframe::egui::Color32;
 
 use super::PlaylistType;
 use eapp_utils::widgets::simple_widgets::{get_theme_button, theme_button};
-use eframe::egui::{self, Color32, CornerRadius, Frame};
+use eframe::egui::{self, CornerRadius, Frame};
 use std::path::Path;
 
 impl super::App {
@@ -26,8 +29,10 @@ impl super::App {
                 ui.horizontal(|ui| {
                     theme_button(ui, get_theme_button(ui));
 
+                    #[allow(clippy::single_element_loop)]
                     for (v, str) in [
                         (PlaylistType::Playlist, "Playlist"),
+                        #[cfg(feature = "danmu")]
                         (PlaylistType::Danmu, "Danmu"),
                     ]
                     .into_iter()
@@ -51,6 +56,7 @@ impl super::App {
                                 self.ui_playlist_playlist(ui, max_width);
                             });
                     }
+                    #[cfg(feature = "danmu")]
                     PlaylistType::Danmu => {
                         self.ui_playlist_danmu(ui);
                     }
@@ -176,6 +182,7 @@ impl super::App {
         }
     }
 
+    #[cfg(feature = "danmu")]
     fn ui_playlist_danmu(&mut self, ui: &mut egui::Ui) {
         let text_style = egui::TextStyle::Body;
         let row_height = ui.text_style_height(&text_style) + 4.0;

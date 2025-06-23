@@ -234,6 +234,7 @@ impl super::App {
                         .clicked()
                     {
                         self.player.set_play_state(PlayState::Stop);
+                        #[cfg(feature = "danmu")]
                         self.danmu.clear();
                     }
 

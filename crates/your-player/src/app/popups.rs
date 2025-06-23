@@ -3,7 +3,10 @@ use crate::{
     mpv,
 };
 use eapp_utils::widgets::simple_widgets::toggle_ui;
-use eframe::egui::{self, Vec2b};
+use eframe::egui;
+
+#[cfg(feature = "danmu")]
+use eframe::egui::Vec2b;
 
 impl super::App {
     pub fn ui_chapters_popup(&mut self, ui: &mut egui::Ui) {
@@ -42,7 +45,14 @@ impl super::App {
         ui.set_height(150.0);
         ui.set_width(350.0);
         ui.horizontal(|ui| {
-            for (v, str) in [(Play, "Play"), (Color, "Color"), (Danmu, "Danmu")].into_iter() {
+            for (v, str) in [
+                (Play, "Play"),
+                (Color, "Color"),
+                #[cfg(feature = "danmu")]
+                (Danmu, "Danmu"),
+            ]
+            .into_iter()
+            {
                 ui.selectable_value(&mut self.state.setting_type, v, str);
             }
         });
@@ -160,12 +170,14 @@ impl super::App {
                 simple_slider!(hue, set_hue, -100..=100);
                 simple_slider!(sharpen, set_sharpen, -4.0..=4.0);
             }
+            #[cfg(feature = "danmu")]
             Danmu => {
                 self.ui_setting_popup_contents_danmu(ui);
             }
         }
     }
 
+    #[cfg(feature = "danmu")]
     fn ui_setting_popup_contents_danmu(&mut self, ui: &mut egui::Ui) {
         ui.label("danmu");
         toggle_ui(ui, &mut self.state.enable_danmu);
@@ -252,12 +264,14 @@ impl super::App {
 
         use super::LongSettingType::*;
         ui.horizontal(|ui| {
+            #[allow(clippy::single_element_loop)]
             for (v, str, hover_text) in [
                 (
                     MpvOptions,
                     "Mpv options",
                     "Edit mpv option (effect on the next startup)",
                 ),
+                #[cfg(feature = "danmu")]
                 (DanmuFonts, "Danmu fonts", "Edit danmu fonts"),
             ]
             .into_iter()
@@ -278,6 +292,7 @@ impl super::App {
                     );
                 });
             }
+            #[cfg(feature = "danmu")]
             DanmuFonts => {
                 egui::ScrollArea::vertical()
                     .auto_shrink(Vec2b::new(false, false))
