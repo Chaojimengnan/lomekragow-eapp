@@ -6,8 +6,8 @@ use crate::{
 use eapp_utils::{
     borderless,
     codicons::{
-        ICON_COFFEE, ICON_GO_TO_FILE, ICON_INSPECT, ICON_NEW_FILE, ICON_REFRESH, ICON_SCREEN_FULL,
-        ICON_SCREEN_NORMAL, ICON_TRIANGLE_LEFT, ICON_TRIANGLE_RIGHT,
+        ICON_COFFEE, ICON_FOLDER, ICON_GO_TO_FILE, ICON_INSPECT, ICON_NEW_FILE, ICON_REFRESH,
+        ICON_SCREEN_FULL, ICON_SCREEN_NORMAL, ICON_TRIANGLE_LEFT, ICON_TRIANGLE_RIGHT,
     },
     task::Task,
     widgets::{
@@ -197,7 +197,21 @@ impl App {
             .width_range(200.0..=max_width)
             .show_animated_inside(ui, self.state.left_panel_open, |ui| {
                 ui.horizontal(|ui| {
+                    ui.visuals_mut().button_frame = false;
+
                     theme_button(ui, get_theme_button(ui));
+
+                    if ui
+                        .button(ICON_FOLDER.to_string())
+                        .on_hover_text("Load from current work directory")
+                        .clicked()
+                    {
+                        if let Ok(dir) = std::env::current_dir() {
+                            self.search_list
+                                .push_back(dir.to_string_lossy().into_owned());
+                        }
+                    }
+
                     ui.selectable_value(
                         &mut self.state.initial_scaling_mode,
                         InitialScalingMode::KeepScale,

@@ -1,7 +1,7 @@
 use crate::save_manager::SaveManager;
 use eapp_utils::{
     borderless,
-    codicons::ICON_SEARCH,
+    codicons::ICON_FOLDER,
     widgets::simple_widgets::{get_theme_button, theme_button},
 };
 use eframe::egui::{self, Color32, UiBuilder, Vec2, collapsing_header::CollapsingState};
@@ -101,7 +101,7 @@ impl App {
                 ui.horizontal(|ui| {
                     ui.label("save directory");
                     if ui
-                        .add(egui::Button::new(ICON_SEARCH.to_string()).frame(false))
+                        .add(egui::Button::new(ICON_FOLDER.to_string()).frame(false))
                         .clicked()
                     {
                         if let Some(dir_path) = rfd::FileDialog::new().pick_folder() {

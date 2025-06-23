@@ -1,7 +1,7 @@
 use crate::sync::{self, ItemCmd, Syncer};
 use eapp_utils::{
     borderless,
-    codicons::{ICON_SEARCH, ICON_SETTINGS_GEAR},
+    codicons::{ICON_FOLDER, ICON_SETTINGS_GEAR},
     widgets::simple_widgets::{get_theme_button, theme_button, toggle_ui},
 };
 use eframe::egui::{self, Color32, RichText, UiBuilder, Vec2, Widget};
@@ -149,7 +149,7 @@ impl App {
                     ui.horizontal(|ui| {
                         ui.label(label);
                         if ui
-                            .add(egui::Button::new(ICON_SEARCH.to_string()).frame(false))
+                            .add(egui::Button::new(ICON_FOLDER.to_string()).frame(false))
                             .clicked()
                         {
                             if let Some(dir_path) = rfd::FileDialog::new().pick_folder() {

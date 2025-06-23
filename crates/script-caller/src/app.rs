@@ -1,7 +1,7 @@
 use crate::script::{self, Script};
 use eapp_utils::{
     borderless,
-    codicons::{ICON_FOLDER, ICON_SEARCH, ICON_SETTINGS_GEAR},
+    codicons::{ICON_FOLDER, ICON_SETTINGS_GEAR},
     widgets::simple_widgets::{get_theme_button, theme_button},
 };
 use eframe::egui::{self, Color32, Event, Key, UiBuilder, Vec2, Vec2b};
@@ -202,7 +202,7 @@ impl App {
                 ui.horizontal(|ui| {
                     ui.label("info.json");
 
-                    if ui.button(ICON_SEARCH.to_string()).clicked() {
+                    if ui.button(ICON_FOLDER.to_string()).clicked() {
                         if let Some(open_path) = rfd::FileDialog::new()
                             .add_filter("JSON files", &["json"])
                             .set_directory(self.cwd.clone().unwrap_or_default())
