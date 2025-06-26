@@ -3,7 +3,7 @@ use eframe::egui::{
     ahash::{HashMap, HashMapExt},
 };
 use image::AnimationDecoder;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use crate::lifo;
 
@@ -24,7 +24,7 @@ pub enum Texture {
     Animated {
         frames: Vec<(egui::TextureHandle, u64)>,
         current: usize,
-        next_update: Duration,
+        next_update: Instant,
         average_color: egui::Color32,
     },
 }
@@ -52,12 +52,6 @@ pub struct TexLoader {
     average_colors: HashMap<String, egui::Color32>,
     sender: lifo::Sender<LoadCommand>,
     receiver: std::sync::mpsc::Receiver<(String, Image)>,
-}
-
-fn get_duration() -> Duration {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
 }
 
 fn calculate_average_color(pixels: &[egui::Color32]) -> egui::Color32 {
@@ -101,32 +95,30 @@ impl TexLoader {
                                 let content = std::fs::read(&image_path)?;
                                 match image::guess_format(&content)? {
                                     image::ImageFormat::Gif => {
-                                        let frames = (
-                                            image_path.clone(),
-                                            Image::Animated(
-                                                image::codecs::gif::GifDecoder::new(
-                                                    std::io::Cursor::new(content),
-                                                )?
-                                                .into_frames()
-                                                .collect_frames()?
-                                                .into_iter()
-                                                .map(|frame| {
-                                                    let (num, den) = frame.delay().numer_denom_ms();
-                                                    (
-                                                        egui::ColorImage::from_rgba_unmultiplied(
-                                                            [
-                                                                frame.buffer().width() as _,
-                                                                frame.buffer().height() as _,
-                                                            ],
-                                                            frame.buffer(),
-                                                        ),
-                                                        (num as f32 * 1000.0 / den as f32) as _,
-                                                    )
-                                                })
-                                                .collect(),
-                                            ),
-                                        );
-                                        image_sender.send(frames).unwrap();
+                                        let frames = image::codecs::gif::GifDecoder::new(std::io::Cursor::new(content))?
+                                            .into_frames()
+                                            .collect_frames()?
+                                            .into_iter()
+                                            .map(|frame| {
+                                                let (num, den) = frame.delay().numer_denom_ms();
+                                                let delay_ms = num as f32  / den as f32;
+
+                                                (
+                                                    egui::ColorImage::from_rgba_unmultiplied(
+                                                        [
+                                                            frame.buffer().width() as _,
+                                                            frame.buffer().height() as _,
+                                                        ],
+                                                        frame.buffer(),
+                                                    ),
+                                                    delay_ms as u64,
+                                                )
+                                            })
+                                            .collect();
+
+                                        image_sender
+                                            .send((image_path.clone(), Image::Animated(frames)))
+                                            .unwrap();
                                     }
                                     // image::ImageFormat::WebP => todo!(),
                                     fmt => {
@@ -186,14 +178,16 @@ impl TexLoader {
                         next_update,
                         ..
                     } => {
-                        let now = get_duration();
-                        if *next_update <= now {
-                            let delay = Duration::from_micros(frames[*current].1);
+                        let now = Instant::now();
+                        if now >= *next_update {
+                            let delay = Duration::from_millis(frames[*current].1);
                             *current = (*current + 1) % frames.len();
                             *next_update = now + delay;
-                            ctx.request_repaint_after(delay);
+                            let remaining = *next_update - now;
+                            ctx.request_repaint_after(remaining);
                         } else {
-                            ctx.request_repaint_after(*next_update - now);
+                            let remaining = *next_update - now;
+                            ctx.request_repaint_after(remaining);
                         }
                     }
                 }
@@ -236,7 +230,7 @@ impl TexLoader {
                             }
                             Image::Animated(imgs) => {
                                 let current = 0;
-                                let next_update = get_duration();
+                                let next_update = Instant::now();
                                 let average_color = if let Some(first_frame) = imgs.first() {
                                     get_or_calculate_average_color!(
                                         &image_path,

@@ -6,7 +6,6 @@ use crate::{
 use eapp_utils::borderless;
 use eframe::egui::{self, CornerRadius, ViewportCommand};
 use serde::{Deserialize, Serialize};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 #[cfg(feature = "danmu")]
 use crate::danmu;
@@ -77,7 +76,7 @@ pub struct State {
     pub content_rect: egui::Rect,
 
     #[serde(skip)]
-    pub last_prevert_sleep_call: Duration,
+    pub last_prevent_sleep_time: f64,
 
     /// danmu regex string
     #[cfg(feature = "danmu")]
@@ -151,7 +150,7 @@ impl Default for State {
             end_reached: EndReached::Idle,
             last_playback_time: 0.0,
             content_rect: egui::Rect::ZERO,
-            last_prevert_sleep_call: Duration::default(),
+            last_prevent_sleep_time: 0.0,
             #[cfg(feature = "danmu")]
             danmu_regex_str: String::default(),
             #[cfg(feature = "danmu")]
@@ -369,14 +368,14 @@ impl App {
         }
     }
 
-    fn prevent_sleep_if_media_playing(&mut self) {
+    fn prevent_sleep_if_media_playing(&mut self, ui: &egui::Ui) {
         if !self.player.state().play_state.is_playing() {
             return;
         }
 
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-        if now - self.state.last_prevert_sleep_call >= Duration::from_secs(120) {
-            self.state.last_prevert_sleep_call = now;
+        let now = ui.ctx().input(|i| i.time);
+        if now - self.state.last_prevent_sleep_time >= 120.0 {
+            self.state.last_prevent_sleep_time = now;
             eapp_utils::platform::prevent_sleep();
         }
     }
@@ -399,7 +398,7 @@ impl eframe::App for App {
         borderless::window_frame(ctx, Some(ctx.style().visuals.extreme_bg_color)).show(ctx, |ui| {
             borderless::handle_resize(ui);
 
-            self.prevent_sleep_if_media_playing();
+            self.prevent_sleep_if_media_playing(ui);
 
             let gl = frame.gl().unwrap();
 

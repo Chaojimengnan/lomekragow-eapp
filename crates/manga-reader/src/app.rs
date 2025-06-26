@@ -513,6 +513,7 @@ impl App {
         if borderless::rect_contains_pointer(ui, sense_rect) {
             self.state.pointer_in_info_rect = true;
             self.state.last_time_pointer_in_info_rect = current_time;
+            ui.ctx().request_repaint_after_secs(2.0);
         }
 
         if current_time - self.state.last_time_pointer_in_info_rect >= 2.0 {
