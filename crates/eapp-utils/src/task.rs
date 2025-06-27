@@ -26,7 +26,7 @@ impl<T> Task<T> {
     }
 
     pub fn cancel(&self) {
-        self.cancel_sender.send(()).unwrap();
+        let _ = self.cancel_sender.send(());
     }
 
     pub fn get_result(self) -> Result<T> {

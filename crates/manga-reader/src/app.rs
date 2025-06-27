@@ -10,6 +10,7 @@ use eapp_utils::{
         ICON_SCREEN_FULL, ICON_SCREEN_NORMAL, ICON_TRIANGLE_LEFT, ICON_TRIANGLE_RIGHT,
     },
     task::Task,
+    waker::{WakeType, Waker},
     widgets::{
         progress_bar::{ProgressBar, draw_progress_bar_background, value_from_x},
         simple_widgets::{
@@ -68,6 +69,7 @@ impl Default for State {
 
 pub struct App {
     state: State,
+    waker: Waker,
     img_finder: ImgFinder,
     tex_loader: TexLoader,
     translation: ImgTranslation,
@@ -85,6 +87,7 @@ impl App {
         } else {
             State::default()
         };
+        let waker = Waker::new(cc.egui_ctx.clone(), WakeType::WakeOnLongestDeadLine);
         let img_finder = ImgFinder::new();
         let tex_loader = TexLoader::new(&cc.egui_ctx);
         let translation = ImgTranslation::default();
@@ -93,6 +96,7 @@ impl App {
 
         Self {
             state,
+            waker,
             img_finder,
             tex_loader,
             translation,
@@ -513,7 +517,7 @@ impl App {
         if borderless::rect_contains_pointer(ui, sense_rect) {
             self.state.pointer_in_info_rect = true;
             self.state.last_time_pointer_in_info_rect = current_time;
-            ui.ctx().request_repaint_after_secs(2.0);
+            self.waker.request_repaint_after_secs(2.5);
         }
 
         if current_time - self.state.last_time_pointer_in_info_rect >= 2.0 {

@@ -3,7 +3,10 @@ use crate::{
     playlist::Playlist,
     tex_register::TexRegister,
 };
-use eapp_utils::borderless;
+use eapp_utils::{
+    borderless,
+    waker::{WakeType, Waker},
+};
 use eframe::egui::{self, CornerRadius, ViewportCommand};
 use serde::{Deserialize, Serialize};
 
@@ -20,6 +23,7 @@ mod popups;
 
 pub struct App {
     state: State,
+    waker: Waker,
     playlist: Playlist,
     player: mpv::player::Player,
     preview: mpv::preview::Preview,
@@ -77,6 +81,12 @@ pub struct State {
 
     #[serde(skip)]
     pub last_prevent_sleep_time: f64,
+
+    #[serde(skip)]
+    pub last_playing_time: f64,
+
+    #[serde(skip)]
+    pub was_playing: bool,
 
     /// danmu regex string
     #[cfg(feature = "danmu")]
@@ -151,6 +161,8 @@ impl Default for State {
             last_playback_time: 0.0,
             content_rect: egui::Rect::ZERO,
             last_prevent_sleep_time: 0.0,
+            last_playing_time: 0.0,
+            was_playing: true,
             #[cfg(feature = "danmu")]
             danmu_regex_str: String::default(),
             #[cfg(feature = "danmu")]
@@ -232,8 +244,11 @@ impl App {
             };
         }
 
+        let waker = Waker::new(cc.egui_ctx.clone(), WakeType::WakeOnLongestDeadLine);
+
         let mut this = Self {
             state,
+            waker,
             playlist,
             player,
             preview,
@@ -368,15 +383,22 @@ impl App {
         }
     }
 
-    fn prevent_sleep_if_media_playing(&mut self, ui: &egui::Ui) {
-        if !self.player.state().play_state.is_playing() {
+    fn keep_state_if_media_playing(&mut self, ui: &egui::Ui) {
+        if !self.player.state().play_state.is_playing() && !self.state.was_playing {
             return;
         }
+
+        self.state.was_playing = self.player.state().play_state.is_playing();
 
         let now = ui.ctx().input(|i| i.time);
         if now - self.state.last_prevent_sleep_time >= 120.0 {
             self.state.last_prevent_sleep_time = now;
             eapp_utils::platform::prevent_sleep();
+        }
+
+        if now - self.state.last_playing_time >= 1.0 {
+            self.state.last_playing_time = now;
+            self.waker.request_repaint_after_secs(3.0);
         }
     }
 }
@@ -398,7 +420,7 @@ impl eframe::App for App {
         borderless::window_frame(ctx, Some(ctx.style().visuals.extreme_bg_color)).show(ctx, |ui| {
             borderless::handle_resize(ui);
 
-            self.prevent_sleep_if_media_playing(ui);
+            self.keep_state_if_media_playing(ui);
 
             let gl = frame.gl().unwrap();
 
