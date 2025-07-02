@@ -53,18 +53,23 @@ impl Note {
         self.title = format!("{modified}{name} - lonote");
     }
 
-    pub fn read_from_file<P>(path: P) -> Result<(String, usize)>
+    pub fn read_from_file<P>(path: P, codec_idx: Option<usize>) -> Result<(String, usize)>
     where
         P: AsRef<std::path::Path>,
     {
         let data = std::fs::read(path.as_ref())?;
 
-        let mut detector = EncodingDetector::new();
-        detector.feed(&data, true);
-        let encoding = detector.guess(None, true);
+        let encoding = match codec_idx {
+            Some(idx) => codec::supported_encodings()[idx],
+            None => {
+                let mut detector = EncodingDetector::new();
+                detector.feed(&data, true);
+                detector.guess(None, true)
+            }
+        };
 
         let codec_list = codec::supported_encodings();
-        let codec_idx = codec_list.iter().position(|&e| e == encoding).unwrap_or(0); // 默认使用 UTF-8
+        let codec_idx = codec_list.iter().position(|&e| e == encoding).unwrap_or(0); // Default to UTF-8
 
         let contents = if codec_idx == 0 {
             String::from_utf8(data).map_err(|e| e.utf8_error())?
@@ -456,7 +461,8 @@ impl App {
 
 macro_rules! confirm_dialog_or_calling {
     ($self:expr, $note:ident, $block:block) => {
-        let cb = {
+        #[allow(unused_mut)]
+        let mut cb = {
             let $note = $self.note.clone();
             move |yes: bool| {
                 if yes {
@@ -505,7 +511,7 @@ impl App {
 
             if let Some(path) = path {
                 let last_modified_time = Note::get_modified_time(&path)?;
-                let (contents, codec_idx) = Note::read_from_file(&path)?;
+                let (contents, codec_idx) = Note::read_from_file(&path, None)?;
 
                 let note = &mut *note.borrow_mut();
                 note.contents = contents;
@@ -533,7 +539,7 @@ impl App {
             let note = &mut *note.borrow_mut();
             let path = note.get_path().unwrap();
             let last_modified_time = Note::get_modified_time(path)?;
-            let (contents, codec_idx) = Note::read_from_file(path)?;
+            let (contents, codec_idx) = Note::read_from_file(path, Some(note.codec_idx))?;
 
             note.contents = contents;
             note.codec_idx = codec_idx;
