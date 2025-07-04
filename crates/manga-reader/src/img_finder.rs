@@ -208,7 +208,7 @@ impl ImgFinder {
                     }
                 }
                 Err(e) => {
-                    log::error!("Error reading directory {}: {}", dir_path, e);
+                    log::error!("Error reading directory {dir_path}: {e}");
                     self.cur_dir = None;
                     self.cur_image = None;
                 }

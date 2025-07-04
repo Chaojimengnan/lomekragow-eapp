@@ -7,6 +7,6 @@ fn main() {
             .unwrap();
 
         let mpv_path = std::env::var("CARGO_MANIFEST_DIR").unwrap();
-        println!("cargo::rustc-link-search={}/mpv/", mpv_path);
+        println!("cargo::rustc-link-search={mpv_path}/mpv/");
     }
 }

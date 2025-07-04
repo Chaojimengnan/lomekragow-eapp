@@ -232,7 +232,7 @@ pub fn runas_admin(script_path: &str, args: &str) -> anyhow::Result<()> {
             SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW, SHELLEXECUTEINFOW_0, ShellExecuteExW,
         };
 
-        let mut args: Vec<_> = format!("python -i \"{}\" {}", script_path, args)
+        let mut args: Vec<_> = format!("python -i \"{script_path}\" {args}")
             .encode_utf16()
             .collect();
         let mut verb: Vec<_> = "runas".encode_utf16().collect();

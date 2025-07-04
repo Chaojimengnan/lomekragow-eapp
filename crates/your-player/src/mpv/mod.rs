@@ -42,7 +42,7 @@ pub fn make_time_string(seconds: f64) -> String {
     let hour = (seconds / 3600.0) as i32;
     let min = (seconds / 60.0) as i32 % 60;
     let sec = (seconds) as i32 % 60;
-    format!("{}:{:02}:{:02}", hour, min, sec)
+    format!("{hour}:{min:02}:{sec:02}")
 }
 
 struct BasicMpvWrapper {

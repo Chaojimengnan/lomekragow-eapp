@@ -204,7 +204,7 @@ impl super::App {
         painter.text(
             pos2(rect.left(), items_y - 1.5),
             Align2::LEFT_CENTER,
-            format!("{} / {}", playback_time, duration),
+            format!("{playback_time} / {duration}"),
             FontId::proportional(16.0),
             ui.visuals().text_color(),
         );
