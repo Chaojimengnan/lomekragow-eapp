@@ -1,7 +1,14 @@
-use eapp_utils::easy_mark;
-use eframe::egui::{self, CollapsingHeader};
+use eapp_utils::{
+    codicons::{ICON_PIN, ICON_PINNED, ICON_REPLY},
+    easy_mark,
+};
+use eframe::egui::{self, Button, TextEdit, Widget, collapsing_header::CollapsingState};
 use serde::Deserialize;
-use std::{collections::HashSet, fmt::Write, path::Path};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Write,
+    path::Path,
+};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "snake_case")]
@@ -28,8 +35,18 @@ pub struct Arg {
     #[serde(default)]
     pub desc: String,
 
+    #[serde(default)]
+    pub password: bool,
+
+    #[serde(default = "default_as_true")]
+    pub remember: bool,
+
     #[serde(skip)]
     pub enabled: bool,
+}
+
+fn default_as_true() -> bool {
+    true
 }
 
 impl Arg {
@@ -44,34 +61,92 @@ impl Arg {
             &self.name
         };
 
-        CollapsingHeader::new(name)
-            .default_open(true)
-            .show(ui, |ui| {
-                if self.optional {
-                    ui.checkbox(&mut self.enabled, "Enable this option");
-                }
-                ui.add_enabled_ui(self.enabled, |ui| match &mut self.r#type {
-                    ArgType::Choices(value) => {
-                        egui::ComboBox::from_id_salt(format!("{}_combo", self.name))
-                            .selected_text(&self.choices[*value])
-                            .show_index(ui, value, self.choices.len(), |i| &self.choices[i]);
+        CollapsingState::load_with_default_open(ui.ctx(), egui::Id::new(name), true)
+            .show_header(ui, |ui| {
+                ui.horizontal(|ui| {
+                    if self.optional {
+                        let icon = if self.enabled {
+                            ICON_PINNED.to_string()
+                        } else {
+                            ICON_PIN.to_string()
+                        };
+                        ui.toggle_value(&mut self.enabled, icon)
+                            .on_hover_text("Enable this option");
                     }
-                    ArgType::Normal(value) => {
-                        ui.text_edit_multiline(value);
-                    }
-                    ArgType::OneLine(value) => {
-                        ui.text_edit_singleline(value);
-                    }
-                    ArgType::StoreTrue(value) => {
-                        ui.checkbox(value, "Append this option");
-                    }
-                })
+
+                    ui.label(name).on_hover_text(&self.desc);
+                });
             })
-            .header_response
-            .on_hover_text(&self.desc);
+            .body(|ui| {
+                ui.add_enabled_ui(self.enabled, |ui| {
+                    ui.horizontal(|ui| {
+                        match &mut self.r#type {
+                            ArgType::Choices(value) => {
+                                egui::ComboBox::from_id_salt(format!("{}_combo", self.name))
+                                    .selected_text(&self.choices[*value])
+                                    .show_index(ui, value, self.choices.len(), |i| {
+                                        &self.choices[i]
+                                    });
+                            }
+                            ArgType::Normal(value) => {
+                                TextEdit::multiline(value).password(self.password).ui(ui);
+                            }
+                            ArgType::OneLine(value) => {
+                                TextEdit::singleline(value).password(self.password).ui(ui);
+                            }
+                            ArgType::StoreTrue(value) => {
+                                ui.checkbox(value, "Append this option");
+                            }
+                        }
+
+                        if self.default.is_some()
+                            && ui
+                                .add(Button::new(ICON_REPLY.to_string()).frame(false))
+                                .on_hover_text("Reset value to default")
+                                .clicked()
+                        {
+                            self.set_value(self.default.clone());
+                        }
+                    });
+                });
+            });
     }
 
-    pub fn get_value_string(&self) -> String {
+    pub fn set_value(&mut self, opt_value: Option<String>) {
+        let Self { r#type, .. } = self;
+        match r#type {
+            ArgType::Choices(value) => {
+                *value = opt_value
+                    .map(|v| {
+                        self.choices
+                            .iter()
+                            .position(|choice| *choice == v)
+                            .unwrap_or(0usize)
+                    })
+                    .unwrap_or(0usize);
+            }
+            ArgType::Normal(value) | ArgType::OneLine(value) => {
+                *value = opt_value.unwrap_or_default();
+            }
+            ArgType::StoreTrue(value) => {
+                *value = opt_value
+                    .unwrap_or("false".to_owned())
+                    .parse::<bool>()
+                    .ok()
+                    .unwrap_or(false);
+            }
+        }
+    }
+
+    pub fn get_value(&self) -> String {
+        match &self.r#type {
+            ArgType::Choices(index) => self.choices.get(*index).cloned().unwrap_or_default(),
+            ArgType::Normal(s) | ArgType::OneLine(s) => s.clone(),
+            ArgType::StoreTrue(b) => b.to_string(),
+        }
+    }
+
+    pub fn get_value_formatted(&self) -> String {
         let mut value_string = String::new();
 
         match &self.r#type {
@@ -107,35 +182,11 @@ impl Arg {
             self.enabled = true;
         }
 
-        let Self { r#type, .. } = self;
-        match r#type {
-            ArgType::Choices(value) => {
-                let mut default = 0usize;
-                if let Some(default_str) = &self.default {
-                    for (i, choice) in self.choices.iter().enumerate() {
-                        if default_str == choice {
-                            default = i;
-                            break;
-                        }
-                    }
-                }
-                *value = default;
-            }
-            ArgType::Normal(value) | ArgType::OneLine(value) => {
-                let default = self.default.clone().unwrap_or_default();
-                *value = default;
-            }
-            ArgType::StoreTrue(value) => {
-                let default = self
-                    .default
-                    .clone()
-                    .unwrap_or("false".to_owned())
-                    .parse::<bool>()
-                    .ok()
-                    .unwrap_or(false);
-                *value = default;
-            }
+        if self.password {
+            self.remember = false;
         }
+
+        self.set_value(self.default.clone());
     }
 }
 
@@ -179,7 +230,7 @@ impl Script {
                 continue;
             }
 
-            write!(&mut result, "{} ", arg.get_value_string()).unwrap();
+            write!(&mut result, "{} ", arg.get_value_formatted()).unwrap();
         }
 
         result
@@ -196,10 +247,15 @@ pub struct Loader {
     pub script_path: String,
 }
 
+pub type RememberedArgs = HashMap<(String, String), String>;
+
 impl Loader {
     const INFO_FILENAME: &'static str = "info.json";
 
-    pub fn load(info_json_path: Option<&str>) -> anyhow::Result<Self> {
+    pub fn load(
+        info_json_path: Option<&str>,
+        remembered_args: &RememberedArgs,
+    ) -> anyhow::Result<Self> {
         let script_path = info_json_path
             .map(|path| {
                 if let Some(parent) = Path::new(path).parent() {
@@ -214,13 +270,32 @@ impl Loader {
         let json = std::fs::read_to_string(&info_path)?;
         let mut loader = serde_json::from_str::<Loader>(&json)?;
         loader.script_list.iter_mut().for_each(|script| {
-            script
-                .args
-                .iter_mut()
-                .for_each(|arg| arg.initialize_value())
+            script.args.iter_mut().for_each(|arg| {
+                arg.initialize_value();
+                if let Some(value) = remembered_args.get(&(script.name.clone(), arg.name.clone())) {
+                    arg.set_value(Some(value.to_owned()));
+                }
+            })
         });
         loader.script_path = script_path;
         Ok(loader)
+    }
+
+    pub fn generate_remembered_args(&self) -> RememberedArgs {
+        let mut remembered_args = HashMap::new();
+
+        for script in &self.script_list {
+            for arg in &script.args {
+                if arg.remember {
+                    let value = arg.get_value();
+                    if !value.is_empty() && Some(&value) != arg.default.as_ref() {
+                        remembered_args.insert((script.name.clone(), arg.name.clone()), value);
+                    }
+                }
+            }
+        }
+
+        remembered_args
     }
 }
 

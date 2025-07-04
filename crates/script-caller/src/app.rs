@@ -1,4 +1,4 @@
-use crate::script::{self, Script};
+use crate::script::{self, RememberedArgs, Script};
 use eapp_utils::{
     borderless,
     codicons::{ICON_FOLDER, ICON_SETTINGS_GEAR},
@@ -22,6 +22,7 @@ pub struct App {
     search_query: String,
     load_error: Option<String>,
     cwd: Option<String>,
+    remembered_args: RememberedArgs,
 }
 
 impl App {
@@ -34,10 +35,17 @@ impl App {
             None
         };
 
-        let (loader, load_error) = match script::Loader::load(info_json_path.as_deref()) {
-            Ok(loader) => (loader, None),
-            Err(err) => (script::Loader::default(), Some(err.to_string())),
+        let remembered_args = if let Some(storage) = cc.storage {
+            eframe::get_value(storage, "remembered_args").unwrap_or_default()
+        } else {
+            RememberedArgs::new()
         };
+
+        let (loader, load_error) =
+            match script::Loader::load(info_json_path.as_deref(), &remembered_args) {
+                Ok(loader) => (loader, None),
+                Err(err) => (script::Loader::default(), Some(err.to_string())),
+            };
 
         let cwd = std::env::current_dir()
             .ok()
@@ -52,6 +60,7 @@ impl App {
             search_query: String::new(),
             load_error,
             cwd,
+            remembered_args,
         }
     }
 
@@ -230,11 +239,13 @@ impl App {
                     }
 
                     if ui.button("Reload").clicked() {
-                        (self.loader, self.load_error) =
-                            match script::Loader::load(self.info_json_path.as_deref()) {
-                                Ok(loader) => (loader, None),
-                                Err(err) => (script::Loader::default(), Some(err.to_string())),
-                            };
+                        (self.loader, self.load_error) = match script::Loader::load(
+                            self.info_json_path.as_deref(),
+                            &self.remembered_args,
+                        ) {
+                            Ok(loader) => (loader, None),
+                            Err(err) => (script::Loader::default(), Some(err.to_string())),
+                        };
 
                         self.cur_sel_tag = None;
                         self.cur_sel_script = 0;
@@ -434,6 +445,11 @@ impl eframe::App for App {
 
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, "info_json_path", &self.info_json_path);
+        eframe::set_value(
+            storage,
+            "remembered_args",
+            &self.loader.generate_remembered_args(),
+        );
     }
 
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
