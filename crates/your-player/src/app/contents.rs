@@ -195,14 +195,13 @@ impl super::App {
         rect: eframe::epaint::Rect,
         parent_opacity: f32,
     ) {
-        let items_y = rect.top() + 32.0 + 12.0 + 16.0 + 8.0;
         let painter = ui.painter();
         let btn_size = 32.0;
 
         let playback_time = mpv::make_time_string(self.player.state().playback_time);
         let duration = mpv::make_time_string(self.player.state().duration);
         painter.text(
-            pos2(rect.left(), items_y - 1.5),
+            pos2(rect.left(), rect.bottom() - btn_size),
             Align2::LEFT_CENTER,
             format!("{playback_time} / {duration}"),
             FontId::proportional(16.0),
@@ -219,9 +218,8 @@ impl super::App {
                     .corner_radius(CornerRadius::same(2))
                     .hover(hover_color)
             };
-
             let center_btns_rect = Rect::from_center_size(
-                pos2(rect.center().x, items_y),
+                pos2(rect.center().x, rect.bottom() - btn_size),
                 vec2(btn_size * 5.0, btn_size),
             );
 
@@ -297,13 +295,13 @@ impl super::App {
                             });
                         },
                     );
-                })
+                });
             });
 
             let right_btns_rect = {
                 let width = btn_size * 5.0;
                 Rect::from_center_size(
-                    pos2(rect.right() - width / 2.0, items_y - 2.0),
+                    pos2(rect.right() - width / 2.0, rect.bottom() - btn_size),
                     vec2(width, btn_size),
                 )
             };
@@ -349,6 +347,14 @@ impl super::App {
                         ui_long_setting_popup
                     );
 
+                    if ui.add(new_button(16.0, ICON_INSPECT.to_string())).clicked()
+                        && self.tex_register.get(*self.player.texture()).is_some()
+                    {
+                        let size = self.player.state().media_size;
+                        let size = vec2(size.0 as _, size.1 as _);
+                        eapp_utils::window_resize_by_fit_scale(ui, size);
+                    }
+
                     let is_fullscreen = ui.input(|i| i.viewport().fullscreen.unwrap_or(false));
                     let icon = if is_fullscreen {
                         ICON_SCREEN_NORMAL
@@ -360,15 +366,7 @@ impl super::App {
                         ui.ctx()
                             .send_viewport_cmd(ViewportCommand::Fullscreen(!is_fullscreen));
                     }
-
-                    if ui.add(new_button(16.0, ICON_INSPECT.to_string())).clicked()
-                        && self.tex_register.get(*self.player.texture()).is_some()
-                    {
-                        let size = self.player.state().media_size;
-                        let size = vec2(size.0 as _, size.1 as _);
-                        eapp_utils::window_resize_by_fit_scale(ui, size);
-                    }
-                })
+                });
             });
         });
     }
