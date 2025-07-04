@@ -2,7 +2,11 @@ use eapp_utils::{
     codicons::{ICON_PIN, ICON_PINNED, ICON_REPLY},
     easy_mark,
 };
-use eframe::egui::{self, Button, TextEdit, Widget, collapsing_header::CollapsingState};
+use eframe::egui::{
+    self, Button, TextEdit,
+    collapsing_header::CollapsingState,
+    text::{CCursor, CCursorRange},
+};
 use serde::Deserialize;
 use std::{
     collections::{HashMap, HashSet},
@@ -43,6 +47,9 @@ pub struct Arg {
 
     #[serde(skip)]
     pub enabled: bool,
+
+    #[serde(default)]
+    pub existing_path: bool,
 }
 
 fn default_as_true() -> bool {
@@ -80,6 +87,7 @@ impl Arg {
             .body(|ui| {
                 ui.add_enabled_ui(self.enabled, |ui| {
                     ui.horizontal(|ui| {
+                        let oneline = matches!(self.r#type, ArgType::OneLine(_));
                         match &mut self.r#type {
                             ArgType::Choices(value) => {
                                 egui::ComboBox::from_id_salt(format!("{}_combo", self.name))
@@ -88,11 +96,36 @@ impl Arg {
                                         &self.choices[i]
                                     });
                             }
-                            ArgType::Normal(value) => {
-                                TextEdit::multiline(value).password(self.password).ui(ui);
-                            }
-                            ArgType::OneLine(value) => {
-                                TextEdit::singleline(value).password(self.password).ui(ui);
+                            ArgType::OneLine(value) | ArgType::Normal(value) => {
+                                let id = ui.make_persistent_id("text_edit");
+                                let mut output = if oneline {
+                                    TextEdit::singleline(value)
+                                } else {
+                                    TextEdit::multiline(value)
+                                }
+                                .code_editor()
+                                .password(self.password)
+                                .id(id)
+                                .show(ui);
+
+                                let mut response = output.response;
+
+                                if self.existing_path {
+                                    if response.has_focus()
+                                        && ui.input(|i| i.key_pressed(egui::Key::Tab))
+                                        && path_utils::tab_path_completion(value)
+                                    {
+                                        response.mark_changed();
+                                        output.state.cursor.set_char_range(Some(
+                                            CCursorRange::one(CCursor::new(
+                                                value.char_indices().count(),
+                                            )),
+                                        ));
+                                        output.state.store(ui.ctx(), id);
+                                    }
+
+                                    path_utils::check_path_existence(ui, value, response.rect);
+                                }
                             }
                             ArgType::StoreTrue(value) => {
                                 ui.checkbox(value, "Append this option");
@@ -186,7 +219,96 @@ impl Arg {
             self.remember = false;
         }
 
+        if self.existing_path && !matches!(self.r#type, ArgType::Normal(_) | ArgType::OneLine(_)) {
+            self.existing_path = false;
+        }
+
         self.set_value(self.default.clone());
+    }
+}
+
+mod path_utils {
+    use super::*;
+    use eframe::egui::{Color32, Rect};
+
+    pub fn check_path_existence(ui: &mut egui::Ui, value: &str, rect: Rect) {
+        let path = value.trim();
+        if !path.is_empty() && !std::path::Path::new(path).exists() {
+            let underline_y = rect.bottom() + 1.0;
+            ui.painter().line_segment(
+                [
+                    egui::pos2(rect.left(), underline_y),
+                    egui::pos2(rect.right(), underline_y),
+                ],
+                (1.0, Color32::DARK_RED),
+            );
+        }
+    }
+
+    pub fn tab_path_completion(value: &mut String) -> bool {
+        let path = value.trim();
+        if path.is_empty() {
+            return false;
+        }
+
+        let expanded_path = shellexpand::tilde(path).to_string();
+        let path_buf = std::path::PathBuf::from(&expanded_path);
+
+        let (parent, current_file_name) = if let Some(parent) = path_buf.parent() {
+            let file_name = path_buf
+                .file_name()
+                .map(|s| s.to_string_lossy().to_string())
+                .unwrap_or_default();
+            (parent.to_path_buf(), file_name)
+        } else {
+            (
+                std::path::PathBuf::from("."),
+                path_buf.to_string_lossy().to_string(),
+            )
+        };
+
+        let entries = match read_dir_entries(&parent) {
+            Ok(entries) => entries,
+            Err(_) => return false,
+        };
+
+        let (new_name, is_dir) = match entries
+            .iter()
+            .position(|(name, _)| name == &current_file_name)
+        {
+            Some(current_index) => {
+                let next_index = (current_index + 1) % entries.len();
+                &entries[next_index]
+            }
+            None => match entries
+                .iter()
+                .find(|(name, _)| name.starts_with(&current_file_name))
+            {
+                Some(entry) => entry,
+                None => return false,
+            },
+        };
+
+        let mut new_path = parent.join(new_name).to_string_lossy().to_string();
+        if *is_dir {
+            new_path.push(std::path::MAIN_SEPARATOR);
+        }
+
+        *value = new_path;
+
+        true
+    }
+
+    fn read_dir_entries(path: &std::path::Path) -> std::io::Result<Vec<(String, bool)>> {
+        let mut entries = Vec::new();
+        for entry in std::fs::read_dir(path)? {
+            let entry = entry?;
+            let file_name = entry.file_name().to_string_lossy().to_string();
+            let file_type = entry.file_type()?;
+            entries.push((file_name, file_type.is_dir()));
+        }
+        entries.sort_by(|a, b| a.0.cmp(&b.0));
+        Ok(entries)
     }
 }
 
