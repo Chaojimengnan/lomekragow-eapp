@@ -1,9 +1,9 @@
 use eapp_utils::{
-    codicons::{ICON_PIN, ICON_PINNED, ICON_REPLY},
+    codicons::{ICON_ERROR, ICON_PIN, ICON_PINNED, ICON_REPLY},
     easy_mark,
 };
 use eframe::egui::{
-    self, Button, TextEdit,
+    self, TextEdit,
     collapsing_header::CollapsingState,
     text::{CCursor, CCursorRange},
 };
@@ -69,80 +69,94 @@ impl Arg {
         };
 
         CollapsingState::load_with_default_open(ui.ctx(), egui::Id::new(name), true)
-            .show_header(ui, |ui| {
-                ui.horizontal(|ui| {
-                    if self.optional {
-                        let icon = if self.enabled {
-                            ICON_PINNED.to_string()
-                        } else {
-                            ICON_PIN.to_string()
-                        };
-                        ui.toggle_value(&mut self.enabled, icon)
-                            .on_hover_text("Enable this option");
+            .show_header(ui, |ui| self.show_ui_header(ui))
+            .body(|ui| self.show_ui_body(ui));
+    }
+
+    fn show_ui_header(&mut self, ui: &mut egui::Ui) {
+        ui.horizontal(|ui| {
+            let name = if self.name.starts_with("--") {
+                &self.name[2..]
+            } else {
+                &self.name
+            };
+
+            if self.optional {
+                let icon = if self.enabled {
+                    ICON_PINNED.to_string()
+                } else {
+                    ICON_PIN.to_string()
+                };
+                ui.toggle_value(&mut self.enabled, icon)
+                    .on_hover_text("Enable this option");
+            }
+
+            ui.label(name).on_hover_text(&self.desc);
+        });
+    }
+
+    fn show_ui_body(&mut self, ui: &mut egui::Ui) {
+        ui.add_enabled_ui(self.enabled, |ui| {
+            ui.horizontal(|ui| {
+                ui.visuals_mut().button_frame = false;
+                let oneline = matches!(self.r#type, ArgType::OneLine(_));
+
+                match &mut self.r#type {
+                    ArgType::Choices(value) => {
+                        egui::ComboBox::from_id_salt(format!("{}_combo", self.name))
+                            .selected_text(&self.choices[*value])
+                            .show_index(ui, value, self.choices.len(), |i| &self.choices[i]);
                     }
+                    ArgType::OneLine(value) | ArgType::Normal(value) => {
+                        let id = ui.make_persistent_id("text_edit");
+                        let mut output = if oneline {
+                            TextEdit::singleline(value)
+                        } else {
+                            TextEdit::multiline(value)
+                        }
+                        .code_editor()
+                        .password(self.password)
+                        .id(id)
+                        .show(ui);
 
-                    ui.label(name).on_hover_text(&self.desc);
-                });
-            })
-            .body(|ui| {
-                ui.add_enabled_ui(self.enabled, |ui| {
-                    ui.horizontal(|ui| {
-                        let oneline = matches!(self.r#type, ArgType::OneLine(_));
-                        match &mut self.r#type {
-                            ArgType::Choices(value) => {
-                                egui::ComboBox::from_id_salt(format!("{}_combo", self.name))
-                                    .selected_text(&self.choices[*value])
-                                    .show_index(ui, value, self.choices.len(), |i| {
-                                        &self.choices[i]
-                                    });
-                            }
-                            ArgType::OneLine(value) | ArgType::Normal(value) => {
-                                let id = ui.make_persistent_id("text_edit");
-                                let mut output = if oneline {
-                                    TextEdit::singleline(value)
-                                } else {
-                                    TextEdit::multiline(value)
-                                }
-                                .code_editor()
-                                .password(self.password)
-                                .id(id)
-                                .show(ui);
+                        let mut response = output.response;
 
-                                let mut response = output.response;
-
-                                if self.existing_path {
-                                    if response.has_focus()
-                                        && ui.input(|i| i.key_pressed(egui::Key::Tab))
-                                        && path_utils::tab_path_completion(value)
-                                    {
+                        if self.existing_path {
+                            if response.has_focus() && ui.input(|i| i.key_pressed(egui::Key::Tab)) {
+                                if let Some(mut cursor_range) = output.state.cursor.char_range() {
+                                    if path_utils::tab_path_completion(value, &mut cursor_range) {
                                         response.mark_changed();
-                                        output.state.cursor.set_char_range(Some(
-                                            CCursorRange::one(CCursor::new(
-                                                value.char_indices().count(),
-                                            )),
-                                        ));
+                                        output.state.cursor.set_char_range(Some(cursor_range));
                                         output.state.store(ui.ctx(), id);
                                     }
-
-                                    path_utils::check_path_existence(ui, value, response.rect);
                                 }
                             }
-                            ArgType::StoreTrue(value) => {
-                                ui.checkbox(value, "Append this option");
+
+                            let errors = path_utils::check_path_existence(value);
+                            if !errors.is_empty() {
+                                ui.menu_button(ICON_ERROR.to_string(), |ui| {
+                                    for error in &errors {
+                                        ui.label(error);
+                                    }
+                                });
                             }
                         }
+                    }
+                    ArgType::StoreTrue(value) => {
+                        ui.checkbox(value, "Append this option");
+                    }
+                }
 
-                        if self.default.is_some()
-                            && ui
-                                .add(Button::new(ICON_REPLY.to_string()).frame(false))
-                                .on_hover_text("Reset value to default")
-                                .clicked()
-                        {
-                            self.set_value(self.default.clone());
-                        }
-                    });
-                });
+                if self.default.is_some()
+                    && ui
+                        .button(ICON_REPLY.to_string())
+                        .on_hover_text("Reset value to default")
+                        .clicked()
+                {
+                    self.set_value(self.default.clone());
+                }
             });
+        });
     }
 
     pub fn set_value(&mut self, opt_value: Option<String>) {
@@ -229,24 +243,44 @@ impl Arg {
 
 mod path_utils {
     use super::*;
-    use eframe::egui::{Color32, Rect};
+    use eframe::egui::text_selection::text_cursor_state::byte_index_from_char_index;
 
-    pub fn check_path_existence(ui: &mut egui::Ui, value: &str, rect: Rect) {
-        let path = value.trim();
-        if !path.is_empty() && !std::path::Path::new(path).exists() {
-            let underline_y = rect.bottom() + 1.0;
-            ui.painter().line_segment(
-                [
-                    egui::pos2(rect.left(), underline_y),
-                    egui::pos2(rect.right(), underline_y),
-                ],
-                (1.0, Color32::DARK_RED),
-            );
+    pub fn check_path_existence(value: &str) -> Vec<String> {
+        let mut errors = Vec::new();
+
+        for (line_num, line) in value.lines().enumerate() {
+            let path = line.trim();
+            if !path.is_empty() && !std::path::Path::new(path).exists() {
+                errors.push(format!(
+                    "Line {}: Path '{}' does not exist",
+                    line_num + 1,
+                    path
+                ));
+            }
         }
+
+        errors
     }
 
-    pub fn tab_path_completion(value: &mut String) -> bool {
-        let path = value.trim();
+    pub fn tab_path_completion(value: &mut String, cursor_range: &mut CCursorRange) -> bool {
+        let text = value.as_str();
+        let primary_char_index = cursor_range.primary.index;
+
+        let byte_index = byte_index_from_char_index(text, primary_char_index);
+
+        let line_start_byte = text[..byte_index]
+            .rfind('\n')
+            .map(|pos| pos + 1)
+            .unwrap_or(0);
+
+        let line_end_byte = text[byte_index..]
+            .find('\n')
+            .map(|pos| byte_index + pos)
+            .unwrap_or_else(|| text.len());
+
+        let current_line = &text[line_start_byte..line_end_byte];
+        let path = current_line.trim();
+
         if path.is_empty() {
             return false;
         }
@@ -294,7 +328,17 @@ mod path_utils {
             new_path.push(std::path::MAIN_SEPARATOR);
         }
 
-        *value = new_path;
+        let mut new_text = String::new();
+        new_text.push_str(&text[..line_start_byte]);
+        new_text.push_str(&new_path);
+        new_text.push_str(&text[line_end_byte..]);
+
+        let new_path_char_count = new_path.chars().count();
+        let prefix_char_count = text[..line_start_byte].chars().count();
+        let new_cursor_char_index = prefix_char_count + new_path_char_count;
+
+        *cursor_range = CCursorRange::one(CCursor::new(new_cursor_char_index));
+        *value = new_text;
 
         true
     }
