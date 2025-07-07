@@ -87,7 +87,9 @@ impl App {
             theme_button(ui, get_theme_button(ui));
 
             ui.menu_button(ICON_SETTINGS_GEAR.to_string(), |ui| {
-                self.ui_setting(ui);
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    self.ui_setting(ui);
+                });
             });
 
             ui.painter().text(
