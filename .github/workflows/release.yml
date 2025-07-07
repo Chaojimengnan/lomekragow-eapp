@@ -19,7 +19,7 @@ jobs:
           - os: macos-latest
             crate: your-player
             
-        crate: ["lonote", "manga-reader", "save-manager", "script-caller", "syncer", "your-player"]
+        crate: ["lonote", "manga-reader", "save-manager", "script-caller", "syncer", "your-player", "mychat"]
         os: [ubuntu-latest, macos-latest, windows-latest]
         include:
           - os: ubuntu-latest

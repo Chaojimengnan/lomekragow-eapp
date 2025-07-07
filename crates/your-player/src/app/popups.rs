@@ -295,7 +295,7 @@ impl super::App {
             #[cfg(feature = "danmu")]
             DanmuFonts => {
                 egui::ScrollArea::vertical()
-                    .auto_shrink(Vec2b::new(false, false))
+                    .auto_shrink([false, false])
                     .max_height(80.0)
                     .show(ui, |ui| {
                         for (path, _) in &self.danmu.state().atlas.fonts().0 {

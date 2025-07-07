@@ -388,7 +388,7 @@ impl App {
         let height = ui.available_height() - 48.0 - ui.spacing().item_spacing.y * 2.0;
         egui::ScrollArea::vertical()
             .max_height(height)
-            .auto_shrink(Vec2b::new(false, true))
+            .auto_shrink([false, true])
             .show(ui, |ui| {
                 ui.set_min_height(height);
                 ui.with_layout(egui::Layout::top_down_justified(egui::Align::LEFT), |ui| {

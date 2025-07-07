@@ -3,7 +3,6 @@ use eframe::egui;
 pub mod animation;
 pub mod borderless;
 pub mod codicons;
-pub mod easy_mark;
 pub mod natordset;
 pub mod platform;
 pub mod task;
@@ -38,17 +37,21 @@ pub fn setup_fonts(ctx: &egui::Context) {
         egui::FontData::from_static(&CODICON).into(),
     );
 
-    fonts
+    let proportional = fonts
         .families
         .entry(egui::FontFamily::Proportional)
-        .or_default()
-        .append(&mut vec!["unifont".to_owned(), "codicon".to_owned()]);
+        .or_default();
 
-    fonts
+    proportional.insert(0, "unifont".to_owned());
+    proportional.insert(1, "codicon".to_owned());
+
+    let monospace = fonts
         .families
         .entry(egui::FontFamily::Monospace)
-        .or_default()
-        .append(&mut vec!["unifont".to_owned(), "codicon".to_owned()]);
+        .or_default();
+
+    monospace.insert(0, "unifont".to_owned());
+    monospace.insert(1, "codicon".to_owned());
 
     ctx.set_fonts(fonts);
     ctx.style_mut(setup_text_size);

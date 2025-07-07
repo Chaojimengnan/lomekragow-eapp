@@ -1,7 +1,4 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
         {
@@ -91,6 +88,43 @@
                 ],
                 "filter": {
                     "name": "manga-reader",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'mychat'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=mychat",
+                    "--package=mychat"
+                ],
+                "filter": {
+                    "name": "mychat",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'mychat'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=mychat",
+                    "--package=mychat"
+                ],
+                "filter": {
+                    "name": "mychat",
                     "kind": "bin"
                 }
             },

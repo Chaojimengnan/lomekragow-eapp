@@ -19,8 +19,8 @@ use eapp_utils::{
     },
 };
 use eframe::egui::{
-    self, Align2, Color32, CornerRadius, FontId, Frame, Id, Layout, Rect, UiBuilder, Vec2b,
-    Widget as _, pos2, vec2,
+    self, Align2, Color32, CornerRadius, FontId, Frame, Id, Layout, Rect, UiBuilder, Widget as _,
+    pos2, vec2,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
@@ -246,7 +246,7 @@ impl App {
                 );
 
                 egui::ScrollArea::both()
-                    .auto_shrink(Vec2b::new(false, true))
+                    .auto_shrink([false, true])
                     .show(ui, |ui| {
                         ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
 

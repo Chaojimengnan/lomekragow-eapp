@@ -1,12 +1,10 @@
-use eapp_utils::{
-    codicons::{ICON_ERROR, ICON_PIN, ICON_PINNED, ICON_REPLY},
-    easy_mark,
-};
+use eapp_utils::codicons::{ICON_ERROR, ICON_PIN, ICON_PINNED, ICON_REPLY};
 use eframe::egui::{
     self, TextEdit,
     collapsing_header::CollapsingState,
     text::{CCursor, CCursorRange},
 };
+use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
 use serde::Deserialize;
 use std::{
     collections::{HashMap, HashSet},
@@ -374,16 +372,19 @@ pub struct Script {
     pub args: Vec<Arg>,
 
     #[serde(skip)]
-    pub desc_cache: Option<Vec<easy_mark::parser::Item>>,
+    pub desc_cache: Option<(CommonMarkCache, String)>,
 }
 
 impl Script {
     pub fn show_ui(&mut self, ui: &mut egui::Ui) {
         if self.desc_cache.is_none() {
-            self.desc_cache = Some(easy_mark::parser::Parser::new(&self.desc.join("\n")).collect());
+            let markdown_desc = self.desc.join("\n");
+            self.desc_cache = Some((CommonMarkCache::default(), markdown_desc));
         }
 
-        easy_mark::viewer::easy_mark_it(ui, self.desc_cache.as_ref().unwrap().iter());
+        let (cache, desc) = self.desc_cache.as_mut().unwrap();
+        CommonMarkViewer::new().show(ui, cache, desc);
+
         ui.add_space(16.0);
         self.args.iter_mut().for_each(|arg| arg.show_ui(ui));
     }
