@@ -4,7 +4,7 @@ use eapp_utils::{
     codicons::{ICON_FOLDER, ICON_SETTINGS_GEAR},
     widgets::simple_widgets::{get_theme_button, theme_button},
 };
-use eframe::egui::{self, Color32, Event, Key, UiBuilder, Vec2, Vec2b};
+use eframe::egui::{self, Color32, Event, Key, UiBuilder, Vec2};
 
 #[derive(PartialEq, Eq)]
 enum RunMode {

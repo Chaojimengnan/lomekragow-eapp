@@ -21,7 +21,7 @@ cargo build --release
 ### 运行
 
 ```bash
-cargo run --release --bin your-player
+cargo run --release --bin mychat
 ```
 
 ## 许可证
@@ -35,6 +35,52 @@ cargo run --release --bin your-player
 
 ---
 
+## mychat - 本地大模型对话客户端
+
+mychat是一个基于Rust开发的本地大模型对话客户端，提供简洁高效的聊天界面、多轮对话管理和智能上下文压缩功能。它支持实时流式响应、消息编辑和完整的模型参数配置。
+
+### 核心特性
+
+#### 💬 对话管理
+- 新建/删除/切换多个对话
+- 实时对话历史展示
+- 智能对话总结压缩
+- 按角色分类消息（系统/用户/助手）
+
+#### ✍️ 消息操作
+- 实时流式消息显示
+- 消息内容编辑功能
+- 一键复制消息内容
+- 查看思考过程内容
+
+#### ⚙️ 参数配置
+- 完整的LLM参数配置（温度/top_p/惩罚值等）
+- 独立的对话总结参数配置
+- 模型选择和API设置
+- 上下文窗口大小调整
+- 压缩阈值设置
+
+#### 🖥️ 界面特性
+- 无边框透明窗口设计
+- 可折叠的侧边栏
+- Markdown消息渲染
+- 主题切换支持
+- 响应式布局设计
+
+### 技术栈
+- **Rust** - 系统级编程语言
+- **eframe/egui** - 即时模式GUI框架
+- **Tokio** - 异步运行时
+- **Serde** - 数据序列化
+- **reqwest** - HTTP客户端
+- **egui_commonmark** - Markdown渲染
+
+
+### 截图
+
+![3](screenshot/mychat3.gif)  
+![1](screenshot/mychat1.png)  
+![2](screenshot/mychat2.png)  
 
 ## Your Player - 媒体播放器
 

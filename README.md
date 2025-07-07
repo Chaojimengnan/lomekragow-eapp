@@ -18,7 +18,7 @@ cargo build --release
 
 ### Run
 ```bash
-cargo run --release --bin your-player
+cargo run --release --bin mychat
 ```
 
 
@@ -31,6 +31,53 @@ This project is licensed under the [GPLv3 License](LICENSE).
 - [Unifont 15.1.04](https://unifoundry.com/unifont/) (OFL-1.1/GPLv2+): © Unifoundry
 
 ---
+
+## mychat - Local Large Model Chat Client
+
+mychat is a local large model chat client developed in Rust, providing a clean and efficient chat interface with multi-dialogue management and intelligent context compression. It features real-time streaming responses, message editing, and comprehensive model parameter configuration.
+
+### Key Features
+
+#### 💬 Dialogue Management
+- Create/delete/switch between multiple dialogues
+- Real-time dialogue history display
+- Intelligent dialogue summarization
+- Role-based message categorization (system/user/assistant)
+
+#### ✍️ Message Operations
+- Real-time streaming message display
+- Message content editing
+- One-click message copying
+- Thinking process content viewing
+
+#### ⚙️ Parameter Configuration
+- Comprehensive LLM parameter tuning (temperature/top_p/penalties)
+- Separate summarization parameters
+- Model selection and API setup
+- Context window size adjustment
+- Compression threshold setting
+
+#### 🖥️ UI Features
+- Borderless transparent window
+- Collapsible sidebar
+- Markdown message rendering
+- Theme switching support
+- Responsive layout design
+
+### Technology Stack
+- **Rust** - Systems programming language
+- **eframe/egui** - Immediate mode GUI framework
+- **Tokio** - Asynchronous runtime
+- **Serde** - Data serialization
+- **reqwest** - HTTP client
+- **egui_commonmark** - Markdown rendering
+
+### Screenshots
+
+![3](screenshot/mychat3.gif)  
+![1](screenshot/mychat1.png)  
+![2](screenshot/mychat2.png)  
+
 
 ## Your Player - Media Player
 
