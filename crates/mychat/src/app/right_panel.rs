@@ -44,7 +44,12 @@ impl super::App {
         let show_summary = self.state.show_summary && !dialogue.summary.message.content.is_empty();
 
         if show_summary {
-            ui_show_summary(ui, &mut dialogue.summary, &mut clear_summary);
+            ui_show_summary(
+                ui,
+                &mut dialogue.summary,
+                &mut clear_summary,
+                dialogue.amount_of_message_summarized,
+            );
         }
 
         let start_index = if show_summary {
@@ -241,12 +246,23 @@ fn ui_show_message(
     ui.add_space(get_body_text_size(ui));
 }
 
-fn ui_show_summary(ui: &mut egui::Ui, summary: &mut MessageWithUiData, clear_summary: &mut bool) {
+fn ui_show_summary(
+    ui: &mut egui::Ui,
+    summary: &mut MessageWithUiData,
+    clear_summary: &mut bool,
+    amount_of_message_summarized: usize,
+) {
     egui::Frame::NONE
         .fill(ui.visuals().extreme_bg_color)
         .corner_radius(8)
         .inner_margin(egui::Margin::symmetric(12, 8))
         .show(ui, |ui| {
+            ui.heading(if amount_of_message_summarized > 1 {
+                format!("Summary (1 - {amount_of_message_summarized})")
+            } else {
+                format!("Summary ({amount_of_message_summarized})")
+            });
+
             if let Some(thinking_content) = &summary.message.thinking_content {
                 CollapsingHeader::new("Thinking Content")
                     .id_salt("Summary Thinking Content")

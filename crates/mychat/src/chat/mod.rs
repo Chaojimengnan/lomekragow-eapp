@@ -43,8 +43,8 @@ impl Message {
             let content_start = start_idx + think_start.len();
             if let Some(end_idx) = response[content_start..].find(think_end) {
                 let content_end = content_start + end_idx;
-                let thinking = response[content_start..content_end].trim().to_string();
-                let content = response[content_end + think_end.len()..].trim().to_string();
+                let thinking = response[content_start..content_end].to_string();
+                let content = response[content_end + think_end.len()..].to_string();
                 return (Some(thinking), content);
             }
         }
