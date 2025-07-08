@@ -1,7 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-pub mod app;
-pub mod save_manager;
+pub(crate) mod app;
+pub(crate) mod save_manager;
 
 fn main() {
     eapp_utils::setup_loggers("save-manager.log").unwrap();

@@ -1,10 +1,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-pub mod app;
-pub mod img_finder;
-pub mod img_utils;
-pub mod lifo;
-pub mod tex_loader;
+pub(crate) mod app;
+pub(crate) mod img_finder;
+pub(crate) mod img_utils;
+pub(crate) mod lifo;
+pub(crate) mod tex_loader;
 
 fn main() {
     eapp_utils::setup_loggers("manga-reader.log").unwrap();

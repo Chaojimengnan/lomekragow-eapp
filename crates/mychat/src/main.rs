@@ -1,7 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-pub mod app;
-pub mod chat;
+pub(crate) mod app;
+pub(crate) mod chat;
 
 fn main() {
     let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");

@@ -1,7 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-pub mod app;
-pub mod sync;
+pub(crate) mod app;
+pub(crate) mod sync;
 
 fn main() {
     eapp_utils::setup_loggers("syncer.log").unwrap();

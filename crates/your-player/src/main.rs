@@ -1,11 +1,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-pub mod app;
+pub(crate) mod app;
 #[cfg(feature = "danmu")]
-pub mod danmu;
-pub mod mpv;
-pub mod playlist;
-pub mod tex_register;
+pub(crate) mod danmu;
+pub(crate) mod mpv;
+pub(crate) mod playlist;
+pub(crate) mod tex_register;
 
 fn main() {
     eapp_utils::setup_loggers("your-player.log").unwrap();

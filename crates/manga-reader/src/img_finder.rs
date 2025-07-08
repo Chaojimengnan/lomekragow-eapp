@@ -111,6 +111,7 @@ impl ImgFinder {
         flag
     }
 
+    #[allow(unused)]
     pub fn peek_dir_changed_flag(&self) -> bool {
         self.dir_changed
     }
@@ -223,6 +224,7 @@ impl ImgFinder {
         self.cur_dir
     }
 
+    #[allow(unused)]
     pub fn cur_dir_name(&self) -> Option<&str> {
         if let Some(dir) = self.cur_dir {
             return Some(&self.cur_dir_set.0[dir]);

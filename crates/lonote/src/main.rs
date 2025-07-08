@@ -1,7 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-pub mod app;
-pub mod codec;
+pub(crate) mod app;
+pub(crate) mod codec;
 
 fn main() {
     eapp_utils::setup_loggers("lonote.log").unwrap();

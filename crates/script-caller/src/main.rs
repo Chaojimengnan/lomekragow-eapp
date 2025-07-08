@@ -1,7 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-pub mod app;
-pub mod script;
+pub(crate) mod app;
+pub(crate) mod script;
 
 fn main() {
     eapp_utils::setup_loggers("script-caller.log").unwrap();
