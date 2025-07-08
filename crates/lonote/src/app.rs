@@ -3,6 +3,7 @@ use chardetng::EncodingDetector;
 use eapp_utils::{
     borderless,
     codicons::{ICON_TRIANGLE_DOWN, ICON_TRIANGLE_UP},
+    get_body_font_id,
     widgets::simple_widgets::{get_theme_button, theme_button},
 };
 use eframe::egui::{
@@ -283,7 +284,7 @@ impl App {
                             let primary_cursor_rect = cursor_rect(
                                 &output.galley,
                                 &output.state.cursor.range(&output.galley).unwrap().primary,
-                                16.0,
+                                ui.fonts(|f| f.row_height(&get_body_font_id(ui))),
                             );
 
                             ui.scroll_to_rect(
@@ -363,7 +364,7 @@ impl App {
                 title_bar_rect.center(),
                 egui::Align2::CENTER_CENTER,
                 &self.note.borrow().title,
-                egui::FontId::proportional(16.0),
+                get_body_font_id(ui),
                 ui.style().visuals.text_color(),
             );
         });

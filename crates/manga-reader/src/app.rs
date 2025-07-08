@@ -9,6 +9,7 @@ use eapp_utils::{
         ICON_COFFEE, ICON_FOLDER, ICON_GO_TO_FILE, ICON_INSPECT, ICON_NEW_FILE, ICON_REFRESH,
         ICON_SCREEN_FULL, ICON_SCREEN_NORMAL, ICON_TRIANGLE_LEFT, ICON_TRIANGLE_RIGHT,
     },
+    get_body_font_id, get_body_text_size,
     task::Task,
     waker::{WakeType, Waker},
     widgets::{
@@ -19,8 +20,8 @@ use eapp_utils::{
     },
 };
 use eframe::egui::{
-    self, Align2, Color32, CornerRadius, FontId, Frame, Id, Layout, Rect, UiBuilder, Widget as _,
-    pos2, vec2,
+    self, Align2, Color32, CornerRadius, Frame, Id, Layout, Rect, UiBuilder, Widget as _, pos2,
+    vec2,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
@@ -362,7 +363,7 @@ impl App {
                 rect.center(),
                 Align2::CENTER_CENTER,
                 text,
-                FontId::proportional(16.0),
+                get_body_font_id(ui),
                 ui.visuals().text_color(),
             )
         };
@@ -438,13 +439,14 @@ impl App {
                 });
 
                 let diff = available_size - scaled_size;
-                let corner_radius = if diff.x <= 16.0 && diff.y <= 16.0 {
-                    CornerRadius::same(8)
+                let font_size = get_body_text_size(ui);
+                let corner_radius = if diff.x <= font_size && diff.y <= font_size {
+                    8
                 } else {
-                    CornerRadius::same(0)
+                    0
                 };
 
-                tex.corner_radius(self.adjust_corner_radius_match_left_panel(corner_radius))
+                tex.corner_radius(self.adjust_corner_radius_match_left_panel(corner_radius.into()))
                     .tint(Color32::WHITE.gamma_multiply(opacity))
                     .paint_at(ui, image_rect);
             } else {
@@ -585,8 +587,6 @@ impl App {
             ui.add(egui::Label::new(name).wrap_mode(egui::TextWrapMode::Truncate));
 
             let response = ProgressBar::new((current_page + 1) as f64, total_pages as f64)
-                .height(16.0)
-                .knob_radius(7.0)
                 .preview(|ui, hover_img| {
                     let new_page = (hover_img as usize).min(total_pages.saturating_sub(1));
                     let size = vec2(256.0, 256.0);

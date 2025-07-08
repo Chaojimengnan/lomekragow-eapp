@@ -1,6 +1,9 @@
-use eapp_utils::codicons::{
-    ICON_ARROW_UP, ICON_CLEAR_ALL, ICON_CLOUD_UPLOAD, ICON_COPY, ICON_EDIT, ICON_PREVIEW,
-    ICON_STOP_CIRCLE,
+use eapp_utils::{
+    codicons::{
+        ICON_ARROW_UP, ICON_CLEAR_ALL, ICON_CLOUD_UPLOAD, ICON_COPY, ICON_EDIT, ICON_PREVIEW,
+        ICON_STOP_CIRCLE,
+    },
+    get_body_font_id, get_body_text_size,
 };
 use eframe::egui::{self, Button, CollapsingHeader, Color32, FontId, TextEdit, Widget};
 use egui_commonmark::CommonMarkViewer;
@@ -198,7 +201,7 @@ fn ui_show_message(
             ui.painter()
                 .layout(
                     message.content.clone(),
-                    FontId::monospace(16.0),
+                    get_body_font_id(ui),
                     Color32::TRANSPARENT,
                     max_width,
                 )
@@ -235,7 +238,7 @@ fn ui_show_message(
         });
     });
 
-    ui.add_space(16.0);
+    ui.add_space(get_body_text_size(ui));
 }
 
 fn ui_show_summary(ui: &mut egui::Ui, summary: &mut MessageWithUiData, clear_summary: &mut bool) {
@@ -273,5 +276,5 @@ fn ui_show_summary(ui: &mut egui::Ui, summary: &mut MessageWithUiData, clear_sum
             });
         });
 
-    ui.add_space(16.0);
+    ui.add_space(get_body_text_size(ui));
 }

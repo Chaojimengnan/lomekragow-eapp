@@ -2,13 +2,14 @@ use crate::mpv::{self, player::PlayState};
 use eapp_utils::{
     borderless,
     codicons::{ICON_TRIANGLE_LEFT, ICON_TRIANGLE_RIGHT},
+    get_body_font_id,
     widgets::{
         progress_bar::{ProgressBar, draw_progress_bar_background, value_from_x},
         simple_widgets::{PlainButton, popup_animated, text_in_center_bottom_of_rect},
     },
 };
 use eframe::egui::{
-    self, Align2, CornerRadius, FontId, Frame, Id, Rect, UiBuilder, ViewportCommand, Widget as _,
+    self, Align2, CornerRadius, Frame, Id, Rect, UiBuilder, ViewportCommand, Widget as _,
     load::SizedTexture, pos2, vec2,
 };
 
@@ -143,8 +144,6 @@ impl super::App {
             ));
 
             let response = ProgressBar::new(playback_time, duration)
-                .height(16.0)
-                .knob_radius(7.0)
                 .preview(|ui, hover_time| {
                     if self.player.state().play_state != PlayState::Stop {
                         let size = self.preview.size();
@@ -204,7 +203,7 @@ impl super::App {
             pos2(rect.left(), rect.bottom() - btn_size),
             Align2::LEFT_CENTER,
             format!("{playback_time} / {duration}"),
-            FontId::proportional(16.0),
+            get_body_font_id(ui),
             ui.visuals().text_color(),
         );
 
@@ -228,7 +227,7 @@ impl super::App {
             ui.allocate_new_ui(UiBuilder::new().max_rect(center_btns_rect), |ui| {
                 ui.horizontal(|ui| {
                     if ui
-                        .add(new_button(28.0, ICON_STOP_CIRCLE.to_string()))
+                        .add(new_button(24.0, ICON_STOP_CIRCLE.to_string()))
                         .clicked()
                     {
                         self.player.set_play_state(PlayState::Stop);
@@ -237,7 +236,7 @@ impl super::App {
                     }
 
                     if ui
-                        .add(new_button(28.0, ICON_ARROW_CIRCLE_LEFT.to_string()))
+                        .add(new_button(24.0, ICON_ARROW_CIRCLE_LEFT.to_string()))
                         .clicked()
                     {
                         if let Some(new_media) = self.playlist.prev_item() {
@@ -252,7 +251,7 @@ impl super::App {
                         ICON_DEBUG_PAUSE
                     }
                     .to_string();
-                    if ui.add(new_button(28.0, icon)).clicked() {
+                    if ui.add(new_button(24.0, icon)).clicked() {
                         self.player.set_play_state(if is_pause {
                             PlayState::Play
                         } else {
@@ -261,7 +260,7 @@ impl super::App {
                     }
 
                     if ui
-                        .add(new_button(28.0, ICON_ARROW_CIRCLE_RIGHT.to_string()))
+                        .add(new_button(24.0, ICON_ARROW_CIRCLE_RIGHT.to_string()))
                         .clicked()
                     {
                         if let Some(new_media) = self.playlist.next_item() {
@@ -271,7 +270,7 @@ impl super::App {
 
                     let mute = self.player.state().mute;
                     let icon = if mute { ICON_MUTE } else { ICON_UNMUTE }.to_string();
-                    let volume_res = ui.add(new_button(28.0, icon.clone()));
+                    let volume_res = ui.add(new_button(24.0, icon.clone()));
                     if volume_res.clicked() {
                         self.state.volume_popup_open = !self.state.volume_popup_open;
                     }

@@ -2,6 +2,7 @@ use crate::save_manager::SaveManager;
 use eapp_utils::{
     borderless,
     codicons::ICON_FOLDER,
+    get_body_font_id,
     widgets::simple_widgets::{get_theme_button, theme_button},
 };
 use eframe::egui::{self, Color32, UiBuilder, Vec2, collapsing_header::CollapsingState};
@@ -53,7 +54,7 @@ impl App {
                 title_bar_rect.center(),
                 egui::Align2::CENTER_CENTER,
                 "save-manager",
-                egui::FontId::proportional(16.0),
+                get_body_font_id(ui),
                 ui.style().visuals.text_color(),
             );
         });

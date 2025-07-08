@@ -5,6 +5,7 @@ mod setting;
 use eapp_utils::{
     borderless,
     codicons::{ICON_LAYOUT_SIDEBAR_LEFT, ICON_SETTINGS_GEAR},
+    get_body_font_id,
     widgets::simple_widgets::{get_theme_button, theme_button},
 };
 use eframe::egui::{self, Color32, UiBuilder, Vec2};
@@ -87,16 +88,15 @@ impl App {
             theme_button(ui, get_theme_button(ui));
 
             ui.menu_button(ICON_SETTINGS_GEAR.to_string(), |ui| {
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    self.ui_setting(ui);
-                });
+                ui.set_max_height(ui.ctx().screen_rect().height() * 0.65);
+                self.ui_setting(ui);
             });
 
             ui.painter().text(
                 title_bar_rect.center(),
                 egui::Align2::CENTER_CENTER,
                 "MYCHAT:)",
-                egui::FontId::proportional(16.0),
+                get_body_font_id(ui),
                 ui.style().visuals.text_color(),
             );
         });

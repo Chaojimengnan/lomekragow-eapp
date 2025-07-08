@@ -2,6 +2,7 @@ use crate::sync::{self, ItemCmd, Syncer};
 use eapp_utils::{
     borderless,
     codicons::{ICON_FOLDER, ICON_SETTINGS_GEAR},
+    get_body_font_id,
     widgets::simple_widgets::{get_theme_button, theme_button, toggle_ui},
 };
 use eframe::egui::{self, Color32, RichText, UiBuilder, Vec2, Widget};
@@ -117,7 +118,7 @@ impl App {
                 title_bar_rect.center(),
                 egui::Align2::CENTER_CENTER,
                 "syncer",
-                egui::FontId::proportional(16.0),
+                get_body_font_id(ui),
                 ui.style().visuals.text_color(),
             );
         });

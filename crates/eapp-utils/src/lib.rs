@@ -45,22 +45,42 @@ pub fn setup_fonts(ctx: &egui::Context) {
     proportional.insert(0, "unifont".to_owned());
     proportional.insert(1, "codicon".to_owned());
 
-    let monospace = fonts
-        .families
-        .entry(egui::FontFamily::Monospace)
-        .or_default();
-
-    monospace.insert(0, "unifont".to_owned());
-    monospace.insert(1, "codicon".to_owned());
-
     ctx.set_fonts(fonts);
     ctx.style_mut(setup_text_size);
 }
 
 pub fn setup_text_size(style: &mut egui::Style) {
-    for id in &mut style.text_styles.values_mut() {
-        id.size = 16.0;
-    }
+    use crate::egui::FontFamily::Proportional;
+    use crate::egui::FontId;
+    use crate::egui::TextStyle::*;
+    style.text_styles = [
+        (Heading, FontId::new(18.0, Proportional)),
+        (Body, FontId::new(16.0, Proportional)),
+        (Monospace, FontId::new(16.0, Proportional)),
+        (Button, FontId::new(16.0, Proportional)),
+        (Small, FontId::new(12.0, Proportional)),
+    ]
+    .into();
+}
+
+pub fn get_font_id(ui: &egui::Ui, text_style: &egui::TextStyle) -> Option<egui::FontId> {
+    ui.style().text_styles.get(text_style).cloned()
+}
+
+pub fn get_text_size(ui: &egui::Ui, text_style: &egui::TextStyle) -> Option<f32> {
+    get_font_id(ui, text_style).map(|font_id| font_id.size)
+}
+
+pub fn get_body_text_size(ui: &egui::Ui) -> f32 {
+    get_body_font_id(ui).size
+}
+
+pub fn get_body_font_id(ui: &egui::Ui) -> egui::FontId {
+    get_font_id(ui, &egui::TextStyle::Body).unwrap()
+}
+
+pub fn get_button_height(ui: &egui::Ui) -> f32 {
+    ui.style().spacing.button_padding.y + get_text_size(ui, &egui::TextStyle::Button).unwrap()
 }
 
 pub fn setup_loggers(log_filename: &str) -> Result<(), Box<dyn std::error::Error>> {

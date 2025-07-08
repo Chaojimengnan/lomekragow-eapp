@@ -12,7 +12,7 @@ use eframe::egui::{
 pub struct PlainButton {
     text: WidgetText,
     size: Vec2,
-    font_size: f32,
+    font_size: Option<f32>,
     corner_radius: CornerRadius,
     fill: Option<Color32>,
     hover: Option<Color32>,
@@ -23,7 +23,7 @@ impl PlainButton {
         Self {
             text: text.into(),
             size,
-            font_size: 16.0,
+            font_size: None,
             corner_radius: Default::default(),
             fill: None,
             hover: None,
@@ -50,7 +50,7 @@ impl PlainButton {
 
     #[inline]
     pub fn font_size(mut self, font_size: f32) -> Self {
-        self.font_size = font_size;
+        self.font_size = Some(font_size);
         self
     }
 }
@@ -75,12 +75,16 @@ impl Widget for PlainButton {
 
             let text_color = ui.style().visuals.text_color();
             let strong_text_color = ui.style().visuals.strong_text_color();
+            let mut font_id = crate::get_body_font_id(ui);
+            if let Some(font_size) = self.font_size {
+                font_id.size = font_size;
+            }
 
             ui.painter().text(
                 rect.center(),
                 Align2::CENTER_CENTER,
                 self.text.text(),
-                FontId::proportional(self.font_size),
+                font_id,
                 color_lerp(text_color, strong_text_color, factor),
             );
         }
@@ -170,9 +174,10 @@ pub fn toggle_ui(ui: &mut egui::Ui, on: &mut bool) -> egui::Response {
 
 pub fn text_in_center_bottom_of_rect(ui: &egui::Ui, text: String, rect: &Rect) {
     let color = ui.visuals().strong_text_color();
+    let font_size = crate::get_body_text_size(ui);
     let galley = ui
         .painter()
-        .layout(text, FontId::proportional(16.0), color, 256.0);
+        .layout(text, FontId::proportional(font_size), color, rect.width());
     let pos = {
         let pos = rect.center_bottom();
         pos2(pos.x - galley.size().x / 2.0, pos.y - galley.size().y)

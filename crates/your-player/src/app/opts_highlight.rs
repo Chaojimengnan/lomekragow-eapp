@@ -8,7 +8,7 @@ impl egui::util::cache::ComputerMut<&str, egui::text::LayoutJob> for Highlighter
     fn compute(&mut self, mut opts: &str) -> egui::text::LayoutJob {
         let mut job = egui::text::LayoutJob::default();
 
-        let font_id = egui::FontId::monospace(16.0);
+        let font_id = egui::FontId::proportional(16.0);
         let comment_format = egui::TextFormat::simple(font_id.clone(), Color32::from_gray(120));
         let key_format =
             egui::TextFormat::simple(font_id.clone(), Color32::from_rgb(225, 120, 164));

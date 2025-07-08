@@ -33,7 +33,7 @@ pub struct ProgressBar<'a> {
     max: f64,
 
     /// Height of the progress bar track
-    height: f32,
+    height: Option<f32>,
 
     /// Background color of the track
     background_color: Option<Color32>,
@@ -66,7 +66,7 @@ impl<'a> ProgressBar<'a> {
         Self {
             value,
             max,
-            height: 16.0,
+            height: None,
             background_color: None,
             fill_color: None,
             active_color: None,
@@ -78,7 +78,7 @@ impl<'a> ProgressBar<'a> {
 
     /// Sets the height of the progress bar track
     pub fn height(mut self, height: f32) -> Self {
-        self.height = height;
+        self.height = Some(height);
         self
     }
 
@@ -126,7 +126,8 @@ impl<'a> ProgressBar<'a> {
 impl<'a> Widget for ProgressBar<'a> {
     fn ui(mut self, ui: &mut Ui) -> Response {
         // Allocate space for the progress bar
-        let desired_size = vec2(ui.available_width(), self.height);
+        let height = self.height.unwrap_or(crate::get_body_text_size(ui));
+        let desired_size = vec2(ui.available_width(), height);
         let (_, response) = ui.allocate_exact_size(desired_size, Sense::drag());
         let rect = response.rect;
 
@@ -221,12 +222,14 @@ pub fn draw_progress_bar_background(
     background_color: Color32,
     corner_radius: CornerRadius,
 ) {
+    let size = crate::get_body_text_size(ui);
+
     // Draw bottom background panel
     let painter = ui.painter();
     painter.rect_filled(
         {
             let mut rect = rect;
-            rect.set_top(rect.bottom() - 16.0);
+            rect.set_top(rect.bottom() - size);
             rect
         },
         corner_radius,
@@ -236,7 +239,7 @@ pub fn draw_progress_bar_background(
     // Prepare gradient area
     let mesh_rect = {
         let mut r = rect;
-        r.set_bottom(r.bottom() - 16.0);
+        r.set_bottom(r.bottom() - size);
         r
     };
 

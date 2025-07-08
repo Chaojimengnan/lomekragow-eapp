@@ -1,4 +1,7 @@
-use eapp_utils::codicons::{ICON_ERROR, ICON_PIN, ICON_PINNED, ICON_REPLY};
+use eapp_utils::{
+    codicons::{ICON_ERROR, ICON_PIN, ICON_PINNED, ICON_REPLY},
+    get_body_font_id, get_body_text_size,
+};
 use eframe::egui::{
     self, TextEdit,
     collapsing_header::CollapsingState,
@@ -385,7 +388,7 @@ impl Script {
         let (cache, desc) = self.desc_cache.as_mut().unwrap();
         CommonMarkViewer::new().show(ui, cache, desc);
 
-        ui.add_space(16.0);
+        ui.add_space(get_body_text_size(ui));
         self.args.iter_mut().for_each(|arg| arg.show_ui(ui));
     }
 
