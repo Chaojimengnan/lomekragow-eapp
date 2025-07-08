@@ -99,9 +99,6 @@ async fn stream_from_api(
         "stream": true,
     });
 
-    // TODO
-    log::info!("{is_sending}, {request_body}");
-
     let response = Client::new()
         .post(&config.api_url)
         .header("Authorization", format!("Bearer {}", config.api_key))

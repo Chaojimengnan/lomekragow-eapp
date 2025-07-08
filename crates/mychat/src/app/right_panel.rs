@@ -5,7 +5,7 @@ use eapp_utils::{
     },
     get_body_font_id, get_body_text_size,
 };
-use eframe::egui::{self, Button, CollapsingHeader, Color32, FontId, TextEdit, Widget};
+use eframe::egui::{self, Button, CollapsingHeader, Color32, TextEdit, Widget};
 use egui_commonmark::CommonMarkViewer;
 
 use crate::chat::{

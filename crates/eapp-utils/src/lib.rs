@@ -25,7 +25,7 @@ macro_rules! capture_error {
 pub fn setup_fonts(ctx: &egui::Context) {
     let mut fonts = egui::FontDefinitions::default();
 
-    include_flate::flate!(static UNIFONT: [u8] from "../../assets/unifont-15.1.04.otf");
+    include_flate::flate!(static UNIFONT: [u8] from "../../assets/unifont-16.0.04.otf");
     include_flate::flate!(static CODICON: [u8] from "../../assets/codicon.ttf");
 
     fonts.font_data.insert(

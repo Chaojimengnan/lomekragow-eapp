@@ -156,6 +156,7 @@ jobs:
             - script-caller
             - syncer
             - your-player
+            - mychat
             
             **Build info:**
             - Rust: ${{ env.RUST_VERSION }}

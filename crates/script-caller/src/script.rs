@@ -1,6 +1,6 @@
 use eapp_utils::{
     codicons::{ICON_ERROR, ICON_PIN, ICON_PINNED, ICON_REPLY},
-    get_body_font_id, get_body_text_size,
+    get_body_text_size,
 };
 use eframe::egui::{
     self, TextEdit,

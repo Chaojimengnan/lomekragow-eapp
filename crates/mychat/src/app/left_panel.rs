@@ -2,6 +2,8 @@ use eframe::egui::{self};
 
 impl super::App {
     pub fn ui_left_panel(&mut self, ui: &mut egui::Ui) {
+        ui.add_space(4.0);
+
         if ui
             .add_sized([ui.available_width(), 26.0], egui::Button::new("New Chat"))
             .clicked()
@@ -9,7 +11,7 @@ impl super::App {
             self.manager.new_dialogue();
         }
 
-        ui.add_space(8.0);
+        ui.add_space(4.0);
 
         let row_height = ui.spacing().interact_size.y;
         let total_rows = self.manager.data.dialogues.len();
