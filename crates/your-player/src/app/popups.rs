@@ -5,9 +5,6 @@ use crate::{
 use eapp_utils::widgets::simple_widgets::toggle_ui;
 use eframe::egui;
 
-#[cfg(feature = "danmu")]
-use eframe::egui::Vec2b;
-
 impl super::App {
     pub fn ui_chapters_popup(&mut self, ui: &mut egui::Ui) {
         ui.set_height(150.0);
