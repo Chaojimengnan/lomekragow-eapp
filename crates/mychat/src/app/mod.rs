@@ -11,7 +11,7 @@ use eapp_utils::{
 use eframe::egui::{self, Color32, UiBuilder, Vec2};
 use serde::{Deserialize, Serialize};
 
-use crate::chat::{Role, config::ChatConfig, dialogue_manager::DialogueManager};
+use crate::chat::{Message, Role, config::ChatConfig, dialogue_manager::DialogueManager};
 
 #[derive(Deserialize, Serialize)]
 #[serde(default)]
@@ -39,6 +39,8 @@ pub struct App {
     role: Role,
     config: ChatConfig,
     status_msg: String,
+    edit_summary: bool,
+    last_summary: (usize, Message),
 }
 
 impl App {
@@ -56,6 +58,14 @@ impl App {
         let role = Role::User;
         let config = manager.data.config.read().unwrap().clone();
         let status_msg = String::new();
+        let edit_summary = false;
+        let last_summary = (
+            0,
+            Message {
+                role: Role::System,
+                ..Default::default()
+            },
+        );
 
         Self {
             state,
@@ -65,6 +75,8 @@ impl App {
             role,
             config,
             status_msg,
+            edit_summary,
+            last_summary,
         }
     }
 }

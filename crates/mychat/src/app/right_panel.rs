@@ -1,7 +1,7 @@
 use eapp_utils::{
     codicons::{
         ICON_ARROW_UP, ICON_CLEAR_ALL, ICON_CLOUD_UPLOAD, ICON_COPY, ICON_EDIT, ICON_PREVIEW,
-        ICON_STOP_CIRCLE,
+        ICON_REDO, ICON_STOP_CIRCLE,
     },
     get_body_font_id, get_body_text_size,
 };
@@ -31,11 +31,11 @@ impl super::App {
     }
 
     fn ui_show_dialogues(&mut self, ui: &mut egui::Ui) {
-        if self.manager.data.dialogues.is_empty() {
+        if self.manager.is_empty() {
             return;
         }
 
-        let dialogue = &mut self.manager.data.dialogues[self.manager.cur_dialogue_idx];
+        let dialogue = self.manager.cur_dialogue_mut();
 
         let is_idle = dialogue.is_idle();
         let mut idx_to_edit = None;
@@ -48,7 +48,10 @@ impl super::App {
                 ui,
                 &mut dialogue.summary,
                 &mut clear_summary,
-                dialogue.amount_of_message_summarized,
+                &mut dialogue.amount_of_message_summarized,
+                &mut self.edit_summary,
+                &mut self.input,
+                &mut self.last_summary,
             );
         }
 
@@ -59,6 +62,17 @@ impl super::App {
         };
 
         for idx in start_index..dialogue.messages.len() {
+            if dialogue.amount_of_message_summarized > 0
+                && !show_summary
+                && dialogue.amount_of_message_summarized == idx
+            {
+                ui.colored_label(
+                    ui.visuals().strong_text_color(),
+                    "The above has been summarized",
+                );
+                ui.separator();
+            }
+
             let msg = &mut dialogue.messages[idx];
             ui_show_message(ui, msg, is_idle, idx, &mut idx_to_edit);
         }
@@ -131,28 +145,39 @@ impl super::App {
                 .add_sized(ui.available_size(), Button::new(icon))
                 .clicked()
             {
-                if self.manager.data.dialogues.is_empty() {
+                if self.manager.is_empty() {
                     self.manager.new_dialogue();
                 }
 
-                if is_idle {
-                    let input = self.input.trim();
-                    if !input.is_empty() {
-                        let thinking_content = self.thinking_content.take();
-                        self.manager.push_message(Message {
-                            role: self.role,
-                            content: input.to_owned(),
-                            thinking_content,
-                        });
-
+                match (is_idle, self.edit_summary) {
+                    (true, true) => {
+                        let input = self.input.trim();
+                        self.manager.cur_dialogue_mut().summary.message.content = input.to_owned();
+                        self.edit_summary = false;
                         self.input.clear();
                     }
+                    (true, false) => {
+                        let input = self.input.trim();
+                        if !input.is_empty() {
+                            let thinking_content = self.thinking_content.take();
+                            self.manager.push_message(Message {
+                                role: self.role,
+                                content: input.to_owned(),
+                                thinking_content,
+                            });
 
-                    if self.state.trigger_request {
-                        self.manager.trigger_request();
+                            self.input.clear();
+                        }
+
+                        if self.state.trigger_request {
+                            self.last_summary.0 =
+                                self.manager.cur_dialogue().amount_of_message_summarized;
+                            self.last_summary.1 =
+                                self.manager.cur_dialogue().summary.message.clone();
+                            self.manager.trigger_request();
+                        }
                     }
-                } else {
-                    self.manager.cancel();
+                    (false, _) => self.manager.cancel(),
                 }
             }
         });
@@ -250,14 +275,17 @@ fn ui_show_summary(
     ui: &mut egui::Ui,
     summary: &mut MessageWithUiData,
     clear_summary: &mut bool,
-    amount_of_message_summarized: usize,
+    amount_of_message_summarized: &mut usize,
+    edit_summary: &mut bool,
+    input: &mut String,
+    last_summary: &mut (usize, Message),
 ) {
     egui::Frame::NONE
         .fill(ui.visuals().extreme_bg_color)
         .corner_radius(8)
         .inner_margin(egui::Margin::symmetric(12, 8))
         .show(ui, |ui| {
-            ui.heading(if amount_of_message_summarized > 1 {
+            ui.heading(if *amount_of_message_summarized > 1 {
                 format!("Summary (1 - {amount_of_message_summarized})")
             } else {
                 format!("Summary ({amount_of_message_summarized})")
@@ -288,6 +316,30 @@ fn ui_show_summary(
                             summary.message.content.clone(),
                         ))
                     });
+                }
+
+                if ui
+                    .selectable_label(*edit_summary, ICON_EDIT.to_string())
+                    .clicked()
+                {
+                    *edit_summary = !*edit_summary;
+
+                    if *edit_summary {
+                        *input = summary.message.content.clone();
+                    } else {
+                        input.clear();
+                    }
+                }
+
+                if ui
+                    .add_enabled_ui(!last_summary.1.content.is_empty(), |ui| {
+                        ui.selectable_label(false, ICON_REDO.to_string())
+                    })
+                    .inner
+                    .clicked()
+                {
+                    std::mem::swap(amount_of_message_summarized, &mut last_summary.0);
+                    std::mem::swap(&mut summary.message, &mut last_summary.1);
                 }
             });
         });

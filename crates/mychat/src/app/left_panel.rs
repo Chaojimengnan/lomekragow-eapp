@@ -14,7 +14,7 @@ impl super::App {
         ui.add_space(4.0);
 
         let row_height = ui.spacing().interact_size.y;
-        let total_rows = self.manager.data.dialogues.len();
+        let total_rows = self.manager.len();
 
         let mut idx_to_remove = None;
         egui::ScrollArea::both()
@@ -25,7 +25,7 @@ impl super::App {
 
                     for idx in row_range {
                         let is_current = idx == self.manager.cur_dialogue_idx;
-                        let dialogue = &mut self.manager.data.dialogues[idx];
+                        let dialogue = self.manager.dialogue_mut(idx);
                         let title = if dialogue.messages.is_empty() {
                             "New Chat".to_string()
                         } else {

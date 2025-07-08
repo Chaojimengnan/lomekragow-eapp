@@ -114,6 +114,32 @@ impl DialogueManager {
         self.is_dialogue_idle(self.cur_dialogue_idx)
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.data.dialogues.is_empty()
+    }
+
+    pub fn dialogue(&self, idx: usize) -> &Dialogue {
+        assert!(!self.is_empty());
+        &self.data.dialogues[idx]
+    }
+
+    pub fn dialogue_mut(&mut self, idx: usize) -> &mut Dialogue {
+        assert!(!self.is_empty());
+        &mut self.data.dialogues[idx]
+    }
+
+    pub fn cur_dialogue(&self) -> &Dialogue {
+        self.dialogue(self.cur_dialogue_idx)
+    }
+
+    pub fn cur_dialogue_mut(&mut self) -> &mut Dialogue {
+        self.dialogue_mut(self.cur_dialogue_idx)
+    }
+
+    pub fn len(&self) -> usize {
+        self.data.dialogues.len()
+    }
+
     pub fn push_message(&mut self, msg: Message) {
         assert!(self.is_cur_dialogue_idle());
 
@@ -170,7 +196,13 @@ impl DialogueManager {
                 .collect();
 
             dialogue.amount_of_message_summarized = start_idx;
-            messages_to_summarize.insert(0, dialogue.summary.message.clone());
+
+            let mut summary_message = dialogue.summary.message.clone();
+            if summary_message.content.is_empty() {
+                summary_message.content = "empty".to_owned();
+            }
+
+            messages_to_summarize.insert(0, summary_message);
             dialogue.summary.message.clear();
 
             tokio::spawn({
@@ -288,8 +320,11 @@ impl DialogueManager {
             dialogue
                 .messages
                 .range(start_idx..end_idx)
-                .map(|m| &m.message)
-                .cloned(),
+                .map(|m| Message {
+                    role: m.message.role,
+                    content: m.message.content.clone(),
+                    thinking_content: None,
+                }),
         );
 
         messages
