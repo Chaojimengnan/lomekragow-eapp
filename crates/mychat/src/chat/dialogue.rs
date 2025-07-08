@@ -30,6 +30,13 @@ impl From<Message> for MessageWithUiData {
     }
 }
 
+#[derive(Default, Clone, Copy)]
+struct ScrollState {
+    all_messages_scroll: f32,
+    all_messages_height: f32,
+    summarized_height: f32,
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct Dialogue {
     pub messages: VecDeque<MessageWithUiData>,
@@ -37,6 +44,8 @@ pub struct Dialogue {
     pub amount_of_message_summarized: usize,
     #[serde(skip)]
     pub state: DialogueState,
+    #[serde(skip)]
+    scroll_state: ScrollState,
 }
 
 impl Default for Dialogue {
@@ -48,6 +57,7 @@ impl Default for Dialogue {
             summary,
             amount_of_message_summarized: Default::default(),
             state: Default::default(),
+            scroll_state: Default::default(),
         }
     }
 }
@@ -56,6 +66,34 @@ impl Dialogue {
     pub fn clear_summary(&mut self) {
         self.summary.message.clear();
         self.amount_of_message_summarized = 0;
+    }
+
+    pub fn is_summary_empty(&self) -> bool {
+        self.summary.message.content.is_empty()
+    }
+
+    fn height_offset(&self, show_summary: bool) -> f32 {
+        if show_summary {
+            self.scroll_state.all_messages_height - self.scroll_state.summarized_height
+        } else {
+            0.0
+        }
+    }
+
+    pub fn scroll_offset(&self, show_summary: bool) -> f32 {
+        self.scroll_state.all_messages_scroll - self.height_offset(show_summary)
+    }
+
+    pub fn set_height(&mut self, show_summary: bool, new_height: f32) {
+        if show_summary {
+            self.scroll_state.summarized_height = new_height;
+        } else {
+            self.scroll_state.all_messages_height = new_height;
+        }
+    }
+
+    pub fn set_scroll_offset(&mut self, show_summary: bool, new_offset: f32) {
+        self.scroll_state.all_messages_scroll = new_offset + self.height_offset(show_summary);
     }
 
     pub fn token_count(&self) -> usize {

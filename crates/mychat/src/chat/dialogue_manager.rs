@@ -310,7 +310,7 @@ impl DialogueManager {
         let mut messages = Vec::new();
         let dialogue = &self.data.dialogues[dialogue_idx];
 
-        if !dialogue.summary.message.content.is_empty() {
+        if !dialogue.is_summary_empty() {
             messages.push(dialogue.summary.message.clone());
         }
 

@@ -5,7 +5,7 @@ use eapp_utils::{
     },
     get_body_font_id, get_body_text_size,
 };
-use eframe::egui::{self, Button, CollapsingHeader, Color32, TextEdit, Widget};
+use eframe::egui::{self, Button, CollapsingHeader, Color32, TextEdit, Widget, vec2};
 use egui_commonmark::CommonMarkViewer;
 
 use crate::chat::{
@@ -18,19 +18,29 @@ impl super::App {
         let input_height = 142.0;
         let height = (ui.available_height() - input_height - ui.spacing().item_spacing.y).max(0.0);
 
-        egui::ScrollArea::vertical()
+        let show_summary =
+            self.state.show_summary && !self.manager.cur_dialogue().is_summary_empty();
+        let scroll_offset = self.manager.cur_dialogue().scroll_offset(show_summary);
+
+        let output = egui::ScrollArea::vertical()
             .max_height(height)
             .auto_shrink([false, true])
+            .scroll_offset(vec2(0.0, scroll_offset))
             .stick_to_bottom(true)
             .show(ui, |ui| {
                 ui.set_min_height(height);
-                self.ui_show_dialogues(ui);
+                self.ui_show_dialogues(ui, show_summary);
             });
+
+        let dialogue = self.manager.cur_dialogue_mut();
+
+        dialogue.set_height(show_summary, output.content_size.y);
+        dialogue.set_scroll_offset(show_summary, output.state.offset.y);
 
         self.ui_input(ui, input_height);
     }
 
-    fn ui_show_dialogues(&mut self, ui: &mut egui::Ui) {
+    fn ui_show_dialogues(&mut self, ui: &mut egui::Ui, show_summary: bool) {
         if self.manager.is_empty() {
             return;
         }
@@ -40,8 +50,6 @@ impl super::App {
         let is_idle = dialogue.is_idle();
         let mut idx_to_edit = None;
         let mut clear_summary = false;
-
-        let show_summary = self.state.show_summary && !dialogue.summary.message.content.is_empty();
 
         if show_summary {
             ui_show_summary(
