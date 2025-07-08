@@ -17,7 +17,7 @@ use crate::chat::{Message, Role, config::ChatConfig, dialogue_manager::DialogueM
 #[serde(default)]
 pub struct State {
     pub show_left_panel: bool,
-    pub show_summary: bool,
+    pub show_summarized: bool,
     pub trigger_request: bool,
 }
 
@@ -25,7 +25,7 @@ impl Default for State {
     fn default() -> Self {
         Self {
             show_left_panel: true,
-            show_summary: true,
+            show_summarized: true,
             trigger_request: true,
         }
     }
@@ -41,6 +41,9 @@ pub struct App {
     status_msg: String,
     edit_summary: bool,
     last_summary: (usize, Message),
+    scroll_to_top: bool,
+    scroll_to_bottom: bool,
+    scroll_to_summary: bool,
 }
 
 impl App {
@@ -53,30 +56,27 @@ impl App {
             State::default()
         };
         let manager = DialogueManager::new(cc.egui_ctx.clone());
-        let input = String::new();
-        let thinking_content = None;
-        let role = Role::User;
         let config = manager.data.config.read().unwrap().clone();
-        let status_msg = String::new();
-        let edit_summary = false;
-        let last_summary = (
-            0,
-            Message {
-                role: Role::System,
-                ..Default::default()
-            },
-        );
 
         Self {
             state,
             manager,
-            input,
-            thinking_content,
-            role,
+            input: String::new(),
+            thinking_content: None,
+            role: Role::User,
             config,
-            status_msg,
-            edit_summary,
-            last_summary,
+            status_msg: String::new(),
+            edit_summary: false,
+            last_summary: (
+                0,
+                Message {
+                    role: Role::System,
+                    ..Default::default()
+                },
+            ),
+            scroll_to_top: false,
+            scroll_to_bottom: false,
+            scroll_to_summary: false,
         }
     }
 }

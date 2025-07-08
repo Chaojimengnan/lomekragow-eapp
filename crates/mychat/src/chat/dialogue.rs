@@ -72,28 +72,28 @@ impl Dialogue {
         self.summary.message.content.is_empty()
     }
 
-    fn height_offset(&self, show_summary: bool) -> f32 {
-        if show_summary {
-            self.scroll_state.all_messages_height - self.scroll_state.summarized_height
-        } else {
+    fn height_offset(&self, show_summarized: bool) -> f32 {
+        if show_summarized {
             0.0
-        }
-    }
-
-    pub fn scroll_offset(&self, show_summary: bool) -> f32 {
-        self.scroll_state.all_messages_scroll - self.height_offset(show_summary)
-    }
-
-    pub fn set_height(&mut self, show_summary: bool, new_height: f32) {
-        if show_summary {
-            self.scroll_state.summarized_height = new_height;
         } else {
-            self.scroll_state.all_messages_height = new_height;
+            self.scroll_state.all_messages_height - self.scroll_state.summarized_height
         }
     }
 
-    pub fn set_scroll_offset(&mut self, show_summary: bool, new_offset: f32) {
-        self.scroll_state.all_messages_scroll = new_offset + self.height_offset(show_summary);
+    pub fn scroll_offset(&self, show_summarized: bool) -> f32 {
+        self.scroll_state.all_messages_scroll - self.height_offset(show_summarized)
+    }
+
+    pub fn set_height(&mut self, show_summarized: bool, new_height: f32) {
+        if show_summarized {
+            self.scroll_state.all_messages_height = new_height;
+        } else {
+            self.scroll_state.summarized_height = new_height;
+        }
+    }
+
+    pub fn set_scroll_offset(&mut self, show_summarized: bool, new_offset: f32) {
+        self.scroll_state.all_messages_scroll = new_offset + self.height_offset(show_summarized);
     }
 
     pub fn token_count(&self) -> usize {

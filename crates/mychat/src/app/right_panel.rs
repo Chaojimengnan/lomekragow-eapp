@@ -1,11 +1,12 @@
 use eapp_utils::{
     codicons::{
-        ICON_ARROW_UP, ICON_CLEAR_ALL, ICON_CLOUD_UPLOAD, ICON_COPY, ICON_EDIT, ICON_PREVIEW,
-        ICON_REDO, ICON_STOP_CIRCLE,
+        ICON_ARROW_CIRCLE_DOWN, ICON_ARROW_CIRCLE_UP, ICON_ARROW_UP, ICON_CLEAR_ALL,
+        ICON_CLOUD_UPLOAD, ICON_COPY, ICON_EDIT, ICON_OPEN_PREVIEW, ICON_PREVIEW, ICON_REDO,
+        ICON_STOP_CIRCLE,
     },
     get_body_font_id, get_body_text_size,
 };
-use eframe::egui::{self, Button, CollapsingHeader, Color32, TextEdit, Widget, vec2};
+use eframe::egui::{self, Button, CollapsingHeader, Color32, Response, TextEdit, Widget, vec2};
 use egui_commonmark::CommonMarkViewer;
 
 use crate::chat::{
@@ -18,9 +19,9 @@ impl super::App {
         let input_height = 142.0;
         let height = (ui.available_height() - input_height - ui.spacing().item_spacing.y).max(0.0);
 
-        let show_summary =
-            self.state.show_summary && !self.manager.cur_dialogue().is_summary_empty();
-        let scroll_offset = self.manager.cur_dialogue().scroll_offset(show_summary);
+        let show_summarized =
+            self.state.show_summarized || self.manager.cur_dialogue().is_summary_empty();
+        let scroll_offset = self.manager.cur_dialogue().scroll_offset(show_summarized);
 
         let output = egui::ScrollArea::vertical()
             .max_height(height)
@@ -29,18 +30,29 @@ impl super::App {
             .stick_to_bottom(true)
             .show(ui, |ui| {
                 ui.set_min_height(height);
-                self.ui_show_dialogues(ui, show_summary);
+
+                if self.scroll_to_top {
+                    ui.scroll_to_cursor(Some(egui::Align::TOP));
+                    self.scroll_to_top = false;
+                }
+
+                self.ui_show_dialogues(ui, show_summarized);
+
+                if self.scroll_to_bottom {
+                    ui.scroll_to_cursor(Some(egui::Align::BOTTOM));
+                    self.scroll_to_bottom = false;
+                }
             });
 
         let dialogue = self.manager.cur_dialogue_mut();
 
-        dialogue.set_height(show_summary, output.content_size.y);
-        dialogue.set_scroll_offset(show_summary, output.state.offset.y);
+        dialogue.set_height(show_summarized, output.content_size.y);
+        dialogue.set_scroll_offset(show_summarized, output.state.offset.y);
 
         self.ui_input(ui, input_height);
     }
 
-    fn ui_show_dialogues(&mut self, ui: &mut egui::Ui, show_summary: bool) {
+    fn ui_show_dialogues(&mut self, ui: &mut egui::Ui, show_summarized: bool) {
         if self.manager.is_empty() {
             return;
         }
@@ -51,34 +63,39 @@ impl super::App {
         let mut idx_to_edit = None;
         let mut clear_summary = false;
 
-        if show_summary {
-            ui_show_summary(
-                ui,
-                &mut dialogue.summary,
-                &mut clear_summary,
-                &mut dialogue.amount_of_message_summarized,
-                &mut self.edit_summary,
-                &mut self.input,
-                &mut self.last_summary,
-            );
-        }
-
-        let start_index = if show_summary {
-            dialogue.amount_of_message_summarized
-        } else {
+        let start_index = if show_summarized {
             0
+        } else {
+            dialogue.amount_of_message_summarized
         };
 
         for idx in start_index..dialogue.messages.len() {
             if dialogue.amount_of_message_summarized > 0
-                && !show_summary
                 && dialogue.amount_of_message_summarized == idx
             {
-                ui.colored_label(
-                    ui.visuals().strong_text_color(),
-                    "The above has been summarized",
+                if show_summarized {
+                    ui.colored_label(
+                        ui.visuals().strong_text_color(),
+                        "All the above messages have been summarized",
+                    );
+
+                    ui.separator();
+                }
+
+                let response = ui_show_summary(
+                    ui,
+                    &mut dialogue.summary,
+                    &mut clear_summary,
+                    &mut dialogue.amount_of_message_summarized,
+                    &mut self.edit_summary,
+                    &mut self.input,
+                    &mut self.last_summary,
                 );
-                ui.separator();
+
+                if self.scroll_to_summary {
+                    response.scroll_to_me(Some(egui::Align::Center));
+                    self.scroll_to_summary = false;
+                }
             }
 
             let msg = &mut dialogue.messages[idx];
@@ -118,11 +135,32 @@ impl super::App {
             }
 
             if ui
-                .selectable_label(self.state.show_summary, ICON_PREVIEW.to_string())
-                .on_hover_text("Show summary")
+                .selectable_label(self.state.show_summarized, ICON_PREVIEW.to_string())
+                .on_hover_text("Show summarized messages")
                 .clicked()
             {
-                self.state.show_summary = !self.state.show_summary;
+                self.state.show_summarized = !self.state.show_summarized;
+            }
+            if ui
+                .selectable_label(false, ICON_ARROW_CIRCLE_UP.to_string())
+                .on_hover_text("Scroll to top")
+                .clicked()
+            {
+                self.scroll_to_top = true;
+            }
+            if ui
+                .selectable_label(false, ICON_ARROW_CIRCLE_DOWN.to_string())
+                .on_hover_text("Scroll to bottom")
+                .clicked()
+            {
+                self.scroll_to_bottom = true;
+            }
+            if ui
+                .selectable_label(false, ICON_OPEN_PREVIEW.to_string())
+                .on_hover_text("Scroll to summary")
+                .clicked()
+            {
+                self.scroll_to_summary = true;
             }
             ui.selectable_value(&mut self.role, Role::System, "System");
             ui.selectable_value(&mut self.role, Role::Assistant, "Assistant");
@@ -287,8 +325,8 @@ fn ui_show_summary(
     edit_summary: &mut bool,
     input: &mut String,
     last_summary: &mut (usize, Message),
-) {
-    egui::Frame::NONE
+) -> Response {
+    let response = egui::Frame::NONE
         .fill(ui.visuals().extreme_bg_color)
         .corner_radius(8)
         .inner_margin(egui::Margin::symmetric(12, 8))
@@ -350,7 +388,10 @@ fn ui_show_summary(
                     std::mem::swap(&mut summary.message, &mut last_summary.1);
                 }
             });
-        });
+        })
+        .response;
 
     ui.add_space(get_body_text_size(ui));
+
+    response
 }
