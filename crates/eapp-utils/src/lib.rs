@@ -3,6 +3,7 @@ use eframe::egui;
 pub mod animation;
 pub mod borderless;
 pub mod codicons;
+pub mod delayed_toggle;
 pub mod natordset;
 pub mod platform;
 pub mod task;

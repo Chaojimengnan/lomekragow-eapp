@@ -5,6 +5,7 @@ mod setting;
 use eapp_utils::{
     borderless,
     codicons::{ICON_LAYOUT_SIDEBAR_LEFT, ICON_SETTINGS_GEAR},
+    delayed_toggle::DelayedToggle,
     get_body_font_id,
     widgets::simple_widgets::{get_theme_button, theme_button},
 };
@@ -44,6 +45,7 @@ pub struct App {
     scroll_to_top: bool,
     scroll_to_bottom: bool,
     scroll_to_summary: bool,
+    toggle: DelayedToggle,
 }
 
 impl App {
@@ -77,6 +79,7 @@ impl App {
             scroll_to_top: false,
             scroll_to_bottom: false,
             scroll_to_summary: false,
+            toggle: Default::default(),
         }
     }
 }

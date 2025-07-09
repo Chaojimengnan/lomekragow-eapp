@@ -23,11 +23,21 @@ impl super::App {
             self.state.show_summarized || self.manager.cur_dialogue().is_summary_empty();
         let scroll_offset = self.manager.cur_dialogue().scroll_offset(show_summarized);
 
+        let stick_to_bottom =
+            !self.scroll_to_bottom && !self.scroll_to_top && !self.scroll_to_summary;
+        let cur_time = ui.input(|i| i.time);
+
+        if !stick_to_bottom {
+            self.toggle.active(cur_time);
+        }
+
+        self.toggle.update(cur_time, 0.1);
+
         let output = egui::ScrollArea::vertical()
             .max_height(height)
             .auto_shrink([false, true])
             .scroll_offset(vec2(0.0, scroll_offset))
-            .stick_to_bottom(true)
+            .stick_to_bottom(stick_to_bottom && !self.toggle.is_active())
             .show(ui, |ui| {
                 ui.set_min_height(height);
 
@@ -63,11 +73,22 @@ impl super::App {
         let mut idx_to_edit = None;
         let mut clear_summary = false;
 
-        let start_index = if show_summarized {
-            0
-        } else {
-            dialogue.amount_of_message_summarized
-        };
+        let start_index = dialogue.start_idx(show_summarized);
+        let is_summarizing = dialogue.state == DialogueState::Summarizing;
+
+        macro_rules! show_summary {
+            () => {
+                ui_show_summary(
+                    ui,
+                    &mut dialogue.summary,
+                    &mut clear_summary,
+                    &mut dialogue.amount_of_message_summarized,
+                    &mut self.edit_summary,
+                    &mut self.input,
+                    &mut self.last_summary,
+                )
+            };
+        }
 
         for idx in start_index..dialogue.messages.len() {
             if dialogue.amount_of_message_summarized > 0
@@ -82,19 +103,13 @@ impl super::App {
                     ui.separator();
                 }
 
-                let response = ui_show_summary(
-                    ui,
-                    &mut dialogue.summary,
-                    &mut clear_summary,
-                    &mut dialogue.amount_of_message_summarized,
-                    &mut self.edit_summary,
-                    &mut self.input,
-                    &mut self.last_summary,
-                );
+                if !is_summarizing {
+                    let response = show_summary!();
 
-                if self.scroll_to_summary {
-                    response.scroll_to_me(Some(egui::Align::Center));
-                    self.scroll_to_summary = false;
+                    if self.scroll_to_summary {
+                        response.scroll_to_me(Some(egui::Align::Center));
+                        self.scroll_to_summary = false;
+                    }
                 }
             }
 
@@ -102,11 +117,13 @@ impl super::App {
             ui_show_message(ui, msg, is_idle, idx, &mut idx_to_edit);
         }
 
-        if dialogue.state == DialogueState::Summarizing {
+        if is_summarizing {
             ui.horizontal(|ui| {
                 ui.colored_label(ui.visuals().strong_text_color(), "Summarizing...");
                 ui.spinner();
             });
+
+            show_summary!();
         }
 
         if clear_summary {
@@ -236,7 +253,7 @@ fn ui_show_message(
     is_idle: bool,
     idx: usize,
     idx_to_edit: &mut Option<usize>,
-) {
+) -> Response {
     let max_width = ui.available_width() * 0.85;
 
     let MessageWithUiData { cache, message } = message_with_ui_data;
@@ -270,7 +287,7 @@ fn ui_show_message(
         ui.heading("System");
     }
 
-    ui.with_layout(layout, |ui| {
+    let inner = ui.with_layout(layout, |ui| {
         let width = if message.content.len() >= 200 {
             max_width
         } else {
@@ -293,7 +310,7 @@ fn ui_show_message(
             .inner_margin(egui::Margin::symmetric(12, 8))
             .show(ui, |ui| {
                 CommonMarkViewer::new().show(ui, cache, &message.content);
-            });
+            })
     });
 
     ui.with_layout(layout, |ui| {
@@ -315,6 +332,8 @@ fn ui_show_message(
     });
 
     ui.add_space(get_body_text_size(ui));
+
+    inner.response
 }
 
 fn ui_show_summary(

@@ -72,6 +72,14 @@ impl Dialogue {
         self.summary.message.content.is_empty()
     }
 
+    pub fn start_idx(&self, show_summarized: bool) -> usize {
+        if show_summarized {
+            0
+        } else {
+            self.amount_of_message_summarized
+        }
+    }
+
     fn height_offset(&self, show_summarized: bool) -> f32 {
         if show_summarized {
             0.0

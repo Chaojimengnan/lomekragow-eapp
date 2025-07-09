@@ -72,7 +72,7 @@ async fn stream_from_api(
         (&config.param, all_messages)
     } else {
         let content = format!(
-            "{}\n {}",
+            "{}\n [CHAT HISTORY START]{}[CHAT HISTORY END]",
             config.summary_param.system_message,
             compress_message(&messages)?
         );
