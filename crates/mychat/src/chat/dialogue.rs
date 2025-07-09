@@ -43,6 +43,8 @@ pub struct Dialogue {
     pub summary: MessageWithUiData,
     pub amount_of_message_summarized: usize,
     #[serde(skip)]
+    pub generate_user_input: bool,
+    #[serde(skip)]
     pub state: DialogueState,
     #[serde(skip)]
     scroll_state: ScrollState,
@@ -56,6 +58,7 @@ impl Default for Dialogue {
             messages: Default::default(),
             summary,
             amount_of_message_summarized: Default::default(),
+            generate_user_input: Default::default(),
             state: Default::default(),
             scroll_state: Default::default(),
         }

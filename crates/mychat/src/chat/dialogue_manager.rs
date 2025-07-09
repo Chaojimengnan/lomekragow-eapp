@@ -156,9 +156,14 @@ impl DialogueManager {
 
         let dialogue = &mut self.data.dialogues[self.cur_dialogue_idx];
 
+        dialogue.generate_user_input = dialogue.messages.is_empty()
+            || dialogue
+                .messages
+                .back()
+                .is_some_and(|m| m.message.role == Role::Assistant);
         dialogue.messages.push_back(
             Message {
-                role: Role::Assistant,
+                role: Role::Assistant.reversed_if(dialogue.generate_user_input),
                 content: String::new(),
                 thinking_content: None,
             }
@@ -180,7 +185,7 @@ impl DialogueManager {
                 if let Some(msg) = dialogue.messages.get(idx) {
                     accumulated_tokens += msg.message.content.len();
 
-                    if (current_tokens - accumulated_tokens) <= threshold {
+                    if (current_tokens - accumulated_tokens) <= threshold / 2 {
                         start_idx = idx + 1;
                         break;
                     }
@@ -281,6 +286,7 @@ impl DialogueManager {
                                 }
 
                                 dialogue.state = DialogueState::Idle;
+                                dialogue.generate_user_input = false;
                                 self.cancellation_tokens.remove(&idx);
                             }
                             _ => {}
@@ -293,6 +299,7 @@ impl DialogueManager {
                     *status_msg = error_msg;
                     if let Some(dialogue) = self.data.dialogues.get_mut(idx) {
                         dialogue.state = DialogueState::Idle;
+                        dialogue.generate_user_input = false;
                     }
                     self.cancellation_tokens.remove(&idx);
                 }
@@ -321,7 +328,7 @@ impl DialogueManager {
                 .messages
                 .range(start_idx..end_idx)
                 .map(|m| Message {
-                    role: m.message.role,
+                    role: m.message.role.reversed_if(dialogue.generate_user_input),
                     content: m.message.content.clone(),
                     thinking_content: None,
                 }),

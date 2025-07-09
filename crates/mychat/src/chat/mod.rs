@@ -27,6 +27,20 @@ impl Display for Role {
     }
 }
 
+impl Role {
+    pub fn reversed(&self) -> Self {
+        match self {
+            Role::System => Role::System,
+            Role::Assistant => Role::User,
+            Role::User => Role::Assistant,
+        }
+    }
+
+    pub fn reversed_if(&self, reverse: bool) -> Self {
+        if reverse { self.reversed() } else { *self }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Default)]
 pub struct Message {
     pub role: Role,
