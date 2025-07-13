@@ -109,14 +109,17 @@ impl App {
     }
 
     fn next_script(&mut self) {
-        let len = self.get_cur_script_len().max(1);
-        self.cur_sel_script = (self.cur_sel_script + 1).clamp(0, len - 1);
+        let len = self.get_cur_script_len();
+        if len > 0 {
+            self.cur_sel_script = (self.cur_sel_script + 1) % len;
+        }
     }
 
     fn prev_script(&mut self) {
-        let len = self.get_cur_script_len().max(1);
-        self.cur_sel_script =
-            (self.cur_sel_script as isize - 1).clamp(0, len as isize - 1) as usize;
+        let len = self.get_cur_script_len();
+        if len > 0 {
+            self.cur_sel_script = (self.cur_sel_script + len - 1) % len;
+        }
     }
 
     fn select_script_by_letter(&mut self, letter: char) -> bool {

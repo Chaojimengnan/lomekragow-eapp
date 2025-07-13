@@ -1,3 +1,4 @@
+use anyhow::Context;
 use eapp_utils::{
     codicons::{ICON_ERROR, ICON_PIN, ICON_PINNED, ICON_REPLY},
     get_body_text_size,
@@ -250,12 +251,13 @@ mod path_utils {
         let mut errors = Vec::new();
 
         for (line_num, line) in value.lines().enumerate() {
-            let path = line.trim();
+            let raw = line.trim();
+            let path = raw.trim_matches('"');
             if !path.is_empty() && !std::path::Path::new(path).exists() {
                 errors.push(format!(
                     "Line {}: Path '{}' does not exist",
                     line_num + 1,
-                    path
+                    raw
                 ));
             }
         }
@@ -280,7 +282,13 @@ mod path_utils {
             .unwrap_or_else(|| text.len());
 
         let current_line = &text[line_start_byte..line_end_byte];
-        let path = current_line.trim();
+        let raw = current_line.trim();
+        let has_quote = raw.starts_with('"') && raw.ends_with('"');
+        let path = if has_quote {
+            &raw[1..raw.len() - 1]
+        } else {
+            raw
+        };
 
         if path.is_empty() {
             return false;
@@ -329,9 +337,15 @@ mod path_utils {
             new_path.push(std::path::MAIN_SEPARATOR);
         }
 
+        let final_path = if has_quote {
+            format!(r#""{new_path}""#)
+        } else {
+            new_path.clone()
+        };
+
         let mut new_text = String::new();
         new_text.push_str(&text[..line_start_byte]);
-        new_text.push_str(&new_path);
+        new_text.push_str(&final_path);
         new_text.push_str(&text[line_end_byte..]);
 
         let new_path_char_count = new_path.chars().count();
@@ -517,14 +531,18 @@ pub fn runas_admin(script_path: &str, args: &str) -> anyhow::Result<()> {
 }
 
 pub fn runas_normal(script_path: &str, args: &str) -> anyhow::Result<()> {
+    let parsed_args = shell_words::split(args)
+        .map_err(|e| anyhow::anyhow!("failed to parse args: {}", e))
+        .context("parsing script arguments")?;
+    log::info!("{parsed_args:?}");
+
     std::process::Command::new("wt")
-        .args(
-            ["python", "-i", script_path]
-                .as_slice()
-                .iter()
-                .chain(args.split_whitespace().collect::<Vec<&str>>().iter()),
-        )
-        .spawn()?;
+        .arg("python")
+        .arg("-i")
+        .arg(script_path)
+        .args(parsed_args)
+        .spawn()
+        .context("spawning wt for runas_normal")?;
 
     Ok(())
 }
