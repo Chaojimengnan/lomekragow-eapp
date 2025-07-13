@@ -275,7 +275,6 @@ fn ui_show_message(
     if let Some(content) = message.thinking_content.as_ref() {
         CollapsingHeader::new("Thinking Content")
             .id_salt(idx)
-            .default_open(!is_user)
             .show(ui, |ui| {
                 ui.label(content);
             });
