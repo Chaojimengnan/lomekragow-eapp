@@ -1,4 +1,3 @@
-use anyhow::Context;
 use eapp_utils::{
     codicons::{ICON_ERROR, ICON_PIN, ICON_PINNED, ICON_REPLY},
     get_body_text_size,
@@ -12,7 +11,6 @@ use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
 use serde::Deserialize;
 use std::{
     collections::{HashMap, HashSet},
-    fmt::Write,
     path::Path,
 };
 
@@ -195,31 +193,38 @@ impl Arg {
         }
     }
 
-    pub fn get_value_formatted(&self) -> String {
-        let mut value_string = String::new();
-
+    pub fn get_value_formatted(&self, value_vec: &mut Vec<String>) {
         match &self.r#type {
-            ArgType::Choices(value) => {
-                let len = self.choices.len();
-                if *value < len {
-                    value_string = format!("{} {}", self.name, self.choices[*value]);
+            ArgType::Choices(index) => {
+                if *index < self.choices.len() {
+                    value_vec.push(self.name.clone());
+                    value_vec.push(self.choices[*index].clone());
                 }
             }
             ArgType::Normal(value) => {
-                let value = value.clone().replace(['\n', '\r'], " ");
-                value_string = format!("{} {}", self.name, value);
+                let trimmed_lines: Vec<String> = value
+                    .lines()
+                    .map(|line| line.trim().to_string())
+                    .filter(|trimmed| !trimmed.is_empty())
+                    .collect();
+                if !trimmed_lines.is_empty() {
+                    value_vec.push(self.name.clone());
+                    value_vec.extend(trimmed_lines);
+                }
             }
             ArgType::OneLine(value) => {
-                value_string = format!("{} {}", self.name, value);
+                let trimmed = value.trim();
+                if !trimmed.is_empty() {
+                    value_vec.push(self.name.clone());
+                    value_vec.push(trimmed.to_string());
+                }
             }
             ArgType::StoreTrue(value) => {
                 if *value {
-                    value_string = self.name.clone();
+                    value_vec.push(self.name.clone());
                 }
             }
         }
-
-        value_string
     }
 
     pub fn initialize_value(&mut self) {
@@ -251,13 +256,12 @@ mod path_utils {
         let mut errors = Vec::new();
 
         for (line_num, line) in value.lines().enumerate() {
-            let raw = line.trim();
-            let path = raw.trim_matches('"');
+            let path = line.trim();
             if !path.is_empty() && !std::path::Path::new(path).exists() {
                 errors.push(format!(
                     "Line {}: Path '{}' does not exist",
                     line_num + 1,
-                    raw
+                    path
                 ));
             }
         }
@@ -282,13 +286,7 @@ mod path_utils {
             .unwrap_or_else(|| text.len());
 
         let current_line = &text[line_start_byte..line_end_byte];
-        let raw = current_line.trim();
-        let has_quote = raw.starts_with('"') && raw.ends_with('"');
-        let path = if has_quote {
-            &raw[1..raw.len() - 1]
-        } else {
-            raw
-        };
+        let path = current_line.trim();
 
         if path.is_empty() {
             return false;
@@ -337,15 +335,9 @@ mod path_utils {
             new_path.push(std::path::MAIN_SEPARATOR);
         }
 
-        let final_path = if has_quote {
-            format!(r#""{new_path}""#)
-        } else {
-            new_path.clone()
-        };
-
         let mut new_text = String::new();
         new_text.push_str(&text[..line_start_byte]);
-        new_text.push_str(&final_path);
+        new_text.push_str(&new_path);
         new_text.push_str(&text[line_end_byte..]);
 
         let new_path_char_count = new_path.chars().count();
@@ -406,18 +398,15 @@ impl Script {
         self.args.iter_mut().for_each(|arg| arg.show_ui(ui));
     }
 
-    pub fn generate_args_string(&self) -> String {
-        let mut result = String::new();
+    pub fn generate_args(&self) -> Vec<String> {
+        let mut value_vec = Vec::new();
 
-        for arg in &self.args {
-            if arg.optional_and_disabled() {
-                continue;
-            }
+        self.args
+            .iter()
+            .filter(|arg| !arg.optional_and_disabled())
+            .for_each(|arg| arg.get_value_formatted(&mut value_vec));
 
-            write!(&mut result, "{} ", arg.get_value_formatted()).unwrap();
-        }
-
-        result
+        value_vec
     }
 }
 
@@ -483,7 +472,7 @@ impl Loader {
     }
 }
 
-pub fn runas_admin(script_path: &str, args: &str) -> anyhow::Result<()> {
+pub fn runas_admin(script_path: &str, args: &[String]) -> anyhow::Result<()> {
     #[cfg(windows)]
     unsafe {
         use windows_sys::Win32::Foundation::GetLastError;
@@ -491,13 +480,16 @@ pub fn runas_admin(script_path: &str, args: &str) -> anyhow::Result<()> {
             SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW, SHELLEXECUTEINFOW_0, ShellExecuteExW,
         };
 
-        let mut args: Vec<_> = format!("python -i \"{script_path}\" {args}")
+        let escaped_args_string = args_to_escaped_string(args);
+        let mut args: Vec<_> = format!("python -i \"{script_path}\" {escaped_args_string}")
             .encode_utf16()
             .collect();
-        let mut verb: Vec<_> = "runas".encode_utf16().collect();
-        let mut file: Vec<_> = "wt".encode_utf16().collect();
         args.push(0);
+
+        let mut verb: Vec<_> = "runas".encode_utf16().collect();
         verb.push(0);
+
+        let mut file: Vec<_> = "wt".encode_utf16().collect();
         file.push(0);
 
         let mut info = SHELLEXECUTEINFOW {
@@ -530,19 +522,34 @@ pub fn runas_admin(script_path: &str, args: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn runas_normal(script_path: &str, args: &str) -> anyhow::Result<()> {
-    let parsed_args = shell_words::split(args)
-        .map_err(|e| anyhow::anyhow!("failed to parse args: {}", e))
-        .context("parsing script arguments")?;
-    log::info!("{parsed_args:?}");
-
+pub fn runas_normal(script_path: &str, args: &[String]) -> anyhow::Result<()> {
+    #[cfg(windows)]
     std::process::Command::new("wt")
         .arg("python")
         .arg("-i")
         .arg(script_path)
-        .args(parsed_args)
+        .args(args)
         .spawn()
-        .context("spawning wt for runas_normal")?;
+        .map_err(|e| anyhow::anyhow!("Failed to start process: {}", e))?;
+
+    #[cfg(not(windows))]
+    unimplemented!();
 
     Ok(())
+}
+
+pub fn args_to_escaped_string(args: &[String]) -> String {
+    args.iter()
+        .map(|arg| {
+            if arg.starts_with('-') {
+                arg.to_string()
+            } else if arg.contains(' ') || arg.contains('"') {
+                let escaped = arg.replace('"', r#"\""#);
+                format!("\"{escaped}\"")
+            } else {
+                arg.to_string()
+            }
+        })
+        .collect::<Vec<String>>()
+        .join(" ")
 }

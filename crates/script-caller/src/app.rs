@@ -1,4 +1,4 @@
-use crate::script::{self, RememberedArgs, Script};
+use crate::script::{self, RememberedArgs, Script, args_to_escaped_string};
 use eapp_utils::{
     borderless,
     codicons::{ICON_FOLDER, ICON_SETTINGS_GEAR},
@@ -372,7 +372,7 @@ impl App {
         let script = script.unwrap();
 
         let res = ui.label(&script.name);
-        let args_string = script.generate_args_string().trim().to_owned();
+        let args_string = args_to_escaped_string(&script.generate_args());
         if !args_string.is_empty() {
             res.on_hover_text(args_string);
         }
@@ -422,7 +422,7 @@ impl App {
             let script_base_path = self.loader.script_path.clone();
             eapp_utils::capture_error!(error => log::error!("error when run script: {error}"), {
                 if let Some(script) = self.get_cur_script() {
-                    let args = script.generate_args_string();
+                    let args = script.generate_args();
                     let script_path = format!("{}/{}", script_base_path, script.name);
                     let require_admin = script.require_admin;
                     match self.run_mode {
