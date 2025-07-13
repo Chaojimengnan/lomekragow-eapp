@@ -111,10 +111,10 @@ impl Dialogue {
         // TODO: use Tiktoken?
         let mut total = 0;
 
-        total += self.summary.message.content.len();
+        total += self.summary.message.content.chars().count();
 
         for msg in self.messages.iter().skip(self.amount_of_message_summarized) {
-            total += msg.message.content.len();
+            total += msg.message.content.chars().count();
         }
 
         total
