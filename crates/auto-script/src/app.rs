@@ -1,12 +1,21 @@
 use eapp_utils::{
     borderless,
-    codicons::{ICON_NEW_FILE, ICON_SAVE},
+    codicons::{ICON_NEW_FILE, ICON_SAVE, ICON_SETTINGS},
     get_body_font_id,
+    global_hotkey::{Code, GlobalHotkeyHandler, KeyMap, Modifiers},
     widgets::simple_widgets::{auto_selectable, frameless_btn, get_theme_button, theme_button},
 };
 use eframe::egui::{self, Color32, UiBuilder, Vec2};
+use serde::{Deserialize, Serialize};
 
 use crate::{script_executor::ScriptExecutor, script_manager::ScriptManager};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Deserialize, Serialize)]
+pub enum HotKeyAction {
+    #[default]
+    RunScript,
+    CancelScript,
+}
 
 pub struct App {
     executor: ScriptExecutor,
@@ -15,7 +24,8 @@ pub struct App {
     cur_sel: usize,
     cur_rename: Option<usize>,
     check_error: Option<String>,
-    execute_error: Option<String>,
+    error: Option<String>,
+    handler: GlobalHotkeyHandler<HotKeyAction>,
 }
 
 impl App {
@@ -30,6 +40,35 @@ impl App {
             }
         };
 
+        let mut error = None;
+
+        let handler = eapp_utils::capture_error!(err => {
+            log::error!("Error when load `GlobalHotkeyHandler`: {err}");
+            error = Some(err.to_string());
+            Default::default()
+        },
+        {
+            let mut handler = GlobalHotkeyHandler::<HotKeyAction>::default();
+            handler.create_manager()?;
+
+            let key_map = if let Some(storage) = cc.storage {
+                eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default()
+            } else {
+                KeyMap::<HotKeyAction>::default()
+            };
+
+            if  key_map.is_empty() {
+                handler.register_hotkey(HotKeyAction::RunScript, Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyB)?;
+                handler.register_hotkey(HotKeyAction::CancelScript, Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyE)?;
+            } else {
+                for (hotkey, action) in key_map.values() {
+                    handler.register_hotkey(*action, Some(hotkey.mods), hotkey.key)?;
+                }
+            }
+
+            handler
+        });
+
         Self {
             executor: ScriptExecutor::new(),
             manager,
@@ -37,7 +76,8 @@ impl App {
             cur_sel: 0,
             cur_rename: None,
             check_error: None,
-            execute_error: None,
+            error,
+            handler,
         }
     }
 
@@ -72,6 +112,10 @@ impl App {
                     log::error!("Error when save `ScriptManager`: {err}");
                 }
             }
+
+            ui.menu_button(ICON_SETTINGS.to_string(), |ui| {
+                self.ui_show_global_hotkeys(ui);
+            });
 
             ui.painter().text(
                 title_bar_rect.center(),
@@ -115,8 +159,11 @@ impl App {
                                 ui.close_menu();
                             }
 
-                            if frameless_btn(ui, egui::RichText::new("Delete").color(Color32::RED))
-                                .clicked()
+                            if frameless_btn(
+                                ui,
+                                egui::RichText::new("Delete").color(Color32::LIGHT_RED),
+                            )
+                            .clicked()
                             {
                                 script_to_delete = Some(idx);
                                 ui.close_menu();
@@ -178,7 +225,6 @@ impl App {
             if self.executor.is_executing() {
                 self.executor.cancel();
             } else {
-                self.execute_error = None;
                 self.executor.execute_script(script.content.clone());
             }
         }
@@ -202,18 +248,48 @@ impl App {
     }
 
     fn ui_show_error_modal(&mut self, ui: &mut egui::Ui) {
-        if let Some(msg) = self.execute_error.take() {
+        if let Some(msg) = self.error.take() {
             egui::Modal::new(egui::Id::new("Error")).show(ui.ctx(), |ui| {
-                ui.label(egui::RichText::new(&msg).color(Color32::RED));
+                ui.label(egui::RichText::new(&msg).color(Color32::LIGHT_RED));
 
                 ui.vertical_centered(|ui| {
                     if ui.button("OK").clicked() {
-                        self.execute_error = None;
+                        self.error = None;
                     } else {
-                        self.execute_error = Some(msg);
+                        self.error = Some(msg);
                     }
                 });
             });
+        }
+    }
+
+    fn ui_show_global_hotkeys(&mut self, ui: &mut egui::Ui) {
+        if !self.handler.is_ok() {
+            ui.label("HotKeys unable to work");
+            return;
+        }
+
+        ui.vertical_centered(|ui| ui.heading("HotKeys"));
+        if let Err(err) = self.handler.ui(ui) {
+            self.error = Some(err.to_string());
+        }
+    }
+
+    fn poll_global_hotkey_events(&mut self, ctx: &egui::Context) {
+        if !self.handler.is_ok() {
+            return;
+        }
+
+        ctx.request_repaint_after_secs(2.0);
+        for action in self.handler.poll_events() {
+            match action {
+                HotKeyAction::RunScript => {
+                    if let Some(script) = self.manager.scripts.get(self.cur_sel) {
+                        self.executor.execute_script(script.content.clone());
+                    }
+                }
+                HotKeyAction::CancelScript => self.executor.cancel(),
+            }
         }
     }
 }
@@ -223,7 +299,8 @@ impl eframe::App for App {
         egui::Rgba::TRANSPARENT.to_array()
     }
 
-    fn save(&mut self, _storage: &mut dyn eframe::Storage) {
+    fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        eframe::set_value(storage, eframe::APP_KEY, self.handler.get_key_map());
         if let Err(err) = self.manager.save() {
             log::error!("Error when save `ScriptManager`: {err}");
         }
@@ -252,8 +329,10 @@ impl eframe::App for App {
             .shrink2(Vec2::new(0.5, 0.5));
 
             if let Some(Err(e)) = self.executor.try_get_execute_result() {
-                self.execute_error = Some(e);
+                self.error = Some(e);
             }
+
+            self.poll_global_hotkey_events(ui.ctx());
 
             self.ui_show_rename_modal(ui);
             self.ui_show_error_modal(ui);

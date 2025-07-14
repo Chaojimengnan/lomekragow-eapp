@@ -8,7 +8,7 @@ license = "GPL-3.0-or-later"
 
 [features]
 default_fonts = ["eframe/default_fonts"]
-
+hotkey = ["global-hotkey"]
 
 [dependencies]
 eframe = { workspace = true, features = [
@@ -22,6 +22,7 @@ log.workspace = true
 serde.workspace = true
 include-flate = "0.3.0"
 natord = "1.0"
+global-hotkey = { version = "0.7", optional = true, features = ["serde"] }
 
 [target.'cfg(windows)'.dependencies.windows-sys]
 version = "0.52"

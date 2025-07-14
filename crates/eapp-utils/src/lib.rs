@@ -4,6 +4,7 @@ pub mod animation;
 pub mod borderless;
 pub mod codicons;
 pub mod delayed_toggle;
+pub mod global_hotkey;
 pub mod natordset;
 pub mod platform;
 pub mod task;
@@ -13,11 +14,12 @@ pub mod widgets;
 #[macro_export]
 macro_rules! capture_error {
     ($i:ident => $handler:expr, $block_to_capture:expr) => {
-        if let Err($i) = || -> ::core::result::Result<(), Box<dyn ::std::error::Error>> {
-            $block_to_capture;
-            Ok(())
+        match || -> ::core::result::Result<_, Box<dyn ::std::error::Error>> {
+            let result = $block_to_capture;
+            Ok(result)
         }() {
-            $handler;
+            Ok(result) => result,
+            Err($i) => $handler,
         }
     };
 }
