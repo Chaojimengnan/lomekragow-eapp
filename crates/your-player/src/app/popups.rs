@@ -2,7 +2,7 @@ use crate::{
     app::{END_REACHED_LIST, opts_highlight},
     mpv,
 };
-use eapp_utils::widgets::simple_widgets::toggle_ui;
+use eapp_utils::widgets::simple_widgets::{frameless_btn, toggle_ui};
 use eframe::egui;
 
 impl super::App {
@@ -13,7 +13,7 @@ impl super::App {
             .auto_shrink([false, true])
             .show(ui, |ui| {
                 if self.player.state().chapters.is_empty() {
-                    let _ = ui.selectable_label(false, "None");
+                    let _ = frameless_btn(ui, "None");
                     return;
                 }
 
@@ -326,13 +326,13 @@ impl super::App {
             return;
         };
 
-        if ui.selectable_label(false, "Show in explorer").clicked() {
+        if frameless_btn(ui, "Show in explorer").clicked() {
             eapp_utils::open_in_explorer(media);
         }
 
         ui.visuals_mut().override_text_color = Some(egui::Color32::from_rgb(189, 21, 21));
 
-        if ui.selectable_label(false, "Delete the list").clicked() {
+        if frameless_btn(ui, "Delete the list").clicked() {
             self.playlist.remove_list(list);
         }
     }

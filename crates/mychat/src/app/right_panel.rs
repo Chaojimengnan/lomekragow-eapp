@@ -5,6 +5,7 @@ use eapp_utils::{
         ICON_STOP_CIRCLE,
     },
     get_body_font_id, get_body_text_size,
+    widgets::simple_widgets::frameless_btn,
 };
 use eframe::egui::{self, Button, CollapsingHeader, Color32, Response, TextEdit, Widget, vec2};
 use egui_commonmark::CommonMarkViewer;
@@ -158,22 +159,19 @@ impl super::App {
             {
                 self.state.show_summarized = !self.state.show_summarized;
             }
-            if ui
-                .selectable_label(false, ICON_ARROW_CIRCLE_UP.to_string())
+            if frameless_btn(ui, ICON_ARROW_CIRCLE_UP.to_string())
                 .on_hover_text("Scroll to top")
                 .clicked()
             {
                 self.scroll_to_top = true;
             }
-            if ui
-                .selectable_label(false, ICON_ARROW_CIRCLE_DOWN.to_string())
+            if frameless_btn(ui, ICON_ARROW_CIRCLE_DOWN.to_string())
                 .on_hover_text("Scroll to bottom")
                 .clicked()
             {
                 self.scroll_to_bottom = true;
             }
-            if ui
-                .selectable_label(false, ICON_OPEN_PREVIEW.to_string())
+            if frameless_btn(ui, ICON_OPEN_PREVIEW.to_string())
                 .on_hover_text("Scroll to summary")
                 .clicked()
             {
@@ -365,14 +363,11 @@ fn ui_show_summary(
             CommonMarkViewer::new().show(ui, &mut summary.cache, &summary.message.content);
 
             ui.horizontal(|ui| {
-                if ui
-                    .selectable_label(false, ICON_CLEAR_ALL.to_string())
-                    .clicked()
-                {
+                if frameless_btn(ui, ICON_CLEAR_ALL.to_string()).clicked() {
                     *clear_summary = true;
                 }
 
-                if ui.selectable_label(false, ICON_COPY.to_string()).clicked() {
+                if frameless_btn(ui, ICON_COPY.to_string()).clicked() {
                     ui.output_mut(|o| {
                         o.commands.push(egui::OutputCommand::CopyText(
                             summary.message.content.clone(),
@@ -395,7 +390,7 @@ fn ui_show_summary(
 
                 if ui
                     .add_enabled_ui(!last_summary.1.content.is_empty(), |ui| {
-                        ui.selectable_label(false, ICON_REDO.to_string())
+                        frameless_btn(ui, ICON_REDO.to_string())
                     })
                     .inner
                     .clicked()

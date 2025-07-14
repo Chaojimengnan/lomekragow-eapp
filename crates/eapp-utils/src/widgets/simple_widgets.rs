@@ -210,3 +210,26 @@ pub fn theme_button<Btn: Widget>(ui: &mut egui::Ui, btn: Btn) {
         ui.ctx().style_mut(crate::setup_text_size);
     }
 }
+
+pub fn auto_selectable<Value>(
+    ui: &mut egui::Ui,
+    current_value: &mut Value,
+    selected_value: Value,
+    text: &str,
+    extra_scroll_cod: bool,
+) -> egui::Response
+where
+    Value: PartialEq,
+{
+    let cur_select = *current_value == selected_value;
+    let res = ui.selectable_value(current_value, selected_value, text);
+    if cur_select && extra_scroll_cod {
+        res.scroll_to_me(None);
+    };
+
+    res
+}
+
+pub fn frameless_btn(ui: &mut egui::Ui, text: impl Into<WidgetText>) -> egui::Response {
+    ui.selectable_label(false, text)
+}

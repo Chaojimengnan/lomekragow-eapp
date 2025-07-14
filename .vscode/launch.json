@@ -4,6 +4,43 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug executable 'auto-script'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=auto-script",
+                    "--package=auto-script"
+                ],
+                "filter": {
+                    "name": "auto-script",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'auto-script'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=auto-script",
+                    "--package=auto-script"
+                ],
+                "filter": {
+                    "name": "auto-script",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug unit tests in library 'eapp_utils'",
             "cargo": {
                 "args": [

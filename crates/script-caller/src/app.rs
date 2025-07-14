@@ -3,7 +3,7 @@ use eapp_utils::{
     borderless,
     codicons::{ICON_FOLDER, ICON_SETTINGS_GEAR},
     get_body_font_id,
-    widgets::simple_widgets::{get_theme_button, theme_button},
+    widgets::simple_widgets::{auto_selectable, get_theme_button, theme_button},
 };
 use eframe::egui::{self, Color32, Event, Key, UiBuilder, Vec2};
 
@@ -170,25 +170,6 @@ impl App {
         }
     }
 
-    fn auto_selectable<Value>(
-        ui: &mut egui::Ui,
-        current_value: &mut Value,
-        selected_value: Value,
-        text: &str,
-        extra_scroll_cod: bool,
-    ) -> egui::Response
-    where
-        Value: PartialEq,
-    {
-        let cur_select = *current_value == selected_value;
-        let res = ui.selectable_value(current_value, selected_value, text);
-        if cur_select && extra_scroll_cod {
-            res.scroll_to_me(None);
-        };
-
-        res
-    }
-
     fn ui_contents(&mut self, ui: &mut egui::Ui) {
         let max_width = ui.available_width() * 0.65;
 
@@ -328,9 +309,9 @@ impl App {
         ui.horizontal(|ui| {
             egui::ScrollArea::horizontal().show(ui, |ui| {
                 let cur_sel_tag = &mut self.cur_sel_tag;
-                Self::auto_selectable(ui, cur_sel_tag, None, "ALL", t_changed);
+                auto_selectable(ui, cur_sel_tag, None, "ALL", t_changed);
                 for (i, tag) in self.loader.tag_list.iter().enumerate() {
-                    Self::auto_selectable(ui, cur_sel_tag, Some(i), tag, t_changed);
+                    auto_selectable(ui, cur_sel_tag, Some(i), tag, t_changed);
                 }
             });
         });
@@ -345,7 +326,7 @@ impl App {
 
                 for (display_index, &script_index) in indices.iter().enumerate() {
                     let script = &self.loader.script_list[script_index];
-                    Self::auto_selectable(
+                    auto_selectable(
                         ui,
                         &mut self.cur_sel_script,
                         display_index,

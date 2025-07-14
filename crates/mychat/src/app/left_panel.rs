@@ -1,3 +1,4 @@
+use eapp_utils::widgets::simple_widgets::frameless_btn;
 use eframe::egui::{self};
 
 impl super::App {
@@ -44,7 +45,7 @@ impl super::App {
                         response.context_menu(|ui| {
                             if ui
                                 .add_enabled_ui(self.manager.is_dialogue_idle(idx), |ui| {
-                                    ui.selectable_label(false, "Delete this chat")
+                                    frameless_btn(ui, "Delete this chat")
                                 })
                                 .inner
                                 .clicked()

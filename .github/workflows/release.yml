@@ -19,7 +19,7 @@ jobs:
           - os: macos-latest
             crate: your-player
             
-        crate: ["lonote", "manga-reader", "save-manager", "script-caller", "syncer", "your-player", "mychat"]
+        crate: ["lonote", "manga-reader", "save-manager", "script-caller", "syncer", "your-player", "mychat", "auto-script"]
         os: [ubuntu-latest, macos-latest, windows-latest]
         include:
           - os: ubuntu-latest
@@ -157,6 +157,7 @@ jobs:
             - syncer
             - your-player
             - mychat
+            - auto-script
             
             **Build info:**
             - Rust: ${{ env.RUST_VERSION }}
