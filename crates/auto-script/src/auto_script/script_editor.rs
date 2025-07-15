@@ -12,7 +12,7 @@ use crate::auto_script::GUI_METHODS;
 struct CompletionState {
     byte_offset: usize,
     pos: egui::Pos2,
-    suggestions: Vec<&'static (&'static str, &'static str)>,
+    suggestions: Vec<&'static (&'static str, &'static str, &'static str)>,
 }
 
 #[derive(Default)]
@@ -27,7 +27,7 @@ impl ScriptEditor {
         content: &mut String,
         check_error: Option<&String>,
     ) -> Response {
-        let output = TextEdit::multiline(content)
+        let mut output = TextEdit::multiline(content)
             .code_editor()
             .desired_width(f32::INFINITY)
             .layouter(&mut |ui, code, wrap_width| {
@@ -36,11 +36,11 @@ impl ScriptEditor {
             .id(Id::new("auto_script_editor"))
             .show(ui);
 
-        self.show_completion(ui, &output, content);
+        self.show_completion(ui, &mut output, content);
         output.response
     }
 
-    fn show_completion(&mut self, ui: &mut Ui, output: &TextEditOutput, content: &mut String) {
+    fn show_completion(&mut self, ui: &mut Ui, output: &mut TextEditOutput, content: &mut String) {
         let mut reset_completion = false;
 
         if let Some(state) = self.completion.as_ref() {
@@ -49,8 +49,9 @@ impl ScriptEditor {
                 .order(egui::Order::Foreground)
                 .show(ui.ctx(), |ui| {
                     Self::show_completion_area(ui, |ui| {
-                        for (_, sig) in &state.suggestions {
-                            if frameless_btn(ui, *sig).clicked() {
+                        for (_, sig, doc) in &state.suggestions {
+                            if frameless_btn(ui, *sig).on_hover_text(*doc).clicked() {
+                                output.response.mark_changed();
                                 content.insert_str(state.byte_offset, sig);
                                 reset_completion = true;
                             }
@@ -74,16 +75,16 @@ impl ScriptEditor {
             return;
         }
 
-        let (before_cursor, _) = content.split_at(byte_offset);
-        let Some(prefix_start) = before_cursor.rfind("gui:") else {
+        let Some(prefix_start) = content[..byte_offset].rfind("gui:") else {
             self.completion = None;
             return;
         };
+        let rest = &content[prefix_start + 4..];
+        let typed = rest.split('\n').next().unwrap_or(rest);
 
-        let typed = &before_cursor[prefix_start + 4..];
         let suggestions: Vec<_> = GUI_METHODS
             .iter()
-            .filter(|(name, _)| name.starts_with(typed))
+            .filter(|(name, _, _)| name.starts_with(typed) && name.len() > typed.len())
             .collect();
 
         if suggestions.is_empty() {
@@ -175,7 +176,7 @@ impl ScriptEditor {
         egui::Frame::popup(ui.style())
             .multiply_with_opacity(0.5)
             .show(ui, |ui| {
-                ui.set_max_height(500.0);
+                ui.set_max_height(300.0);
                 egui::ScrollArea::vertical()
                     .max_height(f32::INFINITY)
                     .show(ui, |ui| {
