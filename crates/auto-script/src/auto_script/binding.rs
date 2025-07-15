@@ -20,11 +20,6 @@ impl UserData for AutoScript {
     }
 }
 
-pub const DEFAULT_SCRIPT_CONTENTS: &str = r#"-- 可用的API
--- TODO
-local gui = AutoScript.new()
-"#;
-
 pub struct AutoGui(pub RustAutoGui);
 
 impl UserData for AutoGui {

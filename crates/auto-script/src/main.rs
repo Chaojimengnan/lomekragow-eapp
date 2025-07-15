@@ -2,9 +2,6 @@
 
 pub(crate) mod app;
 pub(crate) mod auto_script;
-pub(crate) mod highlight;
-pub(crate) mod script_executor;
-pub(crate) mod script_manager;
 
 fn main() {
     eapp_utils::setup_loggers("auto-script.log").unwrap();

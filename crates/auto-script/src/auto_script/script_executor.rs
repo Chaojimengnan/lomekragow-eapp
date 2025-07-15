@@ -7,7 +7,7 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-use crate::auto_script::AutoScript;
+use crate::auto_script::binding::AutoScript;
 
 pub struct ScriptExecutor {
     handle: Option<JoinHandle<Result<(), String>>>,

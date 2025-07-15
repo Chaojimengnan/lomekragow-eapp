@@ -8,8 +8,8 @@ use eapp_utils::{
 use eframe::egui::{self, Color32, UiBuilder, Vec2};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    highlight::lua_highlight, script_executor::ScriptExecutor, script_manager::ScriptManager,
+use crate::auto_script::{
+    script_editor::ScriptEditor, script_executor::ScriptExecutor, script_manager::ScriptManager,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Deserialize, Serialize)]
@@ -20,6 +20,7 @@ pub enum HotKeyAction {
 }
 
 pub struct App {
+    editor: ScriptEditor,
     executor: ScriptExecutor,
     manager: ScriptManager,
     search_query: String,
@@ -73,6 +74,7 @@ impl App {
         });
 
         Self {
+            editor: ScriptEditor::default(),
             executor: ScriptExecutor::new(),
             manager,
             search_query: String::new(),
@@ -200,31 +202,24 @@ impl App {
         egui::ScrollArea::vertical()
             .max_height(ui.available_height() - btn_height - ui.style().spacing.item_spacing.y)
             .show(ui, |ui| {
-                ui.with_layout(
-                    egui::Layout::centered_and_justified(egui::Direction::LeftToRight),
-                    |ui| {
-                        let response = ui.add(
-                            egui::TextEdit::multiline(&mut script.content)
-                                .code_editor()
-                                .desired_width(f32::INFINITY)
-                                .layouter(&mut |ui, code, wrap_width| {
-                                    lua_highlight(ui, code, wrap_width, self.check_error.as_ref())
-                                }),
-                        );
+                let layout = egui::Layout::centered_and_justified(egui::Direction::LeftToRight);
+                ui.with_layout(layout, |ui| {
+                    let response =
+                        self.editor
+                            .ui(ui, &mut script.content, self.check_error.as_ref());
 
-                        if response.changed() {
-                            self.script_changed = true;
-                            match self.executor.check_script(&script.content) {
-                                Ok(_) => self.check_error = None,
-                                Err(err) => self.check_error = Some(err),
-                            }
+                    if response.changed() {
+                        self.script_changed = true;
+                        match self.executor.check_script(&script.content) {
+                            Ok(_) => self.check_error = None,
+                            Err(err) => self.check_error = Some(err),
                         }
+                    }
 
-                        if let Some(err) = self.check_error.as_ref() {
-                            response.on_hover_text_at_pointer(err);
-                        }
-                    },
-                );
+                    if let Some(err) = self.check_error.as_ref() {
+                        response.on_hover_text_at_pointer(err);
+                    }
+                });
             });
 
         let text = if self.executor.is_executing() {
