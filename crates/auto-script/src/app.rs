@@ -1,6 +1,6 @@
 use eapp_utils::{
     borderless,
-    codicons::{ICON_NEW_FILE, ICON_SAVE, ICON_SETTINGS},
+    codicons::{ICON_NEW_FILE, ICON_PLAY_CIRCLE, ICON_SAVE, ICON_SETTINGS, ICON_STOP_CIRCLE},
     get_body_font_id,
     global_hotkey::{Code, GlobalHotkeyHandler, KeyMap, Modifiers},
     widgets::simple_widgets::{auto_selectable, frameless_btn, get_theme_button, theme_button},
@@ -124,6 +124,25 @@ impl App {
                 self.ui_show_global_hotkeys(ui);
             });
 
+            let executing = self.executor.is_executing();
+            let text = if executing {
+                ICON_STOP_CIRCLE.to_string()
+            } else {
+                ICON_PLAY_CIRCLE.to_string()
+            };
+
+            if frameless_btn(ui, text).clicked() {
+                if executing {
+                    self.executor.cancel();
+                } else if let Some(script) = self.manager.scripts.get_mut(self.cur_sel) {
+                    self.executor.execute_script(script.content.clone());
+                }
+            }
+
+            if executing {
+                ui.spinner();
+            }
+
             let title = if self.script_changed {
                 "auto-script (unsaved)"
             } else {
@@ -197,10 +216,8 @@ impl App {
             ui.label("No script selected...");
             return;
         };
-
-        let btn_height = 32.0;
         egui::ScrollArea::vertical()
-            .max_height(ui.available_height() - btn_height - ui.style().spacing.item_spacing.y)
+            .max_height(ui.available_height())
             .show(ui, |ui| {
                 let layout = egui::Layout::centered_and_justified(egui::Direction::LeftToRight);
                 ui.with_layout(layout, |ui| {
@@ -221,23 +238,6 @@ impl App {
                     }
                 });
             });
-
-        let text = if self.executor.is_executing() {
-            "Cancel this script"
-        } else {
-            "Run this script"
-        };
-
-        if ui
-            .add_sized([ui.available_width(), btn_height], egui::Button::new(text))
-            .clicked()
-        {
-            if self.executor.is_executing() {
-                self.executor.cancel();
-            } else {
-                self.executor.execute_script(script.content.clone());
-            }
-        }
     }
 
     fn ui_show_rename_modal(&mut self, ui: &mut egui::Ui) {
@@ -290,7 +290,7 @@ impl App {
             return;
         }
 
-        ctx.request_repaint_after_secs(2.0);
+        ctx.request_repaint_after_secs(1.0);
         for action in self.handler.poll_events() {
             match action {
                 HotKeyAction::RunScript => {
@@ -320,6 +320,12 @@ impl eframe::App for App {
         borderless::window_frame(ctx, Some(ctx.style().visuals.window_fill)).show(ctx, |ui| {
             borderless::handle_resize(ui);
 
+            self.poll_global_hotkey_events(ui.ctx());
+
+            if let Some(Err(e)) = self.executor.try_get_execute_result() {
+                self.error = Some(e);
+            }
+
             let app_rect = ui.max_rect();
 
             let title_bar_height = 32.0;
@@ -337,12 +343,6 @@ impl eframe::App for App {
                 rect
             }
             .shrink2(Vec2::new(0.5, 0.5));
-
-            if let Some(Err(e)) = self.executor.try_get_execute_result() {
-                self.error = Some(e);
-            }
-
-            self.poll_global_hotkey_events(ui.ctx());
 
             self.ui_show_rename_modal(ui);
             self.ui_show_error_modal(ui);
