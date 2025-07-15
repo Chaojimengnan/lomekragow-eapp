@@ -295,7 +295,9 @@ impl App {
             match action {
                 HotKeyAction::RunScript => {
                     if let Some(script) = self.manager.scripts.get(self.cur_sel) {
-                        self.executor.execute_script(script.content.clone());
+                        if !self.executor.is_executing() {
+                            self.executor.execute_script(script.content.clone());
+                        }
                     }
                 }
                 HotKeyAction::CancelScript => self.executor.cancel(),

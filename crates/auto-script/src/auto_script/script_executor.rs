@@ -1,4 +1,4 @@
-use mlua::{Error::RuntimeError, HookTriggers, Lua, VmState};
+use mlua::Lua;
 use std::{
     sync::{
         Arc,
@@ -24,7 +24,8 @@ impl ScriptExecutor {
 
     pub fn check_script(&self, script: &str) -> Result<(), String> {
         let lua = Lua::new();
-        AutoScript::register_to_global(&lua.globals()).map_err(|e| e.to_string())?;
+        AutoScript::register_with_cancel_flag(&lua, self.cancel_flag.clone())
+            .map_err(|e| e.to_string())?;
         lua.load(script)
             .set_name("script")
             .into_function()
@@ -33,30 +34,15 @@ impl ScriptExecutor {
     }
 
     pub fn execute_script(&mut self, script: String) {
-        self.cancel();
-        if let Some(prev) = self.handle.take() {
-            let _ = prev.join();
-        }
+        assert!(!self.is_executing());
         self.cancel_flag.store(false, Ordering::SeqCst);
 
-        let flag = Arc::clone(&self.cancel_flag);
+        let flag = self.cancel_flag.clone();
         let code = script.clone();
 
         let handle = thread::spawn(move || {
             let lua = Lua::new();
-            lua.set_hook(
-                HookTriggers {
-                    every_nth_instruction: Some(5),
-                    ..Default::default()
-                },
-                move |_, _| {
-                    if flag.load(Ordering::SeqCst) {
-                        return Err(RuntimeError("Script cancelled".into()));
-                    }
-                    Ok(VmState::Continue)
-                },
-            );
-            AutoScript::register_to_global(&lua.globals()).map_err(|e| e.to_string())?;
+            AutoScript::register_with_cancel_flag(&lua, flag).map_err(|e| e.to_string())?;
             lua.load(&code)
                 .set_name("script")
                 .exec()
