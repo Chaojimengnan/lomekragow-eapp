@@ -234,7 +234,9 @@ impl App {
                     }
 
                     if let Some(err) = self.check_error.as_ref() {
-                        response.on_hover_text_at_pointer(err);
+                        if !self.editor.is_showing_completion() {
+                            response.on_hover_text_at_pointer(err);
+                        }
                     }
                 });
             });

@@ -157,3 +157,105 @@ pub const GUI_METHODS: &[(&str, &str, &str)] = &[
          Returns the array of `{ x, y, score }` tables or nil.",
     ),
 ];
+
+pub static SNIPPETS: &[(&str, &str, &str)] = &[
+    // === Variables ===
+    ("local", "local name = value", "Define a local variable"),
+    ("assign", "name = value", "Assign a value to a variable"),
+    // === Control Flow ===
+    ("if", "if condition then\n    \nend", "If statement"),
+    (
+        "ifelse",
+        "if condition then\n    \nelse\n    \nend",
+        "If-else statement",
+    ),
+    (
+        "elseif",
+        "elseif condition then\n    \n",
+        "Else-if branch (used inside if)",
+    ),
+    ("while", "while condition do\n    \nend", "While loop"),
+    (
+        "repeat",
+        "repeat\n    \nuntil condition",
+        "Repeat-until loop (runs at least once)",
+    ),
+    ("fori", "for i = 1, 10 do\n    \nend", "Numeric for loop"),
+    (
+        "forpairs",
+        "for k, v in pairs(tbl) do\n    \nend",
+        "Generic for loop (table traversal)",
+    ),
+    (
+        "ipairs",
+        "for i, v in ipairs(tbl) do\n    \nend",
+        "Array-style table traversal",
+    ),
+    // === Functions ===
+    (
+        "function",
+        "function name(...)\n    \nend",
+        "Function definition",
+    ),
+    (
+        "localfunc",
+        "local function name(...)\n    \nend",
+        "Local function definition",
+    ),
+    ("return", "return value", "Return a value from a function"),
+    // === Printing / Debugging ===
+    ("print", "print(\"value\")", "Print to console"),
+    ("tostring", "tostring(value)", "Convert a value to string"),
+    // === Table Operations ===
+    (
+        "table",
+        "local t = {\n    key = value,\n}",
+        "Define a table",
+    ),
+    ("table_set", "t.key = value", "Set a field in a table"),
+    (
+        "table_get",
+        "local val = t.key",
+        "Access a field in a table",
+    ),
+    (
+        "table_insert",
+        "table.insert(t, value)",
+        "Insert value into table (append)",
+    ),
+    (
+        "table_remove",
+        "table.remove(t, index)",
+        "Remove a value from table by index",
+    ),
+    ("table_len", "#t", "Get the length of a table (array part)"),
+    // === Modules / Imports ===
+    (
+        "require",
+        "local m = require(\"module\")",
+        "Import a module",
+    ),
+    (
+        "module",
+        "local M = {}\n\nfunction M.foo()\n    \nend\n\nreturn M",
+        "Define a simple Lua module",
+    ),
+    // === Error Handling ===
+    (
+        "pcall",
+        "local ok, result = pcall(function()\n    \nend)",
+        "Call a function with error protection (pcall)",
+    ),
+    // === Misc Utilities ===
+    ("type", "type(value)", "Get the type of a value"),
+    (
+        "pairs",
+        "for k, v in pairs(t) do\n    \nend",
+        "Iterate over key-value pairs in a table",
+    ),
+    (
+        "ipairs",
+        "for i, v in ipairs(t) do\n    \nend",
+        "Iterate over array-style table entries",
+    ),
+];

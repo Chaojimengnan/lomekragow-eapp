@@ -5,7 +5,8 @@ use crate::{
     codicons::{ICON_GITHUB, ICON_GITHUB_INVERTED},
 };
 use eframe::egui::{
-    self, Align2, Color32, CornerRadius, FontId, Rect, Sense, Vec2, Widget, WidgetText, pos2,
+    self, Align2, Color32, CornerRadius, FontId, IntoAtoms, Rect, Sense, Vec2, Widget, WidgetText,
+    pos2,
 };
 
 /// Just a button, with plain style
@@ -230,6 +231,6 @@ where
     res
 }
 
-pub fn frameless_btn(ui: &mut egui::Ui, text: impl Into<WidgetText>) -> egui::Response {
+pub fn frameless_btn<'a>(ui: &mut egui::Ui, text: impl IntoAtoms<'a>) -> egui::Response {
     ui.selectable_label(false, text)
 }
