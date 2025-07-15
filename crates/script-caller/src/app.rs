@@ -220,7 +220,7 @@ impl App {
 
                 ui.horizontal(|ui| {
                     if ui.button("Cancel").clicked() {
-                        ui.close_menu();
+                        ui.close();
                     }
 
                     if ui.button("Reload").clicked() {

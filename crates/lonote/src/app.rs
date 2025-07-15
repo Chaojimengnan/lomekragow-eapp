@@ -341,7 +341,7 @@ impl App {
                             .shortcut_text(ui.ctx().format_shortcut($shortcut));
                         if ui.add(btn).clicked() {
                             $stmt
-                            ui.close_menu();
+                            ui.close();
                         }
                     };
                 }
@@ -383,7 +383,7 @@ impl App {
             .show_inside(ui, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     let rect = ui.max_rect();
-                    ui.allocate_new_ui(UiBuilder::new().max_rect(rect), |ui| {
+                    ui.scope_builder(UiBuilder::new().max_rect(rect), |ui| {
                         ui.with_layout(
                             egui::Layout::centered_and_justified(egui::Direction::LeftToRight),
                             |ui| {

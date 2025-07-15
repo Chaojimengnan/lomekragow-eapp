@@ -491,7 +491,7 @@ impl App {
             return;
         }
 
-        ui.allocate_new_ui(UiBuilder::new().max_rect(btn_rect), |ui| {
+        ui.scope_builder(UiBuilder::new().max_rect(btn_rect), |ui| {
             ui.set_opacity(opacity);
             if ui
                 .add(
@@ -574,7 +574,7 @@ impl App {
             }
         }
 
-        ui.allocate_new_ui(UiBuilder::new().max_rect(rect), |ui| {
+        ui.scope_builder(UiBuilder::new().max_rect(rect), |ui| {
             ui.visuals_mut().override_text_color = Some(ui.visuals().strong_text_color());
 
             ui.advance_cursor_after_rect(Rect::from_min_max(
@@ -633,7 +633,7 @@ impl App {
             let rect =
                 Rect::from_center_size(pos2(rect.center().x, rect.bottom() - 22.0), rect_size);
 
-            ui.allocate_new_ui(UiBuilder::new().max_rect(rect), |ui| {
+            ui.scope_builder(UiBuilder::new().max_rect(rect), |ui| {
                 ui.horizontal(|ui| {
                     let hover_color = ui.visuals().selection.bg_fill;
 

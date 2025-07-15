@@ -3,7 +3,7 @@ use crate::{
     mpv,
 };
 use eapp_utils::widgets::simple_widgets::{frameless_btn, toggle_ui};
-use eframe::egui;
+use eframe::egui::{self, Color32};
 
 impl super::App {
     pub fn ui_chapters_popup(&mut self, ui: &mut egui::Ui) {
@@ -42,14 +42,7 @@ impl super::App {
         ui.set_height(150.0);
         ui.set_width(350.0);
         ui.horizontal(|ui| {
-            for (v, str) in [
-                (Play, "Play"),
-                (Color, "Color"),
-                #[cfg(feature = "danmu")]
-                (Danmu, "Danmu"),
-            ]
-            .into_iter()
-            {
+            for (v, str) in [(Play, "Play"), (Color, "Color")].into_iter() {
                 ui.selectable_value(&mut self.state.setting_type, v, str);
             }
         });
@@ -167,92 +160,7 @@ impl super::App {
                 simple_slider!(hue, set_hue, -100..=100);
                 simple_slider!(sharpen, set_sharpen, -4.0..=4.0);
             }
-            #[cfg(feature = "danmu")]
-            Danmu => {
-                self.ui_setting_popup_contents_danmu(ui);
-            }
         }
-    }
-
-    #[cfg(feature = "danmu")]
-    fn ui_setting_popup_contents_danmu(&mut self, ui: &mut egui::Ui) {
-        ui.label("danmu");
-        toggle_ui(ui, &mut self.state.enable_danmu);
-        ui.end_row();
-
-        ui.label("danmu alpha");
-        ui.add(egui::Slider::new(
-            &mut self.danmu.state_mut().alpha,
-            0..=255,
-        ));
-        ui.end_row();
-
-        ui.label("danmu lower bound");
-        ui.add(egui::Slider::new(
-            &mut self.danmu.state_mut().lower_bound,
-            0.25..=1.0,
-        ));
-        ui.end_row();
-
-        ui.label("danmu lifetime");
-        ui.add(egui::Slider::new(
-            &mut self.danmu.state_mut().lifetime,
-            1.0..=10.0,
-        ));
-        ui.end_row();
-
-        ui.label("danmu rolling speed");
-        ui.add(egui::Slider::new(
-            &mut self.danmu.state_mut().rolling_speed,
-            1.0..=1000.0,
-        ));
-        ui.end_row();
-
-        ui.label("danmu delay");
-        if ui
-            .add(
-                egui::DragValue::new(&mut self.danmu.state_mut().delay)
-                    .speed(1.0)
-                    .suffix("s"),
-            )
-            .changed()
-        {
-            self.danmu.delay_danmu(self.danmu.state().delay);
-        }
-        ui.end_row();
-
-        ui.label("danmu font size");
-        let mut font_size = self.danmu.state().atlas.font_size();
-        if ui
-            .add(egui::Slider::new(&mut font_size, 16.0..=32.0))
-            .changed()
-            && self.danmu.state_mut().atlas.set_font_size(font_size)
-        {
-            self.danmu.clear_emitted();
-        }
-        ui.end_row();
-
-        ui.label("danmu stroke size");
-        let mut stroke_size = self.danmu.state().atlas.stroke_size();
-        if ui
-            .add(egui::Slider::new(&mut stroke_size, 0.1..=4.0))
-            .changed()
-            && self.danmu.state_mut().atlas.set_stroke_size(stroke_size)
-        {
-            self.danmu.clear_emitted();
-        }
-        ui.end_row();
-
-        ui.label("danmu embolden");
-        let mut embolden = self.danmu.state().atlas.embolden();
-        if ui
-            .add(egui::Slider::new(&mut embolden, 0.0..=0.5))
-            .changed()
-            && self.danmu.state_mut().atlas.set_embolden(embolden)
-        {
-            self.danmu.clear_emitted();
-        }
-        ui.end_row();
     }
 
     pub fn ui_long_setting_popup(&mut self, ui: &mut egui::Ui) {
@@ -262,15 +170,11 @@ impl super::App {
         use super::LongSettingType::*;
         ui.horizontal(|ui| {
             #[allow(clippy::single_element_loop)]
-            for (v, str, hover_text) in [
-                (
-                    MpvOptions,
-                    "Mpv options",
-                    "Edit mpv option (effect on the next startup)",
-                ),
-                #[cfg(feature = "danmu")]
-                (DanmuFonts, "Danmu fonts", "Edit danmu fonts"),
-            ]
+            for (v, str, hover_text) in [(
+                MpvOptions,
+                "Mpv options",
+                "Edit mpv option (effect on the next startup)",
+            )]
             .into_iter()
             {
                 ui.selectable_value(&mut self.state.long_setting_type, v, str)
@@ -289,35 +193,6 @@ impl super::App {
                     );
                 });
             }
-            #[cfg(feature = "danmu")]
-            DanmuFonts => {
-                egui::ScrollArea::vertical()
-                    .auto_shrink([false, false])
-                    .max_height(80.0)
-                    .show(ui, |ui| {
-                        for (path, _) in &self.danmu.state().atlas.fonts().0 {
-                            ui.label(path);
-                        }
-                    });
-
-                ui.separator();
-
-                ui.add(
-                    egui::TextEdit::singleline(&mut self.state.danmu_font_path)
-                        .desired_width(f32::INFINITY),
-                );
-                ui.horizontal(|ui| {
-                    if ui.button("Add font").clicked() {
-                        self.danmu
-                            .state_mut()
-                            .atlas
-                            .add_font(&self.state.danmu_font_path);
-                    }
-                    if ui.button("Clear fonts").clicked() {
-                        self.danmu.state_mut().atlas.clear_fonts();
-                    }
-                });
-            }
         }
     }
 
@@ -332,7 +207,8 @@ impl super::App {
 
         ui.visuals_mut().override_text_color = Some(egui::Color32::from_rgb(189, 21, 21));
 
-        if frameless_btn(ui, "Delete the list").clicked() {
+        let text = egui::RichText::new("Delete the list").color(Color32::LIGHT_RED);
+        if frameless_btn(ui, text).clicked() {
             self.playlist.remove_list(list);
         }
     }

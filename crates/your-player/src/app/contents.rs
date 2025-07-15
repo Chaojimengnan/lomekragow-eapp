@@ -77,7 +77,7 @@ impl super::App {
         if opacity == 0.0 {
             return;
         }
-        ui.allocate_new_ui(UiBuilder::new().max_rect(btn_rect), |ui| {
+        ui.scope_builder(UiBuilder::new().max_rect(btn_rect), |ui| {
             ui.set_opacity(opacity);
             if ui
                 .add(
@@ -128,7 +128,7 @@ impl super::App {
 
         draw_progress_bar_background(ui, bg_rect, ui.visuals().extreme_bg_color, corner_radius);
 
-        ui.allocate_new_ui(UiBuilder::new().max_rect(rect), |ui| {
+        ui.scope_builder(UiBuilder::new().max_rect(rect), |ui| {
             ui.visuals_mut().override_text_color = Some(ui.visuals().strong_text_color());
 
             let duration = self.player.state().duration;
@@ -224,15 +224,13 @@ impl super::App {
 
             use eapp_utils::codicons::*;
 
-            ui.allocate_new_ui(UiBuilder::new().max_rect(center_btns_rect), |ui| {
+            ui.scope_builder(UiBuilder::new().max_rect(center_btns_rect), |ui| {
                 ui.horizontal(|ui| {
                     if ui
                         .add(new_button(24.0, ICON_STOP_CIRCLE.to_string()))
                         .clicked()
                     {
                         self.player.set_play_state(PlayState::Stop);
-                        #[cfg(feature = "danmu")]
-                        self.danmu.clear();
                     }
 
                     if ui
@@ -305,7 +303,7 @@ impl super::App {
                 )
             };
 
-            ui.allocate_new_ui(UiBuilder::new().max_rect(right_btns_rect), |ui| {
+            ui.scope_builder(UiBuilder::new().max_rect(right_btns_rect), |ui| {
                 ui.horizontal(|ui| {
                     macro_rules! simple_popup {
                         ($icon:expr, $state:ident, $popup_fn:ident) => {

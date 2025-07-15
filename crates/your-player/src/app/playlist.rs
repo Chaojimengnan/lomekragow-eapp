@@ -1,8 +1,3 @@
-#[cfg(feature = "danmu")]
-use crate::danmu::DanmuData;
-#[cfg(feature = "danmu")]
-use eframe::egui::Color32;
-
 use super::PlaylistType;
 use eapp_utils::widgets::simple_widgets::{get_theme_button, theme_button};
 use eframe::egui::{self, CornerRadius, Frame};
@@ -30,13 +25,7 @@ impl super::App {
                     theme_button(ui, get_theme_button(ui));
 
                     #[allow(clippy::single_element_loop)]
-                    for (v, str) in [
-                        (PlaylistType::Playlist, "Playlist"),
-                        #[cfg(feature = "danmu")]
-                        (PlaylistType::Danmu, "Danmu"),
-                    ]
-                    .into_iter()
-                    {
+                    for (v, str) in [(PlaylistType::Playlist, "Playlist")].into_iter() {
                         ui.selectable_value(&mut self.state.playlist_type, v, str);
                     }
                 });
@@ -55,10 +44,6 @@ impl super::App {
                             .show(ui, |ui| {
                                 self.ui_playlist_playlist(ui, max_width);
                             });
-                    }
-                    #[cfg(feature = "danmu")]
-                    PlaylistType::Danmu => {
-                        self.ui_playlist_danmu(ui);
                     }
                 }
             });
@@ -132,7 +117,7 @@ impl super::App {
                                         .on_hover_text(media_name);
 
                                     if res.clicked() {
-                                        ui.memory_mut(|m| m.close_popup());
+                                        egui::Popup::close_id(ui.ctx(), popup_id);
                                     }
 
                                     if res.clicked() || res.secondary_clicked() {
@@ -146,7 +131,7 @@ impl super::App {
                                     }
 
                                     if res.secondary_clicked() {
-                                        ui.memory_mut(|m| m.open_popup(popup_id));
+                                        egui::Popup::open_id(ui.ctx(), popup_id);
                                     }
 
                                     if tuple_as_ref!(self.state.playlist_cur_sel)
@@ -171,93 +156,10 @@ impl super::App {
             let max_x = max_width.min(res.rect.right()).max(175.0);
             let rect = res.rect.with_max_x(max_x);
             let res = res.with_new_rect(rect);
-            egui::popup_above_or_below_widget(
-                ui,
-                popup_id,
-                &res,
-                egui::AboveOrBelow::Below,
-                egui::PopupCloseBehavior::CloseOnClick,
-                |ui| self.ui_playlist_popup(ui),
-            );
+
+            egui::Popup::context_menu(&res)
+                .id(popup_id)
+                .show(|ui| self.ui_playlist_popup(ui));
         }
-    }
-
-    #[cfg(feature = "danmu")]
-    fn ui_playlist_danmu(&mut self, ui: &mut egui::Ui) {
-        let text_style = egui::TextStyle::Body;
-        let row_height = ui.text_style_height(&text_style) + 4.0;
-
-        let mut res = ui.add(
-            egui::TextEdit::singleline(&mut self.state.danmu_regex_str)
-                .desired_width(f32::INFINITY)
-                .hint_text("Block words (in regex)"),
-        );
-
-        if let Some(err_str) = &self.state.danmu_regex_err_str {
-            res =
-                res.on_hover_text(egui::RichText::new(err_str).color(ui.visuals().error_fg_color));
-        }
-
-        if res.changed() {
-            if self.state.danmu_regex_str.is_empty() {
-                self.state.danmu_regex = None;
-                self.state.danmu_regex_err_str = None;
-            } else {
-                self.state.danmu_regex = match regex::Regex::new(&self.state.danmu_regex_str) {
-                    Ok(v) => {
-                        self.state.danmu_regex_err_str = None;
-                        Some(v)
-                    }
-                    Err(err) => {
-                        self.state.danmu_regex_err_str = Some(err.to_string());
-                        None
-                    }
-                };
-            }
-        }
-
-        egui::ScrollArea::both()
-            .auto_shrink([false, true])
-            .show_rows(ui, row_height, self.danmu.danmu().len(), |ui, row_range| {
-                egui::Grid::new("playlist_danmu_grid")
-                    .num_columns(2)
-                    .spacing([10.0, 4.0])
-                    .show(ui, |ui| {
-                        for i in row_range {
-                            let danmu = &self.danmu.danmu()[i];
-                            ui.label(crate::mpv::make_time_string(
-                                self.danmu.danmu()[i].playback_time,
-                            ));
-
-                            let mut color =
-                                Color32::from_rgb(danmu.color.0, danmu.color.1, danmu.color.2);
-
-                            if color == Color32::WHITE {
-                                color = ui.visuals().strong_text_color();
-                            }
-
-                            if let Some(regex) = &self.state.danmu_regex {
-                                if regex.is_match(&danmu.text) {
-                                    color = ui.visuals().weak_text_color();
-                                }
-                            }
-
-                            let text = egui::RichText::new(&danmu.text).color(color);
-                            if ui
-                                .selectable_label(
-                                    self.danmu
-                                        .emitted()
-                                        .contains(&(danmu as *const DanmuData as *mut DanmuData)),
-                                    text.clone(),
-                                )
-                                .on_hover_text(text)
-                                .clicked()
-                            {
-                                self.player.seek(danmu.playback_time, false);
-                            }
-                            ui.end_row();
-                        }
-                    });
-            });
     }
 }

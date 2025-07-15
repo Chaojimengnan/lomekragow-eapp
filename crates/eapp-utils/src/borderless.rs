@@ -123,7 +123,7 @@ pub fn title_bar(
         ui.visuals().widgets.noninteractive.bg_stroke,
     );
 
-    ui.allocate_new_ui(UiBuilder::new().max_rect(title_bar_rect), |ui| {
+    ui.scope_builder(UiBuilder::new().max_rect(title_bar_rect), |ui| {
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             close_maximize_minimize(
                 ui,
@@ -173,7 +173,7 @@ pub fn title_bar_animated(ui: &mut egui::Ui, title_bar_rect: eframe::epaint::Rec
         return;
     }
 
-    ui.allocate_new_ui(UiBuilder::new().max_rect(title_bar_rect), |ui| {
+    ui.scope_builder(UiBuilder::new().max_rect(title_bar_rect), |ui| {
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             ui.set_opacity(opacity);
 

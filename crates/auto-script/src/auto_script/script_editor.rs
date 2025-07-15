@@ -31,7 +31,7 @@ impl ScriptEditor {
             .code_editor()
             .desired_width(f32::INFINITY)
             .layouter(&mut |ui, code, wrap_width| {
-                Self::highlight(ui, code, wrap_width, check_error)
+                Self::highlight(ui, code.as_str(), wrap_width, check_error)
             })
             .id(Id::new("auto_script_editor"))
             .show(ui);
@@ -68,7 +68,7 @@ impl ScriptEditor {
             return;
         };
 
-        let char_index = cursor.primary.ccursor.index;
+        let char_index = cursor.primary.index;
         let byte_offset = byte_index_from_char_index(output.galley.text(), char_index);
 
         if byte_offset > content.len() {
@@ -92,7 +92,7 @@ impl ScriptEditor {
             return;
         }
 
-        let rect = output.galley.pos_from_cursor(&cursor.primary);
+        let rect = output.galley.pos_from_cursor(cursor.primary);
         let global_pos = output.response.rect.min + rect.left_bottom().to_vec2();
 
         self.completion = Some(CompletionState {

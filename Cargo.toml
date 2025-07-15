@@ -5,11 +5,11 @@ resolver = "3"
 
 [workspace.dependencies]
 # eframe = { git = "https://github.com/Chaojimengnan/egui", branch = "self-use", default-features = false }
-eframe = { version = "0.31.1", default-features = false }
-egui_extras = { version = "0.31.1", default-features = false, features = [
+eframe = { version = "0.32", default-features = false }
+egui_extras = { version = "0.32", default-features = false, features = [
     "syntect",
 ] }
-egui_commonmark = { version = "0.20", features = [
+egui_commonmark = { version = "0.21", features = [
     "better_syntax_highlighting",
 ] }
 eapp-utils = { version = "1.0.3", path = "crates/eapp-utils", default-features = false, features = [

@@ -1,8 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 pub(crate) mod app;
-#[cfg(feature = "danmu")]
-pub(crate) mod danmu;
 pub(crate) mod mpv;
 pub(crate) mod playlist;
 pub(crate) mod tex_register;

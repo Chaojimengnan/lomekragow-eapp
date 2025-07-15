@@ -1,4 +1,4 @@
-use eframe::egui::{self, Color32};
+use eframe::egui::{self, Color32, TextBuffer};
 use std::sync::Arc;
 
 #[derive(Default)]
@@ -53,10 +53,11 @@ impl egui::util::cache::ComputerMut<&str, egui::text::LayoutJob> for Highlighter
     }
 }
 
-pub fn highlight(ui: &egui::Ui, opts: &str, wrap_width: f32) -> Arc<egui::Galley> {
+pub fn highlight(ui: &egui::Ui, opts: &dyn TextBuffer, wrap_width: f32) -> Arc<egui::Galley> {
     type HighlightCache = egui::util::cache::FrameCache<egui::text::LayoutJob, Highlighter>;
 
-    let mut layout_job = ui.memory_mut(|mem| mem.caches.cache::<HighlightCache>().get(opts));
+    let mut layout_job =
+        ui.memory_mut(|mem| mem.caches.cache::<HighlightCache>().get(opts.as_str()));
     layout_job.wrap.max_width = wrap_width;
 
     ui.fonts(|f| f.layout_job(layout_job))

@@ -188,7 +188,7 @@ impl App {
                         |ui| {
                             if frameless_btn(ui, "Rename").clicked() {
                                 self.cur_rename = Some(idx);
-                                ui.close_menu();
+                                ui.close();
                             }
 
                             if frameless_btn(
@@ -198,7 +198,7 @@ impl App {
                             .clicked()
                             {
                                 script_to_delete = Some(idx);
-                                ui.close_menu();
+                                ui.close();
                             }
                         },
                     );

@@ -51,7 +51,7 @@ impl super::App {
                                 .clicked()
                             {
                                 idx_to_remove = Some(idx);
-                                ui.close_menu();
+                                ui.close();
                             }
                         });
                     }
