@@ -212,8 +212,10 @@ dependencies = [
  "anyhow",
  "eapp-utils",
  "eframe",
+ "egui_extras",
  "log",
  "mlua",
+ "regex",
  "rustautogui",
  "serde",
  "serde_json",
@@ -923,6 +925,7 @@ dependencies = [
  "log",
  "mime_guess2",
  "profiling",
+ "syntect",
 ]
 
 [[package]]

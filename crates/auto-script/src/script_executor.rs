@@ -29,7 +29,7 @@ impl ScriptExecutor {
             .set_name("script")
             .into_function()
             .map(|_| ())
-            .map_err(|e| format!("Lua syntax error: {e}"))
+            .map_err(|e| e.to_string())
     }
 
     pub fn execute_script(&mut self, script: String) {
@@ -46,7 +46,7 @@ impl ScriptExecutor {
             let lua = Lua::new();
             lua.set_hook(
                 HookTriggers {
-                    every_nth_instruction: Some(1000),
+                    every_nth_instruction: Some(5),
                     ..Default::default()
                 },
                 move |_, _| {

@@ -4,6 +4,8 @@ use std::collections::{
     vec_deque::{Iter, IterMut},
 };
 
+use crate::auto_script::DEFAULT_SCRIPT_CONTENTS;
+
 #[derive(Deserialize, Serialize)]
 #[serde(default)]
 pub struct Script {
@@ -15,7 +17,7 @@ impl Default for Script {
     fn default() -> Self {
         Self {
             name: "New Script".to_string(),
-            content: String::default(),
+            content: DEFAULT_SCRIPT_CONTENTS.to_string(),
         }
     }
 }

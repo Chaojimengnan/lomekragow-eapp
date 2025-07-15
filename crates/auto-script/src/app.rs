@@ -8,7 +8,9 @@ use eapp_utils::{
 use eframe::egui::{self, Color32, UiBuilder, Vec2};
 use serde::{Deserialize, Serialize};
 
-use crate::{script_executor::ScriptExecutor, script_manager::ScriptManager};
+use crate::{
+    highlight::lua_highlight, script_executor::ScriptExecutor, script_manager::ScriptManager,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Deserialize, Serialize)]
 pub enum HotKeyAction {
@@ -26,6 +28,7 @@ pub struct App {
     check_error: Option<String>,
     error: Option<String>,
     handler: GlobalHotkeyHandler<HotKeyAction>,
+    script_changed: bool,
 }
 
 impl App {
@@ -78,6 +81,7 @@ impl App {
             check_error: None,
             error,
             handler,
+            script_changed: false,
         }
     }
 
@@ -108,8 +112,9 @@ impl App {
             }
 
             if frameless_btn(ui, ICON_SAVE.to_string()).clicked() {
-                if let Err(err) = self.manager.save() {
-                    log::error!("Error when save `ScriptManager`: {err}");
+                match self.manager.save() {
+                    Ok(_) => self.script_changed = false,
+                    Err(err) => log::error!("Error when save `ScriptManager`: {err}"),
                 }
             }
 
@@ -117,10 +122,16 @@ impl App {
                 self.ui_show_global_hotkeys(ui);
             });
 
+            let title = if self.script_changed {
+                "auto-script (unsaved)"
+            } else {
+                "auto-script"
+            };
+
             ui.painter().text(
                 title_bar_rect.center(),
                 egui::Align2::CENTER_CENTER,
-                "auto-script",
+                title,
                 get_body_font_id(ui),
                 ui.style().visuals.text_color(),
             );
@@ -195,10 +206,14 @@ impl App {
                         let response = ui.add(
                             egui::TextEdit::multiline(&mut script.content)
                                 .code_editor()
-                                .desired_width(f32::INFINITY),
+                                .desired_width(f32::INFINITY)
+                                .layouter(&mut |ui, code, wrap_width| {
+                                    lua_highlight(ui, code, wrap_width, self.check_error.as_ref())
+                                }),
                         );
 
                         if response.changed() {
+                            self.script_changed = true;
                             match self.executor.check_script(&script.content) {
                                 Ok(_) => self.check_error = None,
                                 Err(err) => self.check_error = Some(err),
