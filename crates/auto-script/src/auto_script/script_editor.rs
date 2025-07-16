@@ -18,6 +18,7 @@ struct CompletionState {
     pos: egui::Pos2,
     suggestions: Vec<&'static (&'static str, &'static str, &'static str)>,
     selected_index: usize,
+    selected_changed: bool,
 }
 
 impl CompletionState {
@@ -74,6 +75,7 @@ impl ScriptEditor {
             if ctx.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
                 if !state.suggestions.is_empty() {
                     state.selected_index = (state.selected_index + 1) % state.suggestions.len();
+                    state.selected_changed = true;
                     ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::ArrowDown));
                 }
             } else if ctx.input(|i| i.key_pressed(egui::Key::ArrowUp)) {
@@ -83,6 +85,7 @@ impl ScriptEditor {
                     } else {
                         state.selected_index -= 1;
                     }
+                    state.selected_changed = true;
                     ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::ArrowUp));
                 }
             } else if ctx.input(|i| i.key_pressed(egui::Key::Tab)) {
@@ -108,7 +111,7 @@ impl ScriptEditor {
     fn show_completion(&mut self, ui: &mut Ui, output: &mut TextEditOutput, content: &mut String) {
         let mut reset_completion = false;
 
-        if let Some(state) = self.completion.as_ref() {
+        if let Some(state) = self.completion.as_mut() {
             egui::Area::new("show_completion_area".into())
                 .fixed_pos(state.pos)
                 .order(egui::Order::Foreground)
@@ -116,10 +119,13 @@ impl ScriptEditor {
                     Self::show_completion_area(ui, |ui| {
                         for (i, (_, sig, doc)) in state.suggestions.iter().enumerate() {
                             let job = Self::syntax_highlight(ui, sig, "lua");
-                            let doc_job = Self::syntax_highlight(ui, doc, "md");
                             let selected = i == state.selected_index;
-                            let response =
-                                ui.selectable_label(selected, job).on_hover_text(doc_job);
+                            let response = ui.selectable_label(selected, job).on_hover_text(*doc);
+
+                            if selected && state.selected_changed {
+                                response.scroll_to_me(None);
+                                state.selected_changed = false;
+                            }
 
                             if response.clicked() {
                                 output.response.mark_changed();
@@ -209,6 +215,7 @@ impl ScriptEditor {
             pos: global_pos,
             suggestions,
             selected_index,
+            selected_changed: false,
         });
     }
 
