@@ -3,6 +3,7 @@ use eapp_utils::{
     borderless,
     codicons::ICON_FOLDER,
     get_body_font_id,
+    ui_font_selector::UiFontSelector,
     widgets::simple_widgets::{get_theme_button, theme_button},
 };
 use eframe::egui::{self, Color32, UiBuilder, Vec2, collapsing_header::CollapsingState};
@@ -12,6 +13,7 @@ use serde::{Deserialize, Serialize};
 #[serde(default)]
 pub struct App {
     manager: SaveManager,
+    selector: UiFontSelector,
 
     #[serde(skip)]
     msg: String,
@@ -25,8 +27,6 @@ pub struct App {
 
 impl App {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        eapp_utils::setup_fonts(&cc.egui_ctx);
-
         let mut this = if let Some(storage) = cc.storage {
             eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default()
         } else {
@@ -39,6 +39,8 @@ impl App {
             }
         }
 
+        this.rebuild_fonts(&cc.egui_ctx);
+        this.selector.apply_text_style(&cc.egui_ctx);
         this
     }
 }
@@ -48,7 +50,13 @@ impl App {
         borderless::title_bar(ui, title_bar_rect, |ui| {
             ui.add_space(8.0);
 
-            theme_button(ui, get_theme_button(ui));
+            if theme_button(ui, get_theme_button(ui)).clicked() {
+                self.selector.apply_text_style(ui.ctx());
+            }
+
+            if self.selector.ui_and_should_rebuild_fonts(ui) {
+                self.rebuild_fonts(ui.ctx());
+            }
 
             ui.painter().text(
                 title_bar_rect.center(),
@@ -225,6 +233,11 @@ impl App {
                         );
                 });
             });
+    }
+
+    fn rebuild_fonts(&mut self, ctx: &egui::Context) {
+        let fonts = self.selector.insert_font(eapp_utils::get_default_fonts());
+        ctx.set_fonts(fonts);
     }
 }
 

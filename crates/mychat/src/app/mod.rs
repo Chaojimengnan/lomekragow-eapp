@@ -7,6 +7,7 @@ use eapp_utils::{
     codicons::{ICON_LAYOUT_SIDEBAR_LEFT, ICON_SETTINGS_GEAR},
     delayed_toggle::DelayedToggle,
     get_body_font_id,
+    ui_font_selector::UiFontSelector,
     widgets::simple_widgets::{get_theme_button, theme_button},
 };
 use eframe::egui::{self, Color32, UiBuilder, Vec2};
@@ -46,12 +47,11 @@ pub struct App {
     scroll_to_bottom: bool,
     scroll_to_summary: bool,
     toggle: DelayedToggle,
+    selector: UiFontSelector,
 }
 
 impl App {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        eapp_utils::setup_fonts(&cc.egui_ctx);
-
         let state = if let Some(storage) = cc.storage {
             eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default()
         } else {
@@ -60,7 +60,13 @@ impl App {
         let manager = DialogueManager::new(cc.egui_ctx.clone());
         let config = manager.data.config.read().unwrap().clone();
 
-        Self {
+        let selector = if let Some(storage) = cc.storage {
+            eframe::get_value(storage, UiFontSelector::KEY).unwrap_or_default()
+        } else {
+            UiFontSelector::default()
+        };
+
+        let mut this = Self {
             state,
             manager,
             input: String::new(),
@@ -80,7 +86,12 @@ impl App {
             scroll_to_bottom: false,
             scroll_to_summary: false,
             toggle: Default::default(),
-        }
+            selector,
+        };
+
+        this.rebuild_fonts(&cc.egui_ctx);
+        this.selector.apply_text_style(&cc.egui_ctx);
+        this
     }
 }
 
@@ -100,7 +111,13 @@ impl App {
                 self.state.show_left_panel = !self.state.show_left_panel;
             }
 
-            theme_button(ui, get_theme_button(ui));
+            if theme_button(ui, get_theme_button(ui)).clicked() {
+                self.selector.apply_text_style(ui.ctx());
+            }
+
+            if self.selector.ui_and_should_rebuild_fonts(ui) {
+                self.rebuild_fonts(ui.ctx());
+            }
 
             ui.menu_button(ICON_SETTINGS_GEAR.to_string(), |ui| {
                 ui.set_max_height(ui.ctx().screen_rect().height() * 0.65);
@@ -146,6 +163,11 @@ impl App {
             .frame(egui::Frame::central_panel(ui.style()).fill(Color32::TRANSPARENT))
             .show_inside(ui, |ui| self.ui_right_panel(ui));
     }
+
+    fn rebuild_fonts(&mut self, ctx: &egui::Context) {
+        let fonts = self.selector.insert_font(eapp_utils::get_default_fonts());
+        ctx.set_fonts(fonts);
+    }
 }
 
 impl eframe::App for App {
@@ -154,6 +176,7 @@ impl eframe::App for App {
     }
 
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        eframe::set_value(storage, UiFontSelector::KEY, &self.selector);
         eframe::set_value(storage, eframe::APP_KEY, &self.state);
         self.manager.save();
     }

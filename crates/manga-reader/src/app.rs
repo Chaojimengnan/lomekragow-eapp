@@ -11,6 +11,7 @@ use eapp_utils::{
     },
     get_body_font_id, get_body_text_size,
     task::Task,
+    ui_font_selector::UiFontSelector,
     waker::{WakeType, Waker},
     widgets::{
         progress_bar::{ProgressBar, draw_progress_bar_background, value_from_x},
@@ -76,11 +77,11 @@ pub struct App {
     translation: ImgTranslation,
     search_task: Option<Task<Option<ImgFinder>>>,
     search_list: VecDeque<String>,
+    selector: UiFontSelector,
 }
 
 impl App {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        eapp_utils::setup_fonts(&cc.egui_ctx);
         cc.egui_ctx.style_mut(|style| style.animation_time = 0.11);
 
         let state = if let Some(storage) = cc.storage {
@@ -95,7 +96,13 @@ impl App {
         let search_task = None;
         let search_list: VecDeque<_> = std::env::args().skip(1).collect();
 
-        Self {
+        let selector = if let Some(storage) = cc.storage {
+            eframe::get_value(storage, UiFontSelector::KEY).unwrap_or_default()
+        } else {
+            UiFontSelector::default()
+        };
+
+        let mut this = Self {
             state,
             waker,
             img_finder,
@@ -103,7 +110,12 @@ impl App {
             translation,
             search_task,
             search_list,
-        }
+            selector,
+        };
+
+        this.rebuild_fonts(&cc.egui_ctx);
+        this.selector.apply_text_style(&cc.egui_ctx);
+        this
     }
 
     fn start_search(&mut self, path: String) {
@@ -207,7 +219,13 @@ impl App {
                 ui.horizontal(|ui| {
                     ui.visuals_mut().button_frame = false;
 
-                    theme_button(ui, get_theme_button(ui));
+                    if theme_button(ui, get_theme_button(ui)).clicked() {
+                        self.selector.apply_text_style(ui.ctx());
+                    }
+
+                    if self.selector.ui_and_should_rebuild_fonts(ui) {
+                        self.rebuild_fonts(ui.ctx());
+                    }
 
                     if ui
                         .button(ICON_FOLDER.to_string())
@@ -854,10 +872,16 @@ impl App {
             self.state.last_image_name = None;
         }
     }
+
+    fn rebuild_fonts(&mut self, ctx: &egui::Context) {
+        let fonts = self.selector.insert_font(eapp_utils::get_default_fonts());
+        ctx.set_fonts(fonts);
+    }
 }
 
 impl eframe::App for App {
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        eframe::set_value(storage, UiFontSelector::KEY, &self.selector);
         eframe::set_value(storage, eframe::APP_KEY, &self.state);
     }
 

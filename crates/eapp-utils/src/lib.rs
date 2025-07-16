@@ -8,6 +8,7 @@ pub mod global_hotkey;
 pub mod natordset;
 pub mod platform;
 pub mod task;
+pub mod ui_font_selector;
 pub mod waker;
 pub mod widgets;
 
@@ -48,26 +49,6 @@ pub fn get_default_fonts() -> egui::FontDefinitions {
     proportional.insert(1, "codicon".to_owned());
 
     fonts
-}
-
-/// Setup fonts for application
-pub fn setup_fonts(ctx: &egui::Context) {
-    ctx.set_fonts(get_default_fonts());
-    ctx.style_mut(setup_proportional_size);
-}
-
-pub fn setup_proportional_size(style: &mut egui::Style) {
-    use crate::egui::FontFamily::Proportional;
-    use crate::egui::FontId;
-    use crate::egui::TextStyle::*;
-    style.text_styles = [
-        (Heading, FontId::new(18.0, Proportional)),
-        (Body, FontId::new(16.0, Proportional)),
-        (Monospace, FontId::new(16.0, Proportional)),
-        (Button, FontId::new(16.0, Proportional)),
-        (Small, FontId::new(12.0, Proportional)),
-    ]
-    .into();
 }
 
 pub fn get_font_id(ui: &egui::Ui, text_style: &egui::TextStyle) -> Option<egui::FontId> {

@@ -1,4 +1,4 @@
-use eframe::egui::{self, FontData, FontDefinitions, FontFamily, FontId};
+use eframe::egui::{FontData, FontDefinitions, FontFamily, FontId};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
@@ -47,7 +47,7 @@ impl DanmuFontLoader {
         self.font_paths.is_empty()
     }
 
-    pub fn rebuild_fonts(&mut self, mut fonts: FontDefinitions, ctx: &egui::Context) {
+    pub fn insert_fonts(&mut self, mut fonts: FontDefinitions) -> FontDefinitions {
         let mut font_counter = 0;
         let mut danmu_fonts = vec![];
 
@@ -71,6 +71,6 @@ impl DanmuFontLoader {
                 .extend(danmu_fonts);
         }
 
-        ctx.set_fonts(fonts);
+        fonts
     }
 }

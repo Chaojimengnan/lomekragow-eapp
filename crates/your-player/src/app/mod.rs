@@ -4,6 +4,7 @@ use crate::{
     playlist::Playlist,
     tex_register::TexRegister,
 };
+use eapp_utils::ui_font_selector::UiFontSelector;
 use eapp_utils::{
     borderless,
     waker::{WakeType, Waker},
@@ -25,6 +26,7 @@ pub struct App {
     preview: mpv::preview::Preview,
     tex_register: TexRegister,
     danmu: danmu::Manager,
+    selector: UiFontSelector,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -203,16 +205,11 @@ impl App {
         let tex_register = TexRegister::default();
         let preview = mpv::preview::Preview::new(200, cc).unwrap();
 
-        let mut danmu_state = if let Some(storage) = cc.storage {
+        let danmu_state = if let Some(storage) = cc.storage {
             eframe::get_value(storage, Self::DANMU_KEY).unwrap_or_default()
         } else {
             danmu::State::default()
         };
-        danmu_state
-            .font_loader
-            .rebuild_fonts(eapp_utils::get_default_fonts(), &cc.egui_ctx);
-        cc.egui_ctx.style_mut(eapp_utils::setup_proportional_size);
-
         let danmu = danmu::Manager::new(danmu_state);
 
         if !state.danmu_regex_str.is_empty() {
@@ -227,6 +224,12 @@ impl App {
 
         let waker = Waker::new(cc.egui_ctx.clone(), WakeType::WakeOnLongestDeadLine);
 
+        let selector = if let Some(storage) = cc.storage {
+            eframe::get_value(storage, UiFontSelector::KEY).unwrap_or_default()
+        } else {
+            UiFontSelector::default()
+        };
+
         let mut this = Self {
             state,
             waker,
@@ -235,7 +238,11 @@ impl App {
             preview,
             tex_register,
             danmu,
+            selector,
         };
+
+        this.rebuild_fonts(&cc.egui_ctx);
+        this.selector.apply_text_style(&cc.egui_ctx);
 
         if let Some(path_str) = std::env::args().nth(1) {
             if std::path::Path::new(&path_str).is_file() {
@@ -378,6 +385,16 @@ impl App {
             self.waker.request_repaint_after_secs(3.0);
         }
     }
+
+    fn rebuild_fonts(&mut self, ctx: &egui::Context) {
+        let fonts = self
+            .danmu
+            .state_mut()
+            .font_loader
+            .insert_fonts(eapp_utils::get_default_fonts());
+        let fonts = self.selector.insert_font(fonts);
+        ctx.set_fonts(fonts);
+    }
 }
 
 impl eframe::App for App {
@@ -386,6 +403,7 @@ impl eframe::App for App {
         eframe::set_value(storage, Self::MPV_KEY, &self.player.state());
         eframe::set_value(storage, Self::PLAYLIST_KEY, &self.playlist);
         eframe::set_value(storage, Self::DANMU_KEY, &self.danmu.state());
+        eframe::set_value(storage, UiFontSelector::KEY, &self.selector);
     }
 
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {

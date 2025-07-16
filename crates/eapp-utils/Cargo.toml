@@ -1,6 +1,6 @@
 [package]
 name = "eapp-utils"
-version = "1.0.3"
+version = "1.0.5"
 edition = "2024"
 license = "GPL-3.0-or-later"
 
@@ -20,6 +20,7 @@ eframe = { workspace = true, features = [
 simplelog.workspace = true
 log.workspace = true
 serde.workspace = true
+rfd.workspace = true
 include-flate = "0.3.0"
 natord = "1.0"
 global-hotkey = { version = "0.7", optional = true, features = ["serde"] }

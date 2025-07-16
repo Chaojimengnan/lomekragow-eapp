@@ -3,6 +3,7 @@ use eapp_utils::{
     borderless,
     codicons::{ICON_FOLDER, ICON_SETTINGS_GEAR},
     get_body_font_id,
+    ui_font_selector::UiFontSelector,
     widgets::simple_widgets::{auto_selectable, get_theme_button, theme_button},
 };
 use eframe::egui::{self, Color32, Event, Key, UiBuilder, Vec2};
@@ -24,12 +25,11 @@ pub struct App {
     load_error: Option<String>,
     cwd: Option<String>,
     remembered_args: RememberedArgs,
+    selector: UiFontSelector,
 }
 
 impl App {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        eapp_utils::setup_fonts(&cc.egui_ctx);
-
         let info_json_path: Option<String> = if let Some(storage) = cc.storage {
             eframe::get_value(storage, "info_json_path").unwrap_or_default()
         } else {
@@ -48,11 +48,17 @@ impl App {
                 Err(err) => (script::Loader::default(), Some(err.to_string())),
             };
 
+        let selector = if let Some(storage) = cc.storage {
+            eframe::get_value(storage, UiFontSelector::KEY).unwrap_or_default()
+        } else {
+            UiFontSelector::default()
+        };
+
         let cwd = std::env::current_dir()
             .ok()
             .map(|path| path.to_string_lossy().into_owned());
 
-        Self {
+        let mut this = Self {
             loader,
             cur_sel_tag: None,
             cur_sel_script: 0,
@@ -62,7 +68,12 @@ impl App {
             load_error,
             cwd,
             remembered_args,
-        }
+            selector,
+        };
+
+        this.rebuild_fonts(&cc.egui_ctx);
+        this.selector.apply_text_style(&cc.egui_ctx);
+        this
     }
 
     fn get_cur_script(&mut self) -> Option<&mut Script> {
@@ -190,7 +201,13 @@ impl App {
 
             ui.add_space(8.0);
 
-            theme_button(ui, get_theme_button(ui));
+            if theme_button(ui, get_theme_button(ui)).clicked() {
+                self.selector.apply_text_style(ui.ctx());
+            }
+
+            if self.selector.ui_and_should_rebuild_fonts(ui) {
+                self.rebuild_fonts(ui.ctx());
+            }
 
             ui.menu_button(ICON_SETTINGS_GEAR.to_string(), |ui| {
                 ui.horizontal(|ui| {
@@ -421,6 +438,11 @@ impl App {
             });
         }
     }
+
+    fn rebuild_fonts(&mut self, ctx: &egui::Context) {
+        let fonts = self.selector.insert_font(eapp_utils::get_default_fonts());
+        ctx.set_fonts(fonts);
+    }
 }
 
 impl eframe::App for App {
@@ -429,6 +451,7 @@ impl eframe::App for App {
     }
 
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        eframe::set_value(storage, UiFontSelector::KEY, &self.selector);
         eframe::set_value(storage, "info_json_path", &self.info_json_path);
         eframe::set_value(
             storage,

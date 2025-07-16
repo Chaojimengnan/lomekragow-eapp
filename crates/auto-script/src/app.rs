@@ -3,6 +3,7 @@ use eapp_utils::{
     codicons::{ICON_NEW_FILE, ICON_PLAY_CIRCLE, ICON_SAVE, ICON_SETTINGS, ICON_STOP_CIRCLE},
     get_body_font_id,
     global_hotkey::{Code, GlobalHotkeyHandler, KeyMap, Modifiers},
+    ui_font_selector::UiFontSelector,
     widgets::simple_widgets::{auto_selectable, frameless_btn, get_theme_button, theme_button},
 };
 use eframe::egui::{self, Color32, UiBuilder, Vec2};
@@ -30,12 +31,12 @@ pub struct App {
     error: Option<String>,
     handler: GlobalHotkeyHandler<HotKeyAction>,
     script_changed: bool,
+    selector: UiFontSelector,
+    show_confirm_modal: bool,
 }
 
 impl App {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        eapp_utils::setup_fonts(&cc.egui_ctx);
-
         let manager = match ScriptManager::load() {
             Ok(manager) => manager,
             Err(err) => {
@@ -73,7 +74,13 @@ impl App {
             handler
         });
 
-        Self {
+        let selector = if let Some(storage) = cc.storage {
+            eframe::get_value(storage, UiFontSelector::KEY).unwrap_or_default()
+        } else {
+            UiFontSelector::default()
+        };
+
+        let mut this = Self {
             editor: ScriptEditor::default(),
             executor: ScriptExecutor::new(),
             manager,
@@ -84,7 +91,13 @@ impl App {
             error,
             handler,
             script_changed: false,
-        }
+            selector,
+            show_confirm_modal: false,
+        };
+
+        this.rebuild_fonts(&cc.egui_ctx);
+        this.selector.apply_text_style(&cc.egui_ctx);
+        this
     }
 
     fn ui_contents(&mut self, ui: &mut egui::Ui) {
@@ -107,7 +120,13 @@ impl App {
 
             ui.add_space(8.0);
 
-            theme_button(ui, get_theme_button(ui));
+            if theme_button(ui, get_theme_button(ui)).clicked() {
+                self.selector.apply_text_style(ui.ctx());
+            }
+
+            if self.selector.ui_and_should_rebuild_fonts(ui) {
+                self.rebuild_fonts(ui.ctx());
+            }
 
             if frameless_btn(ui, ICON_NEW_FILE.to_string()).clicked() {
                 self.manager.new_script();
@@ -287,6 +306,24 @@ impl App {
         }
     }
 
+    fn ui_show_confirm_modal(&mut self, ui: &mut egui::Ui) {
+        if self.show_confirm_modal {
+            egui::Modal::new(egui::Id::new("confirm_close")).show(ui.ctx(), |ui| {
+                ui.label("There are unsaved changes, are you sure you want to exit?");
+
+                ui.horizontal(|ui| {
+                    if ui.button("yes").clicked() {
+                        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
+                    }
+
+                    if ui.button("no").clicked() {
+                        self.show_confirm_modal = false;
+                    }
+                });
+            });
+        }
+    }
+
     fn poll_global_hotkey_events(&mut self, ctx: &egui::Context) {
         if !self.handler.is_ok() {
             return;
@@ -306,6 +343,22 @@ impl App {
             }
         }
     }
+
+    fn process_close_request(&mut self, ui: &mut egui::Ui) {
+        if ui.ctx().input(|i| i.viewport().close_requested())
+            && self.script_changed
+            && !self.show_confirm_modal
+        {
+            self.show_confirm_modal = true;
+            ui.ctx()
+                .send_viewport_cmd(egui::ViewportCommand::CancelClose);
+        }
+    }
+
+    fn rebuild_fonts(&mut self, ctx: &egui::Context) {
+        let fonts = self.selector.insert_font(eapp_utils::get_default_fonts());
+        ctx.set_fonts(fonts);
+    }
 }
 
 impl eframe::App for App {
@@ -314,6 +367,7 @@ impl eframe::App for App {
     }
 
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        eframe::set_value(storage, UiFontSelector::KEY, &self.selector);
         eframe::set_value(storage, eframe::APP_KEY, self.handler.get_key_map());
         if let Err(err) = self.manager.save() {
             log::error!("Error when save `ScriptManager`: {err}");
@@ -347,6 +401,9 @@ impl eframe::App for App {
                 rect
             }
             .shrink2(Vec2::new(0.5, 0.5));
+
+            self.process_close_request(ui);
+            self.ui_show_confirm_modal(ui);
 
             self.ui_show_rename_modal(ui);
             self.ui_show_error_modal(ui);

@@ -260,17 +260,16 @@ impl super::App {
             }
             DanmuFonts => {
                 let mut path_to_remove = None;
-                let font_loader = &mut self.danmu.state_mut().font_loader;
 
                 egui::ScrollArea::vertical()
                     .auto_shrink([false, false])
                     .max_height(80.0)
                     .show(ui, |ui| {
-                        if font_loader.is_empty() {
+                        if self.danmu.state_mut().font_loader.is_empty() {
                             ui.label("No font is added");
                         }
 
-                        for path in font_loader.iter() {
+                        for path in self.danmu.state_mut().font_loader.iter() {
                             ui.label(path).context_menu(|ui| {
                                 let text = egui::RichText::new("Remove").color(Color32::LIGHT_RED);
                                 if ui.button(text).clicked() {
@@ -281,14 +280,17 @@ impl super::App {
                     });
 
                 if let Some(path) = path_to_remove {
-                    font_loader.remove_font(&path);
+                    self.danmu.state_mut().font_loader.remove_font(&path);
                 }
 
                 ui.separator();
 
                 ui.horizontal(|ui| {
                     if frameless_btn(ui, ICON_FOLDER.to_string()).clicked() {
-                        if let Some(open_path) = rfd::FileDialog::new().pick_file() {
+                        if let Some(open_path) = rfd::FileDialog::new()
+                            .add_filter("*", &["ttf", "otf", "ttc"])
+                            .pick_file()
+                        {
                             self.state.danmu_font_path = open_path.to_string_lossy().to_string();
                         }
                     }
@@ -300,13 +302,16 @@ impl super::App {
 
                 ui.horizontal(|ui| {
                     if ui.button("Add font").clicked() {
-                        font_loader.add_font(&self.state.danmu_font_path);
+                        self.danmu
+                            .state_mut()
+                            .font_loader
+                            .add_font(&self.state.danmu_font_path);
                     }
                     if ui.button("Clear fonts").clicked() {
-                        font_loader.clear();
+                        self.danmu.state_mut().font_loader.clear();
                     }
                     if ui.button("Build fonts").clicked() {
-                        font_loader.rebuild_fonts(eapp_utils::get_default_fonts(), ui.ctx());
+                        self.rebuild_fonts(ui.ctx());
                     }
                 });
             }

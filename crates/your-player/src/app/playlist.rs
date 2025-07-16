@@ -24,7 +24,13 @@ impl super::App {
             .width_range(200.0..=max_width)
             .show_animated_inside(ui, self.state.playlist_open, |ui| {
                 ui.horizontal(|ui| {
-                    theme_button(ui, get_theme_button(ui));
+                    if theme_button(ui, get_theme_button(ui)).clicked() {
+                        self.selector.apply_text_style(ui.ctx());
+                    }
+
+                    if self.selector.ui_and_should_rebuild_fonts(ui) {
+                        self.rebuild_fonts(ui.ctx());
+                    }
 
                     #[allow(clippy::single_element_loop)]
                     for (v, str) in [

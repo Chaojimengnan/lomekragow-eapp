@@ -3,6 +3,7 @@ use eapp_utils::{
     borderless,
     codicons::{ICON_FOLDER, ICON_SETTINGS_GEAR},
     get_body_font_id,
+    ui_font_selector::UiFontSelector,
     widgets::simple_widgets::{get_theme_button, theme_button, toggle_ui},
 };
 use eframe::egui::{self, Color32, RichText, UiBuilder, Vec2, Widget};
@@ -13,6 +14,7 @@ pub struct App {
     state: State,
     syncer: Option<Syncer>,
     handle: Option<JoinHandle<()>>,
+    selector: UiFontSelector,
 }
 
 #[derive(Deserialize, Serialize, Default)]
@@ -58,8 +60,6 @@ impl State {
 
 impl App {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        eapp_utils::setup_fonts(&cc.egui_ctx);
-
         let state = if let Some(storage) = cc.storage {
             eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default()
         } else {
@@ -71,11 +71,22 @@ impl App {
             (Some(syncer), Some(handle))
         };
 
-        Self {
+        let selector = if let Some(storage) = cc.storage {
+            eframe::get_value(storage, UiFontSelector::KEY).unwrap_or_default()
+        } else {
+            UiFontSelector::default()
+        };
+
+        let mut this = Self {
             state,
             syncer,
             handle,
-        }
+            selector,
+        };
+
+        this.rebuild_fonts(&cc.egui_ctx);
+        this.selector.apply_text_style(&cc.egui_ctx);
+        this
     }
 
     fn update_syncer(&mut self) {
@@ -103,7 +114,13 @@ impl App {
             ui.add_space(8.0);
             ui.visuals_mut().button_frame = false;
 
-            theme_button(ui, get_theme_button(ui));
+            if theme_button(ui, get_theme_button(ui)).clicked() {
+                self.selector.apply_text_style(ui.ctx());
+            }
+
+            if self.selector.ui_and_should_rebuild_fonts(ui) {
+                self.rebuild_fonts(ui.ctx());
+            }
 
             let synchronizing = self.syncer.as_ref().unwrap().synchronizing();
 
@@ -274,6 +291,11 @@ impl App {
             });
         }
     }
+
+    fn rebuild_fonts(&mut self, ctx: &egui::Context) {
+        let fonts = self.selector.insert_font(eapp_utils::get_default_fonts());
+        ctx.set_fonts(fonts);
+    }
 }
 
 impl eframe::App for App {
@@ -313,6 +335,7 @@ impl eframe::App for App {
 
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, eframe::APP_KEY, &self.state);
+        eframe::set_value(storage, UiFontSelector::KEY, &self.selector);
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {

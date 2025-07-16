@@ -4,6 +4,7 @@ use eapp_utils::{
     borderless,
     codicons::{ICON_TRIANGLE_DOWN, ICON_TRIANGLE_UP},
     get_body_font_id,
+    ui_font_selector::UiFontSelector,
     widgets::simple_widgets::{get_theme_button, theme_button},
 };
 use eframe::egui::{
@@ -31,6 +32,7 @@ pub struct App {
     case_sense: bool,
     search_words: String,
     search_down: Option<bool>,
+    selector: UiFontSelector,
 }
 
 struct Note {
@@ -131,7 +133,12 @@ struct File {
 
 impl App {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        eapp_utils::setup_fonts(&cc.egui_ctx);
+        let selector = if let Some(storage) = cc.storage {
+            eframe::get_value(storage, UiFontSelector::KEY).unwrap_or_default()
+        } else {
+            UiFontSelector::default()
+        };
+
         let mut this = Self {
             note: Rc::new(RefCell::new(Note::default())),
             dialog_cb: None,
@@ -139,12 +146,15 @@ impl App {
             case_sense: true,
             search_words: String::default(),
             search_down: None,
+            selector,
         };
 
         if let Some(file) = std::env::args().nth(1) {
             this.open(Some(file.into()));
         }
 
+        this.rebuild_fonts(&cc.egui_ctx);
+        this.selector.apply_text_style(&cc.egui_ctx);
         this
     }
 
@@ -429,7 +439,13 @@ impl App {
             );
 
             ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                theme_button(ui, get_theme_button(ui));
+                if theme_button(ui, get_theme_button(ui)).clicked() {
+                    self.selector.apply_text_style(ui.ctx());
+                }
+
+                if self.selector.ui_and_should_rebuild_fonts(ui) {
+                    self.rebuild_fonts(ui.ctx());
+                }
 
                 ui.set_clip_rect(ui.max_rect());
                 ui.label(&self.note.borrow().state_msg);
@@ -621,11 +637,20 @@ impl App {
 
         Err("Save path not specified".into())
     }
+
+    fn rebuild_fonts(&mut self, ctx: &egui::Context) {
+        let fonts = self.selector.insert_font(eapp_utils::get_default_fonts());
+        ctx.set_fonts(fonts);
+    }
 }
 
 impl eframe::App for App {
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
         egui::Rgba::TRANSPARENT.to_array()
+    }
+
+    fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        eframe::set_value(storage, UiFontSelector::KEY, &self.selector);
     }
 
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
