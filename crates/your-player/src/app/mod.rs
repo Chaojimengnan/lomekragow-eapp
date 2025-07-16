@@ -92,6 +92,8 @@ pub struct State {
     #[serde(skip)]
     pub danmu_regex_err_str: Option<String>,
 
+    pub danmu_font_path: String,
+
     pub enable_danmu: bool,
 }
 
@@ -105,6 +107,7 @@ pub enum SettingType {
 #[derive(PartialEq)]
 pub enum LongSettingType {
     MpvOptions,
+    DanmuFonts,
 }
 
 #[derive(PartialEq)]
@@ -149,6 +152,7 @@ impl Default for State {
             danmu_regex_str: String::default(),
             danmu_regex: None,
             danmu_regex_err_str: None,
+            danmu_font_path: String::default(),
             enable_danmu: true,
         }
     }
@@ -161,7 +165,6 @@ impl App {
     pub const DANMU_KEY: &'static str = "danmu_state";
 
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        eapp_utils::setup_fonts(&cc.egui_ctx);
         cc.egui_ctx.style_mut(|style| style.animation_time = 0.11);
 
         let mut state = if let Some(storage) = cc.storage {
@@ -200,11 +203,16 @@ impl App {
         let tex_register = TexRegister::default();
         let preview = mpv::preview::Preview::new(200, cc).unwrap();
 
-        let danmu_state = if let Some(storage) = cc.storage {
+        let mut danmu_state = if let Some(storage) = cc.storage {
             eframe::get_value(storage, Self::DANMU_KEY).unwrap_or_default()
         } else {
             danmu::State::default()
         };
+        danmu_state
+            .font_loader
+            .rebuild_fonts(eapp_utils::get_default_fonts(), &cc.egui_ctx);
+        cc.egui_ctx.style_mut(eapp_utils::setup_proportional_size);
+
         let danmu = danmu::Manager::new(danmu_state);
 
         if !state.danmu_regex_str.is_empty() {

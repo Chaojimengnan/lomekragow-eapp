@@ -11,8 +11,8 @@ build = "build.rs"
 log.workspace = true
 eapp-utils.workspace = true
 eframe.workspace = true
+rfd.workspace = true
 encoding_rs = "0.8.33"
-rfd = "0.13"
 chardetng = "0.1"
 
 [target.'cfg(windows)'.build-dependencies]

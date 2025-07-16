@@ -191,10 +191,10 @@ impl Manager {
     }
 
     fn measure_text(state: &State, ui: &egui::Ui, danmu: &mut DanmuData) {
-        let text_style = egui::TextStyle::Body.resolve(ui.style());
-        let galley = ui.fonts(|f| {
-            f.layout_no_wrap(danmu.text.clone(), text_style, egui::Color32::PLACEHOLDER)
-        });
+        let font_id = state.font_loader.get_font_id();
+
+        let galley =
+            ui.fonts(|f| f.layout_no_wrap(danmu.text.clone(), font_id, egui::Color32::PLACEHOLDER));
         let size = galley.size();
         let padded_size = egui::vec2(size.x + 8.0, size.y + 4.0);
 

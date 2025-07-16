@@ -208,7 +208,7 @@ pub fn theme_button<Btn: Widget>(ui: &mut egui::Ui, btn: Btn) {
     if ui.add(btn).clicked() {
         ui.ctx()
             .set_theme(egui::Theme::from_dark_mode(!ui.visuals().dark_mode));
-        ui.ctx().style_mut(crate::setup_text_size);
+        ui.ctx().style_mut(crate::setup_proportional_size);
     }
 }
 

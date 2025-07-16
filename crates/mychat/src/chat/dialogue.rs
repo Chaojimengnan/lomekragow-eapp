@@ -15,6 +15,7 @@ pub enum DialogueState {
 }
 
 #[derive(Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct MessageWithUiData {
     pub message: Message,
     #[serde(skip)]
@@ -38,6 +39,7 @@ struct ScrollState {
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(default)]
 pub struct Dialogue {
     pub messages: VecDeque<MessageWithUiData>,
     pub summary: MessageWithUiData,

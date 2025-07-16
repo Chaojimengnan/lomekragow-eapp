@@ -1,4 +1,5 @@
 pub(crate) mod emit;
+pub(crate) mod font_loader;
 
 use eframe::egui::{self};
 use ordered_float::NotNan;
@@ -8,6 +9,8 @@ use std::{
     ptr::NonNull,
     sync::Arc,
 };
+
+use crate::danmu::font_loader::DanmuFontLoader;
 
 #[derive(Debug)]
 pub struct DanmuData {
@@ -114,6 +117,7 @@ pub struct Manager {
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(default)]
 pub struct State {
     /// danmu rolling speed (in px)
     pub rolling_speed: f32,
@@ -129,6 +133,9 @@ pub struct State {
 
     /// danmu alpha (0 ~ 255)
     pub alpha: u8,
+
+    /// font loader
+    pub font_loader: DanmuFontLoader,
 }
 
 impl Default for State {
@@ -139,6 +146,7 @@ impl Default for State {
             lower_bound: 0.5,
             delay: 0.0,
             alpha: 240,
+            font_loader: DanmuFontLoader::default(),
         }
     }
 }

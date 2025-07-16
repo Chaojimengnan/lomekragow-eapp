@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
 pub struct ChatConfig {
     pub compression_threshold: f32,
 

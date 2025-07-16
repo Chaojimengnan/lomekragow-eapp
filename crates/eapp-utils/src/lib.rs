@@ -24,8 +24,7 @@ macro_rules! capture_error {
     };
 }
 
-/// Setup fonts for application
-pub fn setup_fonts(ctx: &egui::Context) {
+pub fn get_default_fonts() -> egui::FontDefinitions {
     let mut fonts = egui::FontDefinitions::default();
 
     include_flate::flate!(static UNIFONT: [u8] from "../../assets/unifont-16.0.04.otf");
@@ -48,11 +47,16 @@ pub fn setup_fonts(ctx: &egui::Context) {
     proportional.insert(0, "unifont".to_owned());
     proportional.insert(1, "codicon".to_owned());
 
-    ctx.set_fonts(fonts);
-    ctx.style_mut(setup_text_size);
+    fonts
 }
 
-pub fn setup_text_size(style: &mut egui::Style) {
+/// Setup fonts for application
+pub fn setup_fonts(ctx: &egui::Context) {
+    ctx.set_fonts(get_default_fonts());
+    ctx.style_mut(setup_proportional_size);
+}
+
+pub fn setup_proportional_size(style: &mut egui::Style) {
     use crate::egui::FontFamily::Proportional;
     use crate::egui::FontId;
     use crate::egui::TextStyle::*;

@@ -13,6 +13,7 @@ eapp-utils.workspace = true
 eframe.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+rfd.workspace = true
 libmpv = { git = "https://github.com/Chaojimengnan/libmpv-rs", branch = "self-use" }
 walkdir = "2.5.0"
 regex = "*"

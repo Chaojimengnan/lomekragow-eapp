@@ -2,7 +2,10 @@ use crate::{
     app::{END_REACHED_LIST, opts_highlight},
     mpv,
 };
-use eapp_utils::widgets::simple_widgets::{frameless_btn, toggle_ui};
+use eapp_utils::{
+    codicons::ICON_FOLDER,
+    widgets::simple_widgets::{frameless_btn, toggle_ui},
+};
 use eframe::egui::{self, Color32};
 
 impl super::App {
@@ -199,6 +202,14 @@ impl super::App {
         ));
         ui.end_row();
 
+        ui.label("danmu font size");
+        ui.add(egui::Slider::new(
+            &mut self.danmu.state_mut().font_loader.font_size,
+            10.0..=36.0,
+        ));
+
+        ui.end_row();
+
         ui.label("danmu delay");
         if ui
             .add(
@@ -210,6 +221,7 @@ impl super::App {
         {
             self.danmu.delay_danmu(self.danmu.state().delay);
         }
+
         ui.end_row();
     }
 
@@ -220,11 +232,14 @@ impl super::App {
         use super::LongSettingType::*;
         ui.horizontal(|ui| {
             #[allow(clippy::single_element_loop)]
-            for (v, str, hover_text) in [(
-                MpvOptions,
-                "Mpv options",
-                "Edit mpv option (effect on the next startup)",
-            )]
+            for (v, str, hover_text) in [
+                (
+                    MpvOptions,
+                    "Mpv options",
+                    "Edit mpv option (effect on the next startup)",
+                ),
+                (DanmuFonts, "Danmu fonts", "Edit danmu fonts"),
+            ]
             .into_iter()
             {
                 ui.selectable_value(&mut self.state.long_setting_type, v, str)
@@ -241,6 +256,58 @@ impl super::App {
                             .code_editor()
                             .layouter(&mut opts_highlight::highlight),
                     );
+                });
+            }
+            DanmuFonts => {
+                let mut path_to_remove = None;
+                let font_loader = &mut self.danmu.state_mut().font_loader;
+
+                egui::ScrollArea::vertical()
+                    .auto_shrink([false, false])
+                    .max_height(80.0)
+                    .show(ui, |ui| {
+                        if font_loader.is_empty() {
+                            ui.label("No font is added");
+                        }
+
+                        for path in font_loader.iter() {
+                            ui.label(path).context_menu(|ui| {
+                                let text = egui::RichText::new("Remove").color(Color32::LIGHT_RED);
+                                if ui.button(text).clicked() {
+                                    path_to_remove = Some(path.to_string());
+                                }
+                            });
+                        }
+                    });
+
+                if let Some(path) = path_to_remove {
+                    font_loader.remove_font(&path);
+                }
+
+                ui.separator();
+
+                ui.horizontal(|ui| {
+                    if frameless_btn(ui, ICON_FOLDER.to_string()).clicked() {
+                        if let Some(open_path) = rfd::FileDialog::new().pick_file() {
+                            self.state.danmu_font_path = open_path.to_string_lossy().to_string();
+                        }
+                    }
+                    ui.add(
+                        egui::TextEdit::singleline(&mut self.state.danmu_font_path)
+                            .desired_width(f32::INFINITY),
+                    );
+                });
+
+                ui.horizontal(|ui| {
+                    if ui.button("Add font").clicked() {
+                        font_loader.add_font(&self.state.danmu_font_path);
+                    }
+                    if ui.button("Clear fonts").clicked() {
+                        font_loader.clear();
+                    }
+                    if ui.button("Build fonts").clicked() {
+                        font_loader.rebuild_fonts(eapp_utils::get_default_fonts(), ui.ctx());
+                    }
                 });
             }
         }

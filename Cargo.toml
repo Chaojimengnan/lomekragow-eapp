@@ -23,6 +23,7 @@ simplelog = { version = "0.12.2", default-features = false, features = [
 ] }
 log = "*"
 anyhow = "1.0"
+rfd = "0.13"
 
 [profile.release]
 lto = true

@@ -12,8 +12,8 @@ log.workspace = true
 eapp-utils.workspace = true
 eframe.workspace = true
 serde.workspace = true
+rfd.workspace = true
 walkdir = "2.5.0"
-rfd = "0.13"
 
 [target.'cfg(windows)'.build-dependencies]
 winres = "0.1"
