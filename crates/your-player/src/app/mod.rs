@@ -406,7 +406,7 @@ impl eframe::App for App {
                 ctx.request_repaint();
 
                 let playback_time = self.player.state().playback_time;
-                self.danmu.emit(
+                self.danmu.push_pending(
                     playback_time..(playback_time + 0.1),
                     self.state.danmu_regex.as_ref(),
                 );

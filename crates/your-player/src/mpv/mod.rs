@@ -11,8 +11,8 @@ use std::{
     },
 };
 
-pub mod player;
-pub mod preview;
+pub(crate) mod player;
+pub(crate) mod preview;
 
 pub const DEFAULT_OPTS: &str = r#"# write your own mpv options here
 hwdec=auto

@@ -3,7 +3,7 @@ use eapp_utils::widgets::simple_widgets::{get_theme_button, theme_button};
 use eframe::egui::{self, Color32, CornerRadius, Frame};
 use std::path::Path;
 
-use crate::danmu::DanmuData;
+use crate::danmu::DanmuPtr;
 
 impl super::App {
     pub fn ui_playlist(&mut self, ui: &mut egui::Ui) {
@@ -235,9 +235,7 @@ impl super::App {
                             let text = egui::RichText::new(&danmu.text).color(color);
                             if ui
                                 .selectable_label(
-                                    self.danmu
-                                        .emitted()
-                                        .contains(&(danmu as *const DanmuData as *mut DanmuData)),
+                                    self.danmu.emitted().contains(&DanmuPtr::from(danmu)),
                                     text.clone(),
                                 )
                                 .on_hover_text(text)
