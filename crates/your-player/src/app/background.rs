@@ -5,6 +5,10 @@ use eframe::egui::{self, Align2, Rect, load::SizedTexture, vec2};
 impl super::App {
     pub fn ui_background(&mut self, ui: &mut egui::Ui) {
         self.ui_show_cur_video_frame(ui, self.state.content_rect);
+
+        if self.state.enable_danmu {
+            self.ui_show_danmu(ui, self.state.content_rect);
+        }
     }
 
     fn ui_show_cur_video_frame(&mut self, ui: &egui::Ui, rect: egui::Rect) {
@@ -48,5 +52,14 @@ impl super::App {
             tex = tex.corner_radius(self.adjust_fullscreen(ui, self.adjust(corner_radius.into())));
             tex.paint_at(ui, Rect::from_center_size(rect.center(), scaled_size));
         }
+    }
+
+    fn ui_show_danmu(&mut self, ui: &mut egui::Ui, rect: egui::Rect) {
+        let playback_time = self.player.state().playback_time;
+
+        let elapsed_time = playback_time - self.state.last_playback_time;
+
+        self.state.last_playback_time = playback_time;
+        self.danmu.render(ui, rect, elapsed_time);
     }
 }

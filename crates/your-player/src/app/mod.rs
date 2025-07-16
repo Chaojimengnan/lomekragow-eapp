@@ -1,3 +1,4 @@
+use crate::danmu;
 use crate::{
     mpv::{self, player::PlayState},
     playlist::Playlist,
@@ -23,6 +24,7 @@ pub struct App {
     player: mpv::player::Player,
     preview: mpv::preview::Preview,
     tex_register: TexRegister,
+    danmu: danmu::Manager,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -80,12 +82,24 @@ pub struct State {
 
     #[serde(skip)]
     pub was_playing: bool,
+
+    /// danmu regex string
+    pub danmu_regex_str: String,
+
+    #[serde(skip)]
+    pub danmu_regex: Option<regex::Regex>,
+
+    #[serde(skip)]
+    pub danmu_regex_err_str: Option<String>,
+
+    pub enable_danmu: bool,
 }
 
 #[derive(PartialEq)]
 pub enum SettingType {
     Play,
     Color,
+    Danmu,
 }
 
 #[derive(PartialEq)]
@@ -96,6 +110,7 @@ pub enum LongSettingType {
 #[derive(PartialEq)]
 pub enum PlaylistType {
     Playlist,
+    Danmu,
 }
 
 #[derive(PartialEq, Deserialize, Serialize, Clone, Copy)]
@@ -131,6 +146,10 @@ impl Default for State {
             last_prevent_sleep_time: 0.0,
             last_playing_time: 0.0,
             was_playing: true,
+            danmu_regex_str: String::default(),
+            danmu_regex: None,
+            danmu_regex_err_str: None,
+            enable_danmu: true,
         }
     }
 }
@@ -139,6 +158,7 @@ impl App {
     pub const APP_KEY: &'static str = "app_state";
     pub const MPV_KEY: &'static str = "mpv_state";
     pub const PLAYLIST_KEY: &'static str = "playlist_state";
+    pub const DANMU_KEY: &'static str = "danmu_state";
 
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         eapp_utils::setup_fonts(&cc.egui_ctx);
@@ -180,6 +200,23 @@ impl App {
         let tex_register = TexRegister::default();
         let preview = mpv::preview::Preview::new(200, cc).unwrap();
 
+        let danmu_state = if let Some(storage) = cc.storage {
+            eframe::get_value(storage, Self::DANMU_KEY).unwrap_or_default()
+        } else {
+            danmu::State::default()
+        };
+        let danmu = danmu::Manager::new(danmu_state);
+
+        if !state.danmu_regex_str.is_empty() {
+            state.danmu_regex = match regex::Regex::new(&state.danmu_regex_str) {
+                Ok(v) => Some(v),
+                Err(err) => {
+                    state.danmu_regex_err_str = Some(err.to_string());
+                    None
+                }
+            };
+        }
+
         let waker = Waker::new(cc.egui_ctx.clone(), WakeType::WakeOnLongestDeadLine);
 
         let mut this = Self {
@@ -189,6 +226,7 @@ impl App {
             player,
             preview,
             tex_register,
+            danmu,
         };
 
         if let Some(path_str) = std::env::args().nth(1) {
@@ -207,6 +245,18 @@ impl App {
         if !self.player.state().is_audio {
             self.preview.set_media(media_path);
         }
+
+        let mut path = std::path::PathBuf::from(media_path);
+        path.set_extension("json");
+
+        if path.is_file() {
+            let path_str = path.to_string_lossy();
+            match self.danmu.load_danmu(path.to_string_lossy().as_ref()) {
+                Ok(_) => return,
+                Err(err) => log::error!("load danmu '{}' fails: {err}", path_str.as_ref()),
+            }
+        }
+        self.danmu.clear();
     }
 
     fn adjust(&self, corner_radius: CornerRadius) -> CornerRadius {
@@ -327,6 +377,7 @@ impl eframe::App for App {
         eframe::set_value(storage, Self::APP_KEY, &self.state);
         eframe::set_value(storage, Self::MPV_KEY, &self.player.state());
         eframe::set_value(storage, Self::PLAYLIST_KEY, &self.playlist);
+        eframe::set_value(storage, Self::DANMU_KEY, &self.danmu.state());
     }
 
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
@@ -347,6 +398,19 @@ impl eframe::App for App {
             }
 
             self.ui_background(ui);
+
+            if self.player.state().play_state.is_playing()
+                && self.state.enable_danmu
+                && !self.danmu.danmu().is_empty()
+            {
+                ctx.request_repaint();
+
+                let playback_time = self.player.state().playback_time;
+                self.danmu.emit(
+                    playback_time..(playback_time + 0.1),
+                    self.state.danmu_regex.as_ref(),
+                );
+            }
 
             self.process_if_end_reached();
 

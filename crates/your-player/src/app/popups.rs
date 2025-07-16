@@ -42,7 +42,7 @@ impl super::App {
         ui.set_height(150.0);
         ui.set_width(350.0);
         ui.horizontal(|ui| {
-            for (v, str) in [(Play, "Play"), (Color, "Color")].into_iter() {
+            for (v, str) in [(Play, "Play"), (Color, "Color"), (Danmu, "Danmu")].into_iter() {
                 ui.selectable_value(&mut self.state.setting_type, v, str);
             }
         });
@@ -160,7 +160,57 @@ impl super::App {
                 simple_slider!(hue, set_hue, -100..=100);
                 simple_slider!(sharpen, set_sharpen, -4.0..=4.0);
             }
+            Danmu => {
+                self.ui_setting_popup_contents_danmu(ui);
+            }
         }
+    }
+
+    fn ui_setting_popup_contents_danmu(&mut self, ui: &mut egui::Ui) {
+        ui.label("danmu");
+        toggle_ui(ui, &mut self.state.enable_danmu);
+        ui.end_row();
+
+        ui.label("danmu alpha");
+        ui.add(egui::Slider::new(
+            &mut self.danmu.state_mut().alpha,
+            0..=255,
+        ));
+        ui.end_row();
+
+        ui.label("danmu lower bound");
+        ui.add(egui::Slider::new(
+            &mut self.danmu.state_mut().lower_bound,
+            0.25..=1.0,
+        ));
+        ui.end_row();
+
+        ui.label("danmu lifetime");
+        ui.add(egui::Slider::new(
+            &mut self.danmu.state_mut().lifetime,
+            1.0..=10.0,
+        ));
+        ui.end_row();
+
+        ui.label("danmu rolling speed");
+        ui.add(egui::Slider::new(
+            &mut self.danmu.state_mut().rolling_speed,
+            1.0..=1000.0,
+        ));
+        ui.end_row();
+
+        ui.label("danmu delay");
+        if ui
+            .add(
+                egui::DragValue::new(&mut self.danmu.state_mut().delay)
+                    .speed(1.0)
+                    .suffix("s"),
+            )
+            .changed()
+        {
+            self.danmu.delay_danmu(self.danmu.state().delay);
+        }
+        ui.end_row();
     }
 
     pub fn ui_long_setting_popup(&mut self, ui: &mut egui::Ui) {
