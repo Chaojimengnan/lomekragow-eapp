@@ -1,6 +1,9 @@
 use eapp_utils::{
     borderless,
-    codicons::{ICON_NEW_FILE, ICON_PLAY_CIRCLE, ICON_SAVE, ICON_SETTINGS, ICON_STOP_CIRCLE},
+    codicons::{
+        ICON_LAYOUT_SIDEBAR_LEFT, ICON_NEW_FILE, ICON_PLAY_CIRCLE, ICON_SAVE, ICON_SETTINGS,
+        ICON_STOP_CIRCLE, ICON_TERMINAL,
+    },
     get_body_font_id,
     global_hotkey::{Code, GlobalHotkeyHandler, KeyMap, Modifiers},
     ui_font_selector::UiFontSelector,
@@ -33,6 +36,8 @@ pub struct App {
     script_changed: bool,
     selector: UiFontSelector,
     show_confirm_modal: bool,
+    show_console: bool,
+    show_left_panel: bool,
 }
 
 impl App {
@@ -93,6 +98,8 @@ impl App {
             script_changed: false,
             selector,
             show_confirm_modal: false,
+            show_console: true,
+            show_left_panel: true,
         };
 
         this.rebuild_fonts(&cc.egui_ctx);
@@ -102,12 +109,24 @@ impl App {
 
     fn ui_contents(&mut self, ui: &mut egui::Ui) {
         let max_width = ui.available_width() * 0.65;
+        let max_height = ui.available_height() * 0.65;
 
         egui::SidePanel::left("left_panel")
             .frame(egui::Frame::side_top_panel(ui.style()).fill(Color32::TRANSPARENT))
             .default_width(200.0)
             .width_range(200.0..=max_width)
-            .show_inside(ui, |ui| self.ui_left_panel(ui));
+            .show_animated_inside(ui, self.show_left_panel, |ui| self.ui_left_panel(ui));
+
+        egui::TopBottomPanel::bottom("bottom_panel")
+            .default_height(300.0)
+            .height_range(100.0..=max_height)
+            .resizable(true)
+            .frame(
+                egui::Frame::side_top_panel(ui.style())
+                    .inner_margin(4.0)
+                    .fill(Color32::TRANSPARENT),
+            )
+            .show_animated_inside(ui, self.show_console, |ui| self.ui_bottom_panel(ui));
 
         egui::CentralPanel::default()
             .frame(egui::Frame::central_panel(ui.style()).fill(Color32::TRANSPARENT))
@@ -144,6 +163,20 @@ impl App {
                 .show(|ui| {
                     self.ui_show_global_hotkeys(ui);
                 });
+
+            if ui
+                .selectable_label(self.show_console, ICON_TERMINAL.to_string())
+                .clicked()
+            {
+                self.show_console = !self.show_console;
+            }
+
+            if ui
+                .selectable_label(self.show_left_panel, ICON_LAYOUT_SIDEBAR_LEFT.to_string())
+                .clicked()
+            {
+                self.show_left_panel = !self.show_left_panel;
+            }
 
             let executing = self.executor.is_executing();
             let text = if executing {
@@ -260,6 +293,40 @@ impl App {
                         }
                     }
                 });
+            });
+    }
+
+    fn ui_bottom_panel(&mut self, ui: &mut egui::Ui) {
+        fn get_bg_color(ui: &egui::Ui) -> Color32 {
+            let visuals = ui.visuals();
+
+            let base = if visuals.dark_mode {
+                visuals.extreme_bg_color
+            } else {
+                visuals.window_fill()
+            };
+
+            if visuals.dark_mode {
+                base.linear_multiply(0.95)
+            } else {
+                base.linear_multiply(1.05)
+            }
+        }
+
+        egui::Frame::new()
+            .corner_radius(8.0)
+            .inner_margin(8.0)
+            .fill(get_bg_color(ui))
+            .show(ui, |ui| {
+                egui::ScrollArea::vertical()
+                    .auto_shrink([false, false])
+                    .stick_to_bottom(true)
+                    .max_height(ui.available_height())
+                    .show(ui, |ui| {
+                        for log in self.executor.get_console_logs() {
+                            ui.label(log);
+                        }
+                    });
             });
     }
 
@@ -381,6 +448,7 @@ impl eframe::App for App {
             borderless::handle_resize(ui);
 
             self.poll_global_hotkey_events(ui.ctx());
+            self.executor.update();
 
             if let Some(Err(e)) = self.executor.try_get_execute_result() {
                 self.error = Some(e);

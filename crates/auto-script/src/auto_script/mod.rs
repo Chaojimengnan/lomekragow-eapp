@@ -1,4 +1,5 @@
 pub(crate) mod binding;
+pub(crate) mod console;
 pub(crate) mod script_editor;
 pub(crate) mod script_executor;
 pub(crate) mod script_manager;

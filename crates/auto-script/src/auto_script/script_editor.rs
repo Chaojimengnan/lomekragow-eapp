@@ -48,6 +48,7 @@ impl ScriptEditor {
         let mut output = TextEdit::multiline(content)
             .code_editor()
             .desired_width(f32::INFINITY)
+            .background_color(Self::get_bg_color(ui))
             .layouter(&mut |ui, code, wrap_width| {
                 Self::highlight(ui, code.as_str(), wrap_width, check_error)
             })
@@ -64,6 +65,14 @@ impl ScriptEditor {
 
     pub fn is_showing_completion(&self) -> bool {
         self.completion.is_some()
+    }
+
+    pub fn get_bg_color(ui: &egui::Ui) -> Color32 {
+        if ui.visuals().dark_mode {
+            Color32::from_rgb(25, 30, 40)
+        } else {
+            Color32::from_rgb(250, 248, 242)
+        }
     }
 
     fn input_completion(&mut self, ui: &mut Ui, content: &mut String) -> bool {
