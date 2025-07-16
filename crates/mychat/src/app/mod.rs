@@ -8,9 +8,9 @@ use eapp_utils::{
     delayed_toggle::DelayedToggle,
     get_body_font_id,
     ui_font_selector::UiFontSelector,
-    widgets::simple_widgets::{get_theme_button, theme_button},
+    widgets::simple_widgets::{frameless_btn, get_theme_button, theme_button},
 };
-use eframe::egui::{self, Color32, UiBuilder, Vec2};
+use eframe::egui::{self, Color32, PopupCloseBehavior, UiBuilder, Vec2};
 use serde::{Deserialize, Serialize};
 
 use crate::chat::{Message, Role, config::ChatConfig, dialogue_manager::DialogueManager};
@@ -119,10 +119,12 @@ impl App {
                 self.rebuild_fonts(ui.ctx());
             }
 
-            ui.menu_button(ICON_SETTINGS_GEAR.to_string(), |ui| {
-                ui.set_max_height(ui.ctx().screen_rect().height() * 0.65);
-                self.ui_setting(ui);
-            });
+            egui::Popup::menu(&frameless_btn(ui, ICON_SETTINGS_GEAR.to_string()))
+                .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
+                .show(|ui| {
+                    ui.set_max_height(ui.ctx().screen_rect().height() * 0.65);
+                    self.ui_setting(ui);
+                });
 
             ui.painter().text(
                 title_bar_rect.center(),

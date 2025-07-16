@@ -6,7 +6,7 @@ use eapp_utils::{
     ui_font_selector::UiFontSelector,
     widgets::simple_widgets::{auto_selectable, frameless_btn, get_theme_button, theme_button},
 };
-use eframe::egui::{self, Color32, UiBuilder, Vec2};
+use eframe::egui::{self, Color32, PopupCloseBehavior, UiBuilder, Vec2};
 use serde::{Deserialize, Serialize};
 
 use crate::auto_script::{
@@ -139,9 +139,11 @@ impl App {
                 }
             }
 
-            ui.menu_button(ICON_SETTINGS.to_string(), |ui| {
-                self.ui_show_global_hotkeys(ui);
-            });
+            egui::Popup::menu(&frameless_btn(ui, ICON_SETTINGS.to_string()))
+                .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
+                .show(|ui| {
+                    self.ui_show_global_hotkeys(ui);
+                });
 
             let executing = self.executor.is_executing();
             let text = if executing {

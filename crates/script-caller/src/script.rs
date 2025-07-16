@@ -1,9 +1,10 @@
 use eapp_utils::{
     codicons::{ICON_ERROR, ICON_PIN, ICON_PINNED, ICON_REPLY},
     get_body_text_size,
+    widgets::simple_widgets::frameless_btn,
 };
 use eframe::egui::{
-    self, TextEdit,
+    self, PopupCloseBehavior, TextEdit,
     collapsing_header::CollapsingState,
     text::{CCursor, CCursorRange},
 };
@@ -134,11 +135,13 @@ impl Arg {
 
                             let errors = path_utils::check_path_existence(value);
                             if !errors.is_empty() {
-                                ui.menu_button(ICON_ERROR.to_string(), |ui| {
-                                    for error in &errors {
-                                        ui.label(error);
-                                    }
-                                });
+                                egui::Popup::menu(&frameless_btn(ui, ICON_ERROR.to_string()))
+                                    .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
+                                    .show(|ui| {
+                                        for error in &errors {
+                                            ui.label(error);
+                                        }
+                                    });
                             }
                         }
                     }

@@ -4,9 +4,9 @@ use eapp_utils::{
     codicons::{ICON_FOLDER, ICON_SETTINGS_GEAR},
     get_body_font_id,
     ui_font_selector::UiFontSelector,
-    widgets::simple_widgets::{get_theme_button, theme_button, toggle_ui},
+    widgets::simple_widgets::{frameless_btn, get_theme_button, theme_button, toggle_ui},
 };
-use eframe::egui::{self, Color32, RichText, UiBuilder, Vec2, Widget};
+use eframe::egui::{self, Color32, PopupCloseBehavior, RichText, UiBuilder, Vec2, Widget};
 use serde::{Deserialize, Serialize};
 use std::thread::JoinHandle;
 
@@ -125,10 +125,12 @@ impl App {
             let synchronizing = self.syncer.as_ref().unwrap().synchronizing();
 
             ui.add_enabled_ui(!synchronizing, |ui| {
-                ui.menu_button(ICON_SETTINGS_GEAR.to_string(), |ui| {
-                    ui.checkbox(&mut self.state.only_sync, "Only sync");
-                    ui.checkbox(&mut self.state.allow_delete, "Allow delete");
-                });
+                egui::Popup::menu(&frameless_btn(ui, ICON_SETTINGS_GEAR.to_string()))
+                    .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
+                    .show(|ui| {
+                        ui.checkbox(&mut self.state.only_sync, "Only sync");
+                        ui.checkbox(&mut self.state.allow_delete, "Allow delete");
+                    });
             });
 
             ui.painter().text(

@@ -4,9 +4,9 @@ use eapp_utils::{
     codicons::{ICON_FOLDER, ICON_SETTINGS_GEAR},
     get_body_font_id,
     ui_font_selector::UiFontSelector,
-    widgets::simple_widgets::{auto_selectable, get_theme_button, theme_button},
+    widgets::simple_widgets::{auto_selectable, frameless_btn, get_theme_button, theme_button},
 };
-use eframe::egui::{self, Color32, Event, Key, UiBuilder, Vec2};
+use eframe::egui::{self, Color32, Event, Key, PopupCloseBehavior, UiBuilder, Vec2};
 
 #[derive(PartialEq, Eq)]
 enum RunMode {
@@ -209,59 +209,63 @@ impl App {
                 self.rebuild_fonts(ui.ctx());
             }
 
-            ui.menu_button(ICON_SETTINGS_GEAR.to_string(), |ui| {
-                ui.horizontal(|ui| {
-                    ui.label("info.json");
+            egui::Popup::menu(&frameless_btn(ui, ICON_SETTINGS_GEAR.to_string()))
+                .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
+                .show(|ui| {
+                    ui.horizontal(|ui| {
+                        ui.label("info.json");
 
-                    if ui.button(ICON_FOLDER.to_string()).clicked() {
-                        if let Some(open_path) = rfd::FileDialog::new()
-                            .add_filter("JSON files", &["json"])
-                            .set_directory(self.cwd.clone().unwrap_or_default())
-                            .pick_file()
-                        {
-                            self.info_json_path = Some(open_path.to_string_lossy().to_string());
+                        if ui.button(ICON_FOLDER.to_string()).clicked() {
+                            if let Some(open_path) = rfd::FileDialog::new()
+                                .add_filter("JSON files", &["json"])
+                                .set_directory(self.cwd.clone().unwrap_or_default())
+                                .pick_file()
+                            {
+                                self.info_json_path = Some(open_path.to_string_lossy().to_string());
+                            }
                         }
-                    }
 
-                    let mut path_str = self.info_json_path.clone().unwrap_or_default();
-                    if ui.text_edit_singleline(&mut path_str).changed() {
-                        self.info_json_path = if path_str.is_empty() {
-                            None
-                        } else {
-                            Some(path_str.clone())
-                        };
-                    }
+                        let mut path_str = self.info_json_path.clone().unwrap_or_default();
+                        if ui.text_edit_singleline(&mut path_str).changed() {
+                            self.info_json_path = if path_str.is_empty() {
+                                None
+                            } else {
+                                Some(path_str.clone())
+                            };
+                        }
+                    });
+
+                    ui.separator();
+
+                    ui.horizontal(|ui| {
+                        if ui.button("Cancel").clicked() {
+                            ui.close();
+                        }
+
+                        if ui.button("Reload").clicked() {
+                            (self.loader, self.load_error) = match script::Loader::load(
+                                self.info_json_path.as_deref(),
+                                &self.remembered_args,
+                            ) {
+                                Ok(loader) => (loader, None),
+                                Err(err) => (script::Loader::default(), Some(err.to_string())),
+                            };
+
+                            self.cur_sel_tag = None;
+                            self.cur_sel_script = 0;
+                        }
+                    });
                 });
 
-                ui.separator();
-
-                ui.horizontal(|ui| {
-                    if ui.button("Cancel").clicked() {
-                        ui.close();
-                    }
-
-                    if ui.button("Reload").clicked() {
-                        (self.loader, self.load_error) = match script::Loader::load(
-                            self.info_json_path.as_deref(),
-                            &self.remembered_args,
-                        ) {
-                            Ok(loader) => (loader, None),
-                            Err(err) => (script::Loader::default(), Some(err.to_string())),
-                        };
-
-                        self.cur_sel_tag = None;
-                        self.cur_sel_script = 0;
-                    }
+            egui::Popup::menu(&frameless_btn(ui, ICON_FOLDER.to_string()))
+                .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
+                .show(|ui| {
+                    let msg = match self.cwd.as_ref() {
+                        Some(cwd) => cwd,
+                        None => "Cannot read current work directory",
+                    };
+                    ui.label(msg);
                 });
-            });
-
-            ui.menu_button(ICON_FOLDER.to_string(), |ui| {
-                let msg = match self.cwd.as_ref() {
-                    Some(cwd) => cwd,
-                    None => "Cannot read current work directory",
-                };
-                ui.label(msg);
-            });
 
             ui.painter().text(
                 title_bar_rect.center(),
