@@ -117,6 +117,11 @@ pub const GUI_METHODS: &[(&str, &str, &str)] = &[
         "Get the screen resolution",
     ),
     (
+        "get_current_exe_dir",
+        "get_current_exe_dir() -> string",
+        "Get the directory path of the current executable",
+    ),
+    (
         "sleep",
         "sleep(seconds: float)",
         "Pause script execution for the given number of seconds",

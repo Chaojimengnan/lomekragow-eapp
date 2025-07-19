@@ -176,7 +176,18 @@ impl UserData for AutoGui {
                 .map_err(|e| RuntimeError(e.to_string()))
         });
         methods.add_method_mut("get_screen_size", |_, this, ()| {
+            cancelled!(this);
             Ok(this.inner.get_screen_size())
+        });
+        methods.add_method("get_current_exe_dir", |_, this, ()| {
+            cancelled!(this);
+            std::env::current_exe()
+                .map_err(|e| RuntimeError(e.to_string()))
+                .and_then(|exe| {
+                    exe.parent()
+                        .map(|p| p.to_string_lossy().to_string())
+                        .ok_or_else(|| RuntimeError("No parent directory".into()))
+                })
         });
 
         // ----- Sleep binding -----
