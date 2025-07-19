@@ -311,7 +311,6 @@ impl App {
                     );
 
                     let rect = {
-                        let rect = response.rect;
                         let amount = rect.size() * 0.2;
                         rect.shrink2(amount)
                     };
