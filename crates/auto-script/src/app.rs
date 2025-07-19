@@ -1,13 +1,15 @@
 use eapp_utils::{
     borderless,
     codicons::{
-        ICON_LAYOUT_SIDEBAR_LEFT, ICON_NEW_FILE, ICON_PLAY_CIRCLE, ICON_SAVE, ICON_SETTINGS,
-        ICON_STOP_CIRCLE, ICON_TERMINAL,
+        ICON_DEBUG_START, ICON_DEBUG_STOP, ICON_LAYOUT_SIDEBAR_LEFT, ICON_NEW_FILE, ICON_SAVE,
+        ICON_SETTINGS, ICON_TERMINAL,
     },
     get_body_font_id,
     global_hotkey::{Code, GlobalHotkeyHandler, KeyMap, Modifiers},
     ui_font_selector::UiFontSelector,
-    widgets::simple_widgets::{auto_selectable, frameless_btn, get_theme_button, theme_button},
+    widgets::simple_widgets::{
+        PlainButton, auto_selectable, frameless_btn, get_theme_button, theme_button,
+    },
 };
 use eframe::egui::{self, Align2, Color32, PopupCloseBehavior, UiBuilder, Vec2};
 use serde::{Deserialize, Serialize};
@@ -179,21 +181,6 @@ impl App {
                 self.show_left_panel = !self.show_left_panel;
             }
 
-            let executing = self.executor.is_executing();
-            let text = if executing {
-                ICON_STOP_CIRCLE.to_string()
-            } else {
-                ICON_PLAY_CIRCLE.to_string()
-            };
-
-            if frameless_btn(ui, text).clicked() {
-                if executing {
-                    self.executor.cancel();
-                } else if let Some(script) = self.manager.scripts.get_mut(self.cur_sel) {
-                    self.executor.execute_script(script.content.clone());
-                }
-            }
-
             let title = if self.script_changed {
                 "auto-script (unsaved)"
             } else {
@@ -274,28 +261,57 @@ impl App {
                 ui.with_layout(layout, |ui| {
                     let is_executing = self.executor.is_executing();
 
-                    let resp = ui.add_enabled_ui(!is_executing, |ui| {
-                        let response =
+                    let mut response = ui
+                        .add_enabled_ui(!is_executing, |ui| {
                             self.editor
-                                .ui(ui, &mut script.content, self.check_error.as_ref());
+                                .ui(ui, &mut script.content, self.check_error.as_ref())
+                        })
+                        .inner;
 
-                        if response.changed() {
-                            self.script_changed = true;
-                            match self.executor.check_script(&script.content) {
-                                Ok(_) => self.check_error = None,
-                                Err(err) => self.check_error = Some(err),
-                            }
+                    if response.changed() {
+                        self.script_changed = true;
+                        match self.executor.check_script(&script.content) {
+                            Ok(_) => self.check_error = None,
+                            Err(err) => self.check_error = Some(err),
                         }
+                    }
 
-                        if let Some(err) = self.check_error.as_ref() {
-                            if !self.editor.is_showing_completion() {
-                                response.on_hover_text_at_pointer(err);
-                            }
+                    if let Some(err) = self.check_error.as_ref() {
+                        if !self.editor.is_showing_completion() {
+                            response = response.on_hover_text_at_pointer(err);
                         }
-                    });
+                    }
+
+                    let rect = response.rect;
+                    let btn_size = egui::vec2(28.0, 28.0);
+                    let btn_pos = rect.right_bottom() - btn_size - egui::vec2(4.0, 4.0);
+
+                    ui.scope_builder(
+                        UiBuilder::new().max_rect(egui::Rect::from_min_size(btn_pos, btn_size)),
+                        |ui| {
+                            let executing = self.executor.is_executing();
+                            let (icon, hover_text) = if executing {
+                                (ICON_DEBUG_STOP.to_string(), "Stop")
+                            } else {
+                                (ICON_DEBUG_START.to_string(), "Start")
+                            };
+
+                            let btn = PlainButton::new(btn_size, icon)
+                                .font_size(btn_size.y)
+                                .hover(Color32::TRANSPARENT);
+
+                            if ui.add(btn).on_hover_text(hover_text).clicked() {
+                                if executing {
+                                    self.executor.cancel();
+                                } else {
+                                    self.executor.execute_script(script.content.clone());
+                                }
+                            }
+                        },
+                    );
 
                     let rect = {
-                        let rect = resp.response.rect;
+                        let rect = response.rect;
                         let amount = rect.size() * 0.2;
                         rect.shrink2(amount)
                     };
