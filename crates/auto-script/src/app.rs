@@ -282,7 +282,7 @@ impl App {
                         }
                     }
 
-                    let rect = response.rect;
+                    let rect = response.interact_rect;
                     let btn_size = egui::vec2(28.0, 28.0);
                     let btn_pos = rect.right_bottom() - btn_size - egui::vec2(4.0, 4.0);
 
