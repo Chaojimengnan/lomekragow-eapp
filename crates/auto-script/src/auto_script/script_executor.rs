@@ -10,6 +10,7 @@ use std::{
 };
 
 use crate::auto_script::{
+    CONSOLE_SYSTEM_LOG_PREFIEX, SCRIPT_EXECUTION_CANCELLED_MSG,
     binding::AutoScript,
     console::{Console, inject_lua_console},
 };
@@ -82,6 +83,16 @@ impl ScriptExecutor {
                     .unwrap()
                     .join()
                     .unwrap_or_else(|e| Err(format!("Script panicked: {e:?}")));
+
+                if let Err(err) = result.as_ref() {
+                    if err.contains(SCRIPT_EXECUTION_CANCELLED_MSG) {
+                        self.console.logs.push_back(format!(
+                            "{CONSOLE_SYSTEM_LOG_PREFIEX} Script execution was cancelled by user"
+                        ));
+                        return Some(Ok(()));
+                    }
+                }
+
                 return Some(result);
             }
         }

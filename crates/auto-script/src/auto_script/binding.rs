@@ -8,6 +8,8 @@ use std::{
     time::Duration,
 };
 
+use crate::auto_script::SCRIPT_EXECUTION_CANCELLED_MSG;
+
 pub struct AutoScript;
 
 impl AutoScript {
@@ -43,7 +45,7 @@ impl UserData for AutoGui {
         macro_rules! cancelled {
             ($this:expr) => {
                 if $this.is_cancelled() {
-                    return Err(RuntimeError("Script cancelled".into()));
+                    return Err(RuntimeError(SCRIPT_EXECUTION_CANCELLED_MSG.into()));
                 }
             };
         }

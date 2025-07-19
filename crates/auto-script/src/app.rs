@@ -9,11 +9,12 @@ use eapp_utils::{
     ui_font_selector::UiFontSelector,
     widgets::simple_widgets::{auto_selectable, frameless_btn, get_theme_button, theme_button},
 };
-use eframe::egui::{self, Color32, PopupCloseBehavior, UiBuilder, Vec2};
+use eframe::egui::{self, Align2, Color32, PopupCloseBehavior, UiBuilder, Vec2};
 use serde::{Deserialize, Serialize};
 
 use crate::auto_script::{
-    script_editor::ScriptEditor, script_executor::ScriptExecutor, script_manager::ScriptManager,
+    CONSOLE_SYSTEM_LOG_PREFIEX, script_editor::ScriptEditor, script_executor::ScriptExecutor,
+    script_manager::ScriptManager,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Deserialize, Serialize)]
@@ -193,10 +194,6 @@ impl App {
                 }
             }
 
-            if executing {
-                ui.spinner();
-            }
-
             let title = if self.script_changed {
                 "auto-script (unsaved)"
             } else {
@@ -275,22 +272,36 @@ impl App {
             .show(ui, |ui| {
                 let layout = egui::Layout::centered_and_justified(egui::Direction::LeftToRight);
                 ui.with_layout(layout, |ui| {
-                    let response =
-                        self.editor
-                            .ui(ui, &mut script.content, self.check_error.as_ref());
+                    let is_executing = self.executor.is_executing();
 
-                    if response.changed() {
-                        self.script_changed = true;
-                        match self.executor.check_script(&script.content) {
-                            Ok(_) => self.check_error = None,
-                            Err(err) => self.check_error = Some(err),
-                        }
-                    }
+                    let resp = ui.add_enabled_ui(!is_executing, |ui| {
+                        let response =
+                            self.editor
+                                .ui(ui, &mut script.content, self.check_error.as_ref());
 
-                    if let Some(err) = self.check_error.as_ref() {
-                        if !self.editor.is_showing_completion() {
-                            response.on_hover_text_at_pointer(err);
+                        if response.changed() {
+                            self.script_changed = true;
+                            match self.executor.check_script(&script.content) {
+                                Ok(_) => self.check_error = None,
+                                Err(err) => self.check_error = Some(err),
+                            }
                         }
+
+                        if let Some(err) = self.check_error.as_ref() {
+                            if !self.editor.is_showing_completion() {
+                                response.on_hover_text_at_pointer(err);
+                            }
+                        }
+                    });
+
+                    let rect = {
+                        let rect = resp.response.rect;
+                        let amount = rect.size() * 0.2;
+                        rect.shrink2(amount)
+                    };
+
+                    if is_executing {
+                        Self::draw_running_hint(ui, rect);
                     }
                 });
             });
@@ -324,7 +335,12 @@ impl App {
                     .max_height(ui.available_height())
                     .show(ui, |ui| {
                         for log in self.executor.get_console_logs() {
-                            ui.label(log);
+                            let color = if log.starts_with(CONSOLE_SYSTEM_LOG_PREFIEX) {
+                                ui.visuals().warn_fg_color
+                            } else {
+                                ui.visuals().text_color()
+                            };
+                            ui.label(egui::RichText::new(log).color(color));
                         }
                     });
             });
@@ -391,6 +407,22 @@ impl App {
                 });
             });
         }
+    }
+
+    fn draw_running_hint(ui: &mut egui::Ui, rect: egui::Rect) {
+        egui::Spinner::new().paint_at(ui, rect);
+
+        let time = ui.input(|i| i.time);
+        let dot_count = (time as usize) % 3;
+        let text = format!("Running{}", ".".repeat(dot_count + 2));
+
+        ui.painter().text(
+            rect.center(),
+            Align2::CENTER_CENTER,
+            text,
+            get_body_font_id(ui),
+            ui.visuals().strong_text_color(),
+        );
     }
 
     fn poll_global_hotkey_events(&mut self, ctx: &egui::Context) {

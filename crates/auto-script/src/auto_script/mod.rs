@@ -4,6 +4,9 @@ pub(crate) mod script_editor;
 pub(crate) mod script_executor;
 pub(crate) mod script_manager;
 
+pub const SCRIPT_EXECUTION_CANCELLED_MSG: &str = "Script cancelled";
+pub const CONSOLE_SYSTEM_LOG_PREFIEX: &str = "[SCRIPT_EXECUTOR]";
+
 pub const DEFAULT_SCRIPT_CONTENTS: &str = r#"local gui = AutoScript.new()
 "#;
 
