@@ -2,8 +2,14 @@ use eframe::egui::{
     self,
     ahash::{HashMap, HashMapExt},
 };
-use image::AnimationDecoder;
-use std::time::{Duration, Instant};
+use image::{
+    AnimationDecoder, DynamicImage, Frame,
+    codecs::{gif::GifDecoder, webp::WebPDecoder},
+};
+use std::{
+    io::Cursor,
+    time::{Duration, Instant},
+};
 
 use crate::lifo;
 
@@ -87,64 +93,24 @@ impl TexLoader {
         let ctx = ctx.clone();
         std::thread::spawn(move || {
             loop {
-                match cmd_receiver.recv() {
-                    Ok(cmd) => match cmd {
-                        LoadCommand::Load(image_path) => eapp_utils::capture_error!(
-                            error => log::warn!("error when load image '{image_path}': {error}"),
-                            {
-                                let content = std::fs::read(&image_path)?;
-                                match image::guess_format(&content)? {
-                                    image::ImageFormat::Gif => {
-                                        let frames = image::codecs::gif::GifDecoder::new(std::io::Cursor::new(content))?
-                                            .into_frames()
-                                            .collect_frames()?
-                                            .into_iter()
-                                            .map(|frame| {
-                                                let (num, den) = frame.delay().numer_denom_ms();
-                                                let delay_ms = num as f32  / den as f32;
+                let Ok(cmd) = cmd_receiver.recv() else {
+                    return;
+                };
 
-                                                (
-                                                    egui::ColorImage::from_rgba_unmultiplied(
-                                                        [
-                                                            frame.buffer().width() as _,
-                                                            frame.buffer().height() as _,
-                                                        ],
-                                                        frame.buffer(),
-                                                    ),
-                                                    delay_ms as u64,
-                                                )
-                                            })
-                                            .collect();
-
-                                        image_sender
-                                            .send((image_path.clone(), Image::Animated(frames)))
-                                            .unwrap();
-                                    }
-                                    // image::ImageFormat::WebP => todo!(),
-                                    fmt => {
-                                        let img = image::load_from_memory_with_format(&content, fmt)?;
-                                        let size = [img.width() as _, img.height() as _];
-                                        let image_buffer = img.to_rgba8();
-                                        let pixels = image_buffer.as_flat_samples();
-                                        let color_image = egui::ColorImage::from_rgba_unmultiplied(
-                                            size,
-                                            pixels.as_slice(),
-                                        );
-
-                                        image_sender
-                                            .send((
-                                                image_path.clone(),
-                                                Image::Static(color_image),
-                                            ))
-                                            .unwrap();
-                                    }
-                                }
-                                ctx.request_repaint();
+                match cmd {
+                    LoadCommand::Load(image_path) => {
+                        let image = match Self::load_image(&image_path) {
+                            Ok(image) => image,
+                            Err(error) => {
+                                log::warn!("error when load image '{image_path}': {error}");
+                                continue;
                             }
-                        ),
-                    },
-                    Err(_) => return,
-                }
+                        };
+
+                        image_sender.send((image_path, image)).unwrap();
+                        ctx.request_repaint();
+                    }
+                };
             }
         });
 
@@ -279,5 +245,57 @@ impl TexLoader {
 
     pub fn forget_all(&mut self) {
         self.textures.clear();
+    }
+
+    fn dynamic_image_to_image(img: DynamicImage) -> Image {
+        let size = [img.width() as _, img.height() as _];
+        let image_buffer = img.to_rgba8();
+        let pixels = image_buffer.as_flat_samples();
+        let color_image = egui::ColorImage::from_rgba_unmultiplied(size, pixels.as_slice());
+
+        Image::Static(color_image)
+    }
+
+    fn frames_to_image(frames: Vec<Frame>) -> Image {
+        let frames = frames
+            .into_iter()
+            .map(|frame| {
+                let (num, den) = frame.delay().numer_denom_ms();
+                let delay_ms = num as f32 / den as f32;
+                (
+                    egui::ColorImage::from_rgba_unmultiplied(
+                        [frame.buffer().width() as _, frame.buffer().height() as _],
+                        frame.buffer(),
+                    ),
+                    delay_ms as u64,
+                )
+            })
+            .collect();
+
+        Image::Animated(frames)
+    }
+
+    fn load_image(image_path: &str) -> Result<Image, Box<dyn std::error::Error>> {
+        let content = std::fs::read(image_path)?;
+        let image = match image::guess_format(&content)? {
+            image::ImageFormat::Gif => Self::frames_to_image(
+                GifDecoder::new(Cursor::new(content))?
+                    .into_frames()
+                    .collect_frames()?,
+            ),
+            image::ImageFormat::WebP => {
+                let decoder = WebPDecoder::new(Cursor::new(&content))?;
+                if decoder.has_animation() {
+                    Self::frames_to_image(decoder.into_frames().collect_frames()?)
+                } else {
+                    Self::dynamic_image_to_image(DynamicImage::from_decoder(decoder)?)
+                }
+            }
+            fmt => {
+                Self::dynamic_image_to_image(image::load_from_memory_with_format(&content, fmt)?)
+            }
+        };
+
+        Ok(image)
     }
 }

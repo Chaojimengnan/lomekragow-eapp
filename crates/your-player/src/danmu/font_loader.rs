@@ -63,13 +63,19 @@ impl DanmuFontLoader {
             }
         }
 
+        let proportional = fonts
+            .families
+            .entry(FontFamily::Proportional)
+            .or_default()
+            .clone();
+
+        let danmu_family = fonts.families.entry(self.family.clone()).or_default();
+
         if !danmu_fonts.is_empty() {
-            fonts
-                .families
-                .entry(self.family.clone())
-                .or_default()
-                .extend(danmu_fonts);
+            danmu_family.extend(danmu_fonts);
         }
+
+        danmu_family.extend(proportional);
 
         fonts
     }
