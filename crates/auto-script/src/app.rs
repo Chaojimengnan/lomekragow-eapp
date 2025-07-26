@@ -4,7 +4,7 @@ use eapp_utils::{
         ICON_DEBUG_START, ICON_DEBUG_STOP, ICON_LAYOUT_SIDEBAR_LEFT, ICON_NEW_FILE, ICON_SAVE,
         ICON_SETTINGS, ICON_TERMINAL,
     },
-    get_body_font_id,
+    get_body_font_id, get_button_height,
     global_hotkey::{Code, GlobalHotkeyHandler, KeyMap, Modifiers},
     ui_font_selector::UiFontSelector,
     widgets::simple_widgets::{
@@ -503,7 +503,7 @@ impl eframe::App for App {
 
             let app_rect = ui.max_rect();
 
-            let title_bar_height = 32.0;
+            let title_bar_height = get_button_height(ui) + 16.0;
             let title_bar_rect = {
                 let mut rect = app_rect;
                 rect.max.y = rect.min.y + title_bar_height;

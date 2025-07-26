@@ -2,7 +2,7 @@ use crate::script::{self, RememberedArgs, Script, args_to_escaped_string};
 use eapp_utils::{
     borderless,
     codicons::{ICON_FOLDER, ICON_SETTINGS_GEAR},
-    get_body_font_id,
+    get_body_font_id, get_button_height,
     ui_font_selector::UiFontSelector,
     widgets::simple_widgets::{auto_selectable, frameless_btn, get_theme_button, theme_button},
 };
@@ -470,7 +470,7 @@ impl eframe::App for App {
 
             let app_rect = ui.max_rect();
 
-            let title_bar_height = 32.0;
+            let title_bar_height = get_button_height(ui) + 16.0;
             let title_bar_rect = {
                 let mut rect = app_rect;
                 rect.max.y = rect.min.y + title_bar_height;

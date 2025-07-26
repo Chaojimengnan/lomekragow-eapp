@@ -17,7 +17,7 @@ use crate::chat::{
 
 impl super::App {
     pub fn ui_right_panel(&mut self, ui: &mut egui::Ui) {
-        let input_height = 142.0;
+        let input_height = (ui.available_height() * 0.3).max(142.0);
         let height = (ui.available_height() - input_height - ui.spacing().item_spacing.y).max(0.0);
 
         let show_summarized =
@@ -66,7 +66,9 @@ impl super::App {
             dialogue.set_scroll_offset(show_summarized, output.state.offset.y);
         }
 
-        self.ui_input(ui, input_height);
+        ui.allocate_ui(vec2(ui.available_width(), input_height), |ui| {
+            self.ui_input(ui);
+        });
     }
 
     fn ui_show_dialogues(&mut self, ui: &mut egui::Ui, show_summarized: bool) {
@@ -146,7 +148,7 @@ impl super::App {
         }
     }
 
-    fn ui_input(&mut self, ui: &mut egui::Ui, input_height: f32) {
+    fn ui_input(&mut self, ui: &mut egui::Ui) {
         ui.separator();
 
         ui.horizontal(|ui| {
@@ -188,18 +190,25 @@ impl super::App {
             ui.selectable_value(&mut self.role, Role::User, "User");
         });
 
+        let height = ui.available_height();
         ui.horizontal(|ui| {
-            ui.set_height((input_height - 26.0).max(0.0));
-            egui::ScrollArea::vertical()
-                .auto_shrink([true, false])
-                .max_height(f32::INFINITY)
-                .show(ui, |ui| {
-                    TextEdit::multiline(&mut self.input)
-                        .hint_text("Type a message")
-                        .desired_rows(7)
-                        .desired_width(ui.available_width() - 40.0)
-                        .ui(ui);
-                });
+            let button_size = egui::Vec2::new(36.0, height);
+            let scroll_width =
+                (ui.available_width() - button_size.x - ui.spacing().item_spacing.x).max(0.0);
+
+            ui.allocate_ui(egui::Vec2::new(scroll_width, height), |ui| {
+                egui::ScrollArea::vertical()
+                    .max_height(height)
+                    .auto_shrink([false, false])
+                    .show(ui, |ui| {
+                        ui.centered_and_justified(|ui| {
+                            TextEdit::multiline(&mut self.input)
+                                .hint_text("Type a message")
+                                .desired_width(scroll_width - 8.0)
+                                .ui(ui);
+                        });
+                    });
+            });
 
             let is_idle = self.manager.is_cur_dialogue_idle();
             let icon = if is_idle {
@@ -207,11 +216,9 @@ impl super::App {
             } else {
                 ICON_STOP_CIRCLE.to_string()
             };
+            let icon = egui::RichText::new(icon).size(24.0);
 
-            if ui
-                .add_sized(ui.available_size(), Button::new(icon))
-                .clicked()
-            {
+            if ui.add_sized(button_size, Button::new(icon)).clicked() {
                 if self.manager.is_empty() {
                     self.manager.new_dialogue();
                 }

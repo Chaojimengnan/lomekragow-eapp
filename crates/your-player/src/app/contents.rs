@@ -2,7 +2,7 @@ use crate::mpv::{self, player::PlayState};
 use eapp_utils::{
     borderless,
     codicons::{ICON_TRIANGLE_LEFT, ICON_TRIANGLE_RIGHT},
-    get_body_font_id,
+    get_body_font_id, get_button_height,
     widgets::{
         progress_bar::{ProgressBar, draw_progress_bar_background, value_from_x},
         simple_widgets::{PlainButton, popup_animated, text_in_center_bottom_of_rect},
@@ -21,7 +21,7 @@ impl super::App {
                 let app_rect = ui.max_rect();
                 self.state.content_rect = app_rect;
 
-                let title_bar_height = 28.0;
+                let title_bar_height = get_button_height(ui) + 12.0;
                 let title_bar_rect = {
                     let mut rect = app_rect;
                     rect.max.y = rect.min.y + title_bar_height;

@@ -3,7 +3,7 @@ use chardetng::EncodingDetector;
 use eapp_utils::{
     borderless,
     codicons::{ICON_TRIANGLE_DOWN, ICON_TRIANGLE_UP},
-    get_body_font_id,
+    get_body_font_id, get_button_height,
     ui_font_selector::UiFontSelector,
     widgets::simple_widgets::{get_theme_button, theme_button},
 };
@@ -384,7 +384,7 @@ impl App {
         ui.set_clip_rect(ui.max_rect());
 
         egui::TopBottomPanel::bottom("bottom_panel")
-            .exact_height(32.0)
+            .exact_height(get_button_height(ui) + 16.0)
             .frame(egui::Frame::side_top_panel(ui.style()).fill(Color32::TRANSPARENT))
             .show_inside(ui, |ui| self.ui_bottom_panel(ui));
 
@@ -659,7 +659,7 @@ impl eframe::App for App {
 
             let app_rect = ui.max_rect();
 
-            let title_bar_height = 32.0;
+            let title_bar_height = get_button_height(ui) + 16.0;
             let title_bar_rect = {
                 let mut rect = app_rect;
                 rect.max.y = rect.min.y + title_bar_height;

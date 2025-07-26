@@ -9,7 +9,7 @@ use eapp_utils::{
         ICON_COFFEE, ICON_FOLDER, ICON_GO_TO_FILE, ICON_INSPECT, ICON_NEW_FILE, ICON_REFRESH,
         ICON_SCREEN_FULL, ICON_SCREEN_NORMAL, ICON_TRIANGLE_LEFT, ICON_TRIANGLE_RIGHT,
     },
-    get_body_font_id, get_body_text_size,
+    get_body_font_id, get_body_text_size, get_button_height,
     task::Task,
     ui_font_selector::UiFontSelector,
     waker::{WakeType, Waker},
@@ -334,7 +334,7 @@ impl App {
                 self.process_inputs(ui);
                 self.ui_show_cur_image(ui, app_rect);
 
-                let title_bar_height = 28.0;
+                let title_bar_height = get_button_height(ui) + 12.0;
                 let title_bar_rect = {
                     let mut rect = app_rect;
                     rect.max.y = rect.min.y + title_bar_height;
