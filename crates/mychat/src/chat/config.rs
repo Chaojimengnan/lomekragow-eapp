@@ -4,14 +4,11 @@ use serde::{Deserialize, Serialize};
 #[serde(default)]
 pub struct ChatConfig {
     pub compression_threshold: f32,
-
     pub n_ctx: usize,
-    pub api_key: String,
-    pub api_url: String,
-    pub model: String,
 
     pub summary_param: ChatParam,
-    pub param: ChatParam,
+    pub assistant_param: ChatParam,
+    pub user_param: ChatParam,
 }
 
 impl Default for ChatConfig {
@@ -19,17 +16,18 @@ impl Default for ChatConfig {
         Self {
             compression_threshold: 0.7,
             n_ctx: 4096,
-            api_key: String::new(),
-            api_url: String::new(),
-            model: String::new(),
             summary_param: ChatParam::summary_param(),
-            param: ChatParam::param(),
+            assistant_param: ChatParam::param(),
+            user_param: ChatParam::param(),
         }
     }
 }
 
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct ChatParam {
+    pub api_key: String,
+    pub api_url: String,
+    pub model: String,
     pub max_tokens: isize,
     pub system_message: String,
     pub temperature: f32,
@@ -43,6 +41,9 @@ pub struct ChatParam {
 impl ChatParam {
     fn summary_param() -> Self {
         Self {
+            api_key: String::new(),
+            api_url: String::new(),
+            model: String::new(),
             max_tokens: -1,
             system_message: String::from(
                 r"【强制总结指令】
@@ -70,6 +71,9 @@ impl ChatParam {
 
     fn param() -> Self {
         Self {
+            api_key: String::new(),
+            api_url: String::new(),
+            model: String::new(),
             max_tokens: -1,
             system_message: String::new(),
             temperature: 0.7,

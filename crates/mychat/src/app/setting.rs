@@ -14,21 +14,6 @@ impl super::App {
             .max_height(height)
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
-                    ui.label("API URL:");
-                    ui.text_edit_singleline(&mut self.config.api_url);
-                });
-
-                ui.horizontal(|ui| {
-                    ui.label("API Key:");
-                    ui.text_edit_singleline(&mut self.config.api_key);
-                });
-
-                ui.horizontal(|ui| {
-                    ui.label("Model:");
-                    ui.text_edit_singleline(&mut self.config.model);
-                });
-
-                ui.horizontal(|ui| {
                     ui.label("Context Window:");
                     ui.add(egui::DragValue::new(&mut self.config.n_ctx).speed(1));
                 });
@@ -42,10 +27,15 @@ impl super::App {
                     );
                 });
 
-                egui::CollapsingHeader::new("Chat Parameters")
+                egui::CollapsingHeader::new("Assistant Parameters")
                     .default_open(true)
                     .show(ui, |ui| {
-                        Self::ui_param(ui, &mut self.config.param);
+                        Self::ui_param(ui, &mut self.config.assistant_param);
+                    });
+                egui::CollapsingHeader::new("User Parameters")
+                    .default_open(true)
+                    .show(ui, |ui| {
+                        Self::ui_param(ui, &mut self.config.user_param);
                     });
                 egui::CollapsingHeader::new("Summary Parameters")
                     .default_open(true)
@@ -78,6 +68,21 @@ impl super::App {
     }
 
     fn ui_param(ui: &mut egui::Ui, param: &mut ChatParam) {
+        ui.horizontal(|ui| {
+            ui.label("API URL:");
+            ui.text_edit_singleline(&mut param.api_url);
+        });
+
+        ui.horizontal(|ui| {
+            ui.label("API Key:");
+            ui.text_edit_singleline(&mut param.api_key);
+        });
+
+        ui.horizontal(|ui| {
+            ui.label("Model:");
+            ui.text_edit_singleline(&mut param.model);
+        });
+
         ui.horizontal(|ui| {
             ui.label("Max Tokens:");
             ui.add(egui::DragValue::new(&mut param.max_tokens).speed(1));

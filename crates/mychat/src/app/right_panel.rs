@@ -22,7 +22,11 @@ impl super::App {
 
         let show_summarized =
             self.state.show_summarized || self.manager.cur_dialogue().is_summary_empty();
-        let scroll_offset = self.manager.cur_dialogue().scroll_offset(show_summarized);
+        let scroll_offset = if !self.manager.is_empty() {
+            self.manager.cur_dialogue().scroll_offset(show_summarized)
+        } else {
+            0.0
+        };
 
         let stick_to_bottom =
             !self.scroll_to_bottom && !self.scroll_to_top && !self.scroll_to_summary;
@@ -55,10 +59,12 @@ impl super::App {
                 }
             });
 
-        let dialogue = self.manager.cur_dialogue_mut();
+        if !self.manager.is_empty() {
+            let dialogue = self.manager.cur_dialogue_mut();
 
-        dialogue.set_height(show_summarized, output.content_size.y);
-        dialogue.set_scroll_offset(show_summarized, output.state.offset.y);
+            dialogue.set_height(show_summarized, output.content_size.y);
+            dialogue.set_scroll_offset(show_summarized, output.state.offset.y);
+        }
 
         self.ui_input(ui, input_height);
     }

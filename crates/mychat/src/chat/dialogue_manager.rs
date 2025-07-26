@@ -13,8 +13,14 @@ use std::{
 use tokio::sync::mpsc::{self, Receiver, Sender};
 
 pub enum Request {
-    Send((usize, Vec<Message>, CancellationToken)),
-    Summarize((usize, Vec<Message>, CancellationToken)),
+    Send((usize, SendType, Vec<Message>, CancellationToken)),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SendType {
+    Assistant,
+    User,
+    Summary,
 }
 
 pub enum Result {
@@ -215,20 +221,28 @@ impl DialogueManager {
                 let tx = self.request_tx.clone();
                 async move {
                     let _ = tx
-                        .send(Request::Summarize((idx, messages_to_summarize, token)))
+                        .send(Request::Send((
+                            idx,
+                            SendType::Summary,
+                            messages_to_summarize,
+                            token,
+                        )))
                         .await;
                 }
             });
         } else {
             dialogue.state = DialogueState::Sending;
 
-            let messages_to_send = self.prepare_messages_for_sending(self.cur_dialogue_idx);
+            let (messages_to_send, send_type) =
+                self.prepare_messages_for_sending(self.cur_dialogue_idx);
 
             tokio::spawn({
                 let idx = self.cur_dialogue_idx;
                 let tx = self.request_tx.clone();
                 async move {
-                    let _ = tx.send(Request::Send((idx, messages_to_send, token))).await;
+                    let _ = tx
+                        .send(Request::Send((idx, send_type, messages_to_send, token)))
+                        .await;
                 }
             });
         }
@@ -269,14 +283,20 @@ impl DialogueManager {
                                 dialogue.summary.message.split_thinking_content();
 
                                 dialogue.state = DialogueState::Sending;
-                                let messages_to_send = self.prepare_messages_for_sending(idx);
+                                let (messages_to_send, send_type) =
+                                    self.prepare_messages_for_sending(idx);
 
                                 let token = self.cancellation_tokens.get(&idx).unwrap().clone();
 
                                 let tx = self.request_tx.clone();
                                 tokio::spawn(async move {
                                     let _ = tx
-                                        .send(Request::Send((idx, messages_to_send, token)))
+                                        .send(Request::Send((
+                                            idx,
+                                            send_type,
+                                            messages_to_send,
+                                            token,
+                                        )))
                                         .await;
                                 });
                             }
@@ -313,7 +333,7 @@ impl DialogueManager {
         }
     }
 
-    fn prepare_messages_for_sending(&self, dialogue_idx: usize) -> Vec<Message> {
+    fn prepare_messages_for_sending(&self, dialogue_idx: usize) -> (Vec<Message>, SendType) {
         let mut messages = Vec::new();
         let dialogue = &self.data.dialogues[dialogue_idx];
 
@@ -334,6 +354,11 @@ impl DialogueManager {
                 }),
         );
 
-        messages
+        let send_type = match dialogue.generate_user_input {
+            true => SendType::User,
+            false => SendType::Assistant,
+        };
+
+        (messages, send_type)
     }
 }

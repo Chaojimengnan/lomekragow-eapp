@@ -1,7 +1,7 @@
 use crate::chat::{
     Message, Role,
     config::ChatConfig,
-    dialogue_manager::{CancellationToken, Request, Result},
+    dialogue_manager::{CancellationToken, Request, Result, SendType},
 };
 use anyhow::anyhow;
 use eframe::egui;
@@ -24,17 +24,15 @@ pub async fn dialogue_task(
             None => return,
         };
 
-        let is_sending = matches!(request, Request::Send(_));
-
         match request {
-            Request::Summarize((idx, messages, token)) | Request::Send((idx, messages, token)) => {
+            Request::Send((idx, send_type, messages, token)) => {
                 tokio::spawn({
                     let config = config.read().unwrap().clone();
                     let tx = result_tx.clone();
                     let ctx = ctx.clone();
 
                     async move {
-                        match stream_from_api(&ctx, token, &config, is_sending, messages, &tx, idx)
+                        match stream_from_api(&ctx, token, &config, send_type, messages, &tx, idx)
                             .await
                         {
                             Ok(_) => {
@@ -56,38 +54,51 @@ async fn stream_from_api(
     ctx: &egui::Context,
     token: CancellationToken,
     config: &ChatConfig,
-    is_sending: bool,
+    send_type: SendType,
     messages: Vec<Message>,
     tx: &Sender<Result>,
     dialogue_idx: usize,
 ) -> anyhow::Result<()> {
-    let (param, all_messages) = if is_sending {
-        let mut all_messages = vec![Message {
-            role: Role::System,
-            content: config.param.system_message.clone(),
-            thinking_content: None,
-        }];
-        all_messages.extend(messages);
+    let (param, all_messages) = match send_type {
+        SendType::Assistant => {
+            let mut all_messages = vec![Message {
+                role: Role::System,
+                content: config.assistant_param.system_message.clone(),
+                thinking_content: None,
+            }];
+            all_messages.extend(messages);
 
-        (&config.param, all_messages)
-    } else {
-        let content = format!(
-            "{}\n [CHAT HISTORY START]{}[CHAT HISTORY END]",
-            config.summary_param.system_message,
-            compress_message(&messages)?
-        );
+            (&config.assistant_param, all_messages)
+        }
+        SendType::User => {
+            let mut all_messages = vec![Message {
+                role: Role::System,
+                content: config.user_param.system_message.clone(),
+                thinking_content: None,
+            }];
+            all_messages.extend(messages);
 
-        let all_messages = vec![Message {
-            role: Role::System,
-            content,
-            thinking_content: None,
-        }];
+            (&config.user_param, all_messages)
+        }
+        SendType::Summary => {
+            let content = format!(
+                "{}\n [CHAT HISTORY START]{}[CHAT HISTORY END]",
+                config.summary_param.system_message,
+                compress_message(&messages)?
+            );
 
-        (&config.summary_param, all_messages)
+            let all_messages = vec![Message {
+                role: Role::System,
+                content,
+                thinking_content: None,
+            }];
+
+            (&config.summary_param, all_messages)
+        }
     };
 
     let request_body = json!({
-        "model": config.model,
+        "model": param.model,
         "messages": all_messages,
         "max_tokens": param.max_tokens,
         "temperature": param.temperature,
@@ -100,11 +111,11 @@ async fn stream_from_api(
     });
 
     // TODO: DEBUG
-    log::warn!("\n{is_sending}: {request_body}\n\n");
+    log::warn!("\n{send_type:?}: {request_body}\n\n");
 
     let response = Client::new()
-        .post(&config.api_url)
-        .header("Authorization", format!("Bearer {}", config.api_key))
+        .post(&param.api_url)
+        .header("Authorization", format!("Bearer {}", param.api_key))
         .json(&request_body)
         .send()
         .await?;
