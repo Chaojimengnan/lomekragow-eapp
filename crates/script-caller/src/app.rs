@@ -106,8 +106,8 @@ impl App {
                 true
             } else {
                 let query = self.search_query.to_lowercase();
-                script.name.to_lowercase().contains(&query)
-                    || script.desc.join(" ").to_lowercase().contains(&query)
+                script.command.name.to_lowercase().contains(&query)
+                    || script.command.desc.to_lowercase().contains(&query)
                     || script.tag.iter().any(|t| t.to_lowercase().contains(&query))
             };
 
@@ -148,7 +148,7 @@ impl App {
             let index = (start_index + i) % indices.len();
             let script_index = indices[index];
             let script = &self.loader.script_list[script_index];
-            if let Some(first_char) = script.name.chars().next() {
+            if let Some(first_char) = script.command.name.chars().next() {
                 if first_char.to_ascii_lowercase() == search_letter {
                     self.cur_sel_script = index;
                     found = true;
@@ -351,7 +351,7 @@ impl App {
                         ui,
                         &mut self.cur_sel_script,
                         display_index,
-                        &script.name,
+                        &script.command.name,
                         s_changed,
                     );
                 }
@@ -373,7 +373,7 @@ impl App {
 
         let script = script.unwrap();
 
-        let res = ui.label(&script.name);
+        let res = ui.label(&script.command.name);
         let args_string = args_to_escaped_string(&script.generate_args());
         if !args_string.is_empty() {
             res.on_hover_text(args_string);
@@ -425,7 +425,7 @@ impl App {
             eapp_utils::capture_error!(error => log::error!("error when run script: {error}"), {
                 if let Some(script) = self.get_cur_script() {
                     let args = script.generate_args();
-                    let script_path = format!("{}/{}", script_base_path, script.name);
+                    let script_path = format!("{}/{}", script_base_path, script.command.name);
                     let require_admin = script.require_admin;
                     match self.run_mode {
                         RunMode::Config => {

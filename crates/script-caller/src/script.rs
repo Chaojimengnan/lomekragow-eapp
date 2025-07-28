@@ -15,6 +15,16 @@ use std::{
     path::Path,
 };
 
+macro_rules! unique_name {
+    ( $( $x:expr ),* ) => {{
+        let mut name = String::new();
+        $(
+            name.push_str(&format!("{}|", $x));
+        )*
+        name
+    }};
+}
+
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum ArgType {
@@ -109,7 +119,7 @@ impl Arg {
                             .show_index(ui, value, self.choices.len(), |i| &self.choices[i]);
                     }
                     ArgType::OneLine(value) | ArgType::Normal(value) => {
-                        let id = ui.make_persistent_id("text_edit");
+                        let id = ui.make_persistent_id(format!("text_edit_{}", self.name));
                         let mut output = if oneline {
                             TextEdit::singleline(value)
                         } else {
@@ -196,7 +206,9 @@ impl Arg {
         }
     }
 
-    pub fn get_value_formatted(&self, value_vec: &mut Vec<String>) {
+    pub fn get_value_formatted(&self) -> Vec<String> {
+        let mut value_vec = Vec::new();
+
         match &self.r#type {
             ArgType::Choices(index) => {
                 if *index < self.choices.len() {
@@ -228,6 +240,8 @@ impl Arg {
                 }
             }
         }
+
+        value_vec
     }
 
     pub fn initialize_value(&mut self) {
@@ -368,36 +382,18 @@ mod path_utils {
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
-pub struct Script {
+pub struct Command {
     pub name: String,
 
     #[serde(default)]
-    pub desc: Vec<String>,
-
-    #[serde(default)]
-    pub require_admin: bool,
-
-    #[serde(default)]
-    pub tag: HashSet<String>,
+    pub desc: String,
 
     #[serde(default)]
     pub args: Vec<Arg>,
-
-    #[serde(skip)]
-    pub desc_cache: Option<(CommonMarkCache, String)>,
 }
 
-impl Script {
+impl Command {
     pub fn show_ui(&mut self, ui: &mut egui::Ui) {
-        if self.desc_cache.is_none() {
-            let markdown_desc = self.desc.join("\n");
-            self.desc_cache = Some((CommonMarkCache::default(), markdown_desc));
-        }
-
-        let (cache, desc) = self.desc_cache.as_mut().unwrap();
-        CommonMarkViewer::new().show(ui, cache, desc);
-
-        ui.add_space(get_body_text_size(ui));
         self.args.iter_mut().for_each(|arg| arg.show_ui(ui));
     }
 
@@ -407,9 +403,125 @@ impl Script {
         self.args
             .iter()
             .filter(|arg| !arg.optional_and_disabled())
-            .for_each(|arg| arg.get_value_formatted(&mut value_vec));
+            .for_each(|arg| value_vec.extend(arg.get_value_formatted()));
 
         value_vec
+    }
+
+    pub fn initialize(&mut self, prefix: &str, remembered_args: &RememberedArgs) {
+        self.args.iter_mut().for_each(|arg| {
+            arg.initialize_value();
+
+            if let Some(value) = remembered_args.get(&unique_name!(prefix, self.name, arg.name)) {
+                arg.set_value(Some(value.to_owned()));
+            }
+        })
+    }
+
+    pub fn get_remembered_args(&self, prefix: &str) -> RememberedArgs {
+        let mut remembered_args = RememberedArgs::new();
+
+        for arg in &self.args {
+            if arg.remember {
+                let value = arg.get_value();
+                if !value.is_empty() && Some(&value) != arg.default.as_ref() {
+                    remembered_args.insert(unique_name!(prefix, self.name, arg.name), value);
+                }
+            }
+        }
+
+        remembered_args
+    }
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct Script {
+    pub command: Command,
+
+    #[serde(default)]
+    pub subcommands: Vec<Command>,
+
+    #[serde(default)]
+    pub require_admin: bool,
+
+    #[serde(default)]
+    pub tag: HashSet<String>,
+
+    #[serde(skip)]
+    pub desc_cache: Option<CommonMarkCache>,
+
+    #[serde(skip)]
+    pub selected_subcommand: usize,
+}
+
+impl Script {
+    pub fn show_ui(&mut self, ui: &mut egui::Ui) {
+        if self.desc_cache.is_none() {
+            self.desc_cache = Some(CommonMarkCache::default());
+        }
+
+        let cache = self.desc_cache.as_mut().unwrap();
+        CommonMarkViewer::new().show(ui, cache, &self.command.desc);
+
+        ui.add_space(get_body_text_size(ui));
+
+        if !self.subcommands.is_empty() {
+            CollapsingState::load_with_default_open(
+                ui.ctx(),
+                egui::Id::new(&self.command.name),
+                true,
+            )
+            .show_header(ui, |ui| {
+                let subcmd = &self.subcommands[self.selected_subcommand];
+                egui::ComboBox::from_label(
+                    egui::RichText::new(&subcmd.desc).color(ui.visuals().weak_text_color()),
+                )
+                .selected_text(&subcmd.name)
+                .show_ui(ui, |ui| {
+                    for (i, subcmd) in self.subcommands.iter().enumerate() {
+                        ui.selectable_value(&mut self.selected_subcommand, i, &subcmd.name)
+                            .on_hover_text(&subcmd.desc);
+                    }
+                });
+            })
+            .body(|ui| {
+                self.subcommands[self.selected_subcommand].show_ui(ui);
+            });
+        }
+
+        self.command.show_ui(ui);
+    }
+
+    pub fn generate_args(&self) -> Vec<String> {
+        let mut value_vec = Vec::new();
+
+        value_vec.extend(self.command.generate_args());
+        if !self.subcommands.is_empty() {
+            let subcmd = &self.subcommands[self.selected_subcommand];
+            value_vec.push(subcmd.name.clone());
+            value_vec.extend(subcmd.generate_args());
+        }
+
+        value_vec
+    }
+
+    pub fn initialize(&mut self, remembered_args: &RememberedArgs) {
+        self.command.initialize("", remembered_args);
+        self.subcommands
+            .iter_mut()
+            .for_each(|subcommand| subcommand.initialize(&self.command.name, remembered_args));
+    }
+
+    pub fn get_remembered_args(&self) -> RememberedArgs {
+        let mut remembered_args = RememberedArgs::new();
+
+        remembered_args.extend(self.command.get_remembered_args(""));
+        self.subcommands.iter().for_each(|subcommand| {
+            remembered_args.extend(subcommand.get_remembered_args(&self.command.name))
+        });
+
+        remembered_args
     }
 }
 
@@ -423,7 +535,7 @@ pub struct Loader {
     pub script_path: String,
 }
 
-pub type RememberedArgs = HashMap<(String, String), String>;
+pub type RememberedArgs = HashMap<String, String>;
 
 impl Loader {
     const INFO_FILENAME: &'static str = "info.json";
@@ -445,14 +557,12 @@ impl Loader {
         let info_path = format!("{}/{}", script_path, Self::INFO_FILENAME);
         let json = std::fs::read_to_string(&info_path)?;
         let mut loader = serde_json::from_str::<Loader>(&json)?;
-        loader.script_list.iter_mut().for_each(|script| {
-            script.args.iter_mut().for_each(|arg| {
-                arg.initialize_value();
-                if let Some(value) = remembered_args.get(&(script.name.clone(), arg.name.clone())) {
-                    arg.set_value(Some(value.to_owned()));
-                }
-            })
-        });
+
+        loader
+            .script_list
+            .iter_mut()
+            .for_each(|script| script.initialize(remembered_args));
+
         loader.script_path = script_path;
         Ok(loader)
     }
@@ -460,16 +570,9 @@ impl Loader {
     pub fn generate_remembered_args(&self) -> RememberedArgs {
         let mut remembered_args = HashMap::new();
 
-        for script in &self.script_list {
-            for arg in &script.args {
-                if arg.remember {
-                    let value = arg.get_value();
-                    if !value.is_empty() && Some(&value) != arg.default.as_ref() {
-                        remembered_args.insert((script.name.clone(), arg.name.clone()), value);
-                    }
-                }
-            }
-        }
+        self.script_list
+            .iter()
+            .for_each(|script| remembered_args.extend(script.get_remembered_args()));
 
         remembered_args
     }
