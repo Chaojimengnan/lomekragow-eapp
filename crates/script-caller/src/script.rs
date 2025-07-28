@@ -1,5 +1,5 @@
 use eapp_utils::{
-    codicons::{ICON_ERROR, ICON_PIN, ICON_PINNED, ICON_REPLY},
+    codicons::{ICON_ERROR, ICON_LAYERS, ICON_PIN, ICON_PINNED, ICON_REPLY},
     get_body_text_size,
     widgets::simple_widgets::frameless_btn,
 };
@@ -486,7 +486,7 @@ impl Script {
                 egui::ComboBox::from_label(
                     egui::RichText::new(&subcmd.desc).color(ui.visuals().weak_text_color()),
                 )
-                .selected_text(&subcmd.name)
+                .selected_text(format!("{} {}", ICON_LAYERS, &subcmd.name))
                 .show_ui(ui, |ui| {
                     for (i, subcmd) in self.subcommands.iter().enumerate() {
                         ui.selectable_value(&mut self.selected_subcommand, i, &subcmd.name)
