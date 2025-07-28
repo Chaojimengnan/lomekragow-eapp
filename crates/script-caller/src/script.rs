@@ -103,6 +103,12 @@ impl Arg {
             }
 
             ui.label(name).on_hover_text(&self.desc);
+            ui.add(
+                egui::Label::new(
+                    egui::RichText::new(&self.desc).color(ui.visuals().weak_text_color()),
+                )
+                .wrap_mode(egui::TextWrapMode::Truncate),
+            );
         });
     }
 
@@ -120,11 +126,14 @@ impl Arg {
                     }
                     ArgType::OneLine(value) | ArgType::Normal(value) => {
                         let id = ui.make_persistent_id(format!("text_edit_{}", self.name));
+                        let width = ui.available_width() * 0.85;
+
                         let mut output = if oneline {
                             TextEdit::singleline(value)
                         } else {
                             TextEdit::multiline(value)
                         }
+                        .desired_width(width)
                         .code_editor()
                         .password(self.password)
                         .id(id)
