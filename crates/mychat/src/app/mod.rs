@@ -1,10 +1,11 @@
+mod bottom_panel;
 mod left_panel;
 mod right_panel;
 mod setting;
 
 use eapp_utils::{
     borderless,
-    codicons::{ICON_LAYOUT_SIDEBAR_LEFT, ICON_SETTINGS_GEAR},
+    codicons::{ICON_LAYOUT_SIDEBAR_LEFT, ICON_SETTINGS_GEAR, ICON_TERMINAL},
     delayed_toggle::DelayedToggle,
     get_body_font_id, get_button_height,
     ui_font_selector::UiFontSelector,
@@ -19,6 +20,7 @@ use crate::chat::{Message, Role, config::ChatConfig, dialogue_manager::DialogueM
 #[serde(default)]
 pub struct State {
     pub show_left_panel: bool,
+    pub show_bottom_panel: bool,
     pub show_summarized: bool,
     pub trigger_request: bool,
 }
@@ -27,6 +29,7 @@ impl Default for State {
     fn default() -> Self {
         Self {
             show_left_panel: true,
+            show_bottom_panel: true,
             show_summarized: true,
             trigger_request: true,
         }
@@ -111,6 +114,13 @@ impl App {
                 self.state.show_left_panel = !self.state.show_left_panel;
             }
 
+            if ui
+                .selectable_label(self.state.show_bottom_panel, ICON_TERMINAL.to_string())
+                .clicked()
+            {
+                self.state.show_bottom_panel = !self.state.show_bottom_panel;
+            }
+
             if theme_button(ui, get_theme_button(ui)).clicked() {
                 self.selector.apply_text_style(ui.ctx());
             }
@@ -138,8 +148,9 @@ impl App {
 
     fn ui_contents(&mut self, ui: &mut egui::Ui) {
         let max_width = ui.available_width() * 0.65;
+        let max_height = ui.available_height() * 0.65;
 
-        egui::TopBottomPanel::bottom("bottom_panel")
+        egui::TopBottomPanel::bottom("msg_panel")
             .exact_height(get_button_height(ui) + 16.0)
             .frame(egui::Frame::side_top_panel(ui.style()).fill(Color32::TRANSPARENT))
             .show_animated_inside(ui, !self.status_msg.is_empty(), |ui| {
@@ -160,6 +171,16 @@ impl App {
             .default_width(200.0)
             .width_range(200.0..=max_width)
             .show_animated_inside(ui, self.state.show_left_panel, |ui| self.ui_left_panel(ui));
+
+        egui::TopBottomPanel::bottom("bottom_panel")
+            .default_height(300.0)
+            .height_range(100.0..=max_height)
+            .resizable(true)
+            .show_separator_line(false)
+            .frame(egui::Frame::side_top_panel(ui.style()).fill(Color32::TRANSPARENT))
+            .show_animated_inside(ui, self.state.show_bottom_panel, |ui| {
+                self.ui_bottom_panel(ui)
+            });
 
         egui::CentralPanel::default()
             .frame(egui::Frame::central_panel(ui.style()).fill(Color32::TRANSPARENT))
