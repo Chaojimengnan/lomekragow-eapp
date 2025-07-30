@@ -32,6 +32,59 @@ This project is licensed under the [GPLv3 License](LICENSE).
 
 ---
 
+## auto-script - Automation Script Runner
+
+auto-script is a Rust-based automation script runner that provides an efficient environment for creating and executing automation scripts. It features a borderless transparent UI, global hotkey support, and comprehensive GUI automation capabilities.
+
+### Key Features
+
+#### ✍️ Script Editing
+- Syntax highlighting and intelligent code completion
+- Real-time error checking
+- Collapsible script sidebar
+- Script search and filtering
+
+#### ⚙️ Script Execution
+- Multi-threaded script execution
+- Real-time console logging
+- Script execution status indicator
+- Global hotkey control (run/stop scripts)
+
+#### 🖱️ GUI Automation
+- Mouse control (move, click, drag)
+- Keyboard operations (key press, combinations, text input)
+- Image recognition and template matching
+- Screen operations (get resolution, mouse position)
+
+#### 📚 Script Management
+- Script create/delete/rename
+- Automatic script collection saving
+- Script content versioning
+- Quick script switching
+
+#### 🖥️ UI Features
+- Borderless transparent window
+- Collapsible console panel
+- Custom font selector
+- Theme switching support
+- Responsive layout design
+
+### Technology Stack
+- **Rust** - Systems programming language
+- **eframe/egui** - Immediate mode GUI framework
+- **mlua** - Lua script engine
+- **Serde** - Data serialization
+- **image** - Image processing library
+- **rustautogui** - Automation operations library
+- **egui_extras** - UI extension components
+
+
+### Screenshots
+
+![1](screenshot/auto_script1.png)  
+![2](screenshot/auto_script2.gif)  
+
+
 ## mychat - Local Large Model Chat Client
 
 mychat is a local large model chat client developed in Rust, providing a clean and efficient chat interface with multi-dialogue management and intelligent context compression. It features real-time streaming responses, message editing, and comprehensive model parameter configuration.
