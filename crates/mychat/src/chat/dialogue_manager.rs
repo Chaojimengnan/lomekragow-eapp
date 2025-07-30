@@ -23,8 +23,14 @@ pub enum SendType {
     Summary,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StreamType {
+    Content,
+    Reasoning,
+}
+
 pub enum Result {
-    Streaming((usize, String)),
+    Streaming((usize, StreamType, String)),
     Done(usize),
     Error((usize, String)),
 }
@@ -259,20 +265,25 @@ impl DialogueManager {
     pub fn update(&mut self, status_msg: &mut String) {
         while let Ok(result) = self.result_rx.try_recv() {
             match result {
-                Result::Streaming((idx, content)) => {
+                Result::Streaming((idx, stream_type, content)) => {
                     if let Some(dialogue) = self.data.dialogues.get_mut(idx) {
-                        match dialogue.state {
-                            DialogueState::Summarizing => {
-                                dialogue.summary.message.content.push_str(&content);
-                                dialogue.summary.message.split_thinking_content();
-                            }
+                        let message = match dialogue.state {
+                            DialogueState::Summarizing => &mut dialogue.summary.message,
                             DialogueState::Sending => {
-                                if let Some(last_msg) = dialogue.messages.back_mut() {
-                                    last_msg.message.content.push_str(&content);
-                                    last_msg.message.split_thinking_content();
-                                }
+                                &mut dialogue.messages.back_mut().unwrap().message
                             }
-                            _ => {}
+                            _ => unreachable!(),
+                        };
+
+                        match stream_type {
+                            StreamType::Content => {
+                                message.content.push_str(&content);
+                                message.split_thinking_content();
+                            }
+                            StreamType::Reasoning => message
+                                .thinking_content
+                                .get_or_insert_default()
+                                .push_str(&content),
                         }
                     }
                 }
@@ -301,9 +312,8 @@ impl DialogueManager {
                                 });
                             }
                             DialogueState::Sending => {
-                                if let Some(last_msg) = dialogue.messages.back_mut() {
-                                    last_msg.message.split_thinking_content();
-                                }
+                                let last_msg = &mut dialogue.messages.back_mut().unwrap().message;
+                                last_msg.split_thinking_content();
 
                                 dialogue.state = DialogueState::Idle;
                                 dialogue.generate_user_input = false;

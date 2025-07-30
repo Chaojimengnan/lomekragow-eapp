@@ -1,7 +1,7 @@
 use crate::chat::{
     Message, Role,
     config::ChatConfig,
-    dialogue_manager::{CancellationToken, Request, Result, SendType},
+    dialogue_manager::{CancellationToken, Request, Result, SendType, StreamType},
 };
 use anyhow::anyhow;
 use eframe::egui;
@@ -108,6 +108,7 @@ async fn stream_from_api(
         "frequency_penalty": param.frequency_penalty,
         "presence_penalty": param.presence_penalty,
         "stream": true,
+        "include_reasoning": true,
     });
 
     // TODO: DEBUG
@@ -148,12 +149,23 @@ async fn stream_from_api(
             if let Some(data) = line.strip_prefix("data: ") {
                 if let Ok(json) = serde_json::from_str::<serde_json::Value>(data) {
                     if let Some(delta) = json["choices"][0]["delta"].as_object() {
-                        if let Some(content_part) = delta.get("content").and_then(|v| v.as_str()) {
-                            ctx.request_repaint();
-                            tx.send(Result::Streaming((dialogue_idx, content_part.to_string())))
-                                .await
-                                .map_err(|e| anyhow!("Failed to send streaming: {}", e))?;
+                        macro_rules! send_streaming_if_has {
+                            ($name: expr, $stream_type: expr) => {
+                                if let Some(part) = delta.get($name).and_then(|v| v.as_str()) {
+                                    ctx.request_repaint();
+                                    tx.send(Result::Streaming((
+                                        dialogue_idx,
+                                        $stream_type,
+                                        part.to_string(),
+                                    )))
+                                    .await
+                                    .map_err(|e| anyhow!("Failed to send streaming: {}", e))?;
+                                }
+                            };
                         }
+
+                        send_streaming_if_has!("content", StreamType::Content);
+                        send_streaming_if_has!("reasoning", StreamType::Reasoning);
                     }
                 }
             }

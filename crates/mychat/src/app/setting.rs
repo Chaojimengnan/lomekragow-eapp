@@ -1,5 +1,5 @@
 use eapp_utils::{get_body_text_size, get_button_height};
-use eframe::egui::{self, Color32};
+use eframe::egui::{self, Color32, TextEdit};
 
 use crate::chat::config::ChatParam;
 
@@ -75,7 +75,7 @@ impl super::App {
 
         ui.horizontal(|ui| {
             ui.label("API Key:");
-            ui.text_edit_singleline(&mut param.api_key);
+            ui.add(TextEdit::singleline(&mut param.api_key).password(true));
         });
 
         ui.horizontal(|ui| {
