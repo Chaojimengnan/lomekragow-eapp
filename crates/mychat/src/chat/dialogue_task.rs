@@ -1,6 +1,6 @@
 use crate::chat::{
     Message, Role,
-    config::ChatConfig,
+    config::{ChatConfig, ChatConfigManager},
     dialogue_manager::{CancellationToken, Request, Result, SendType, StreamType},
 };
 use anyhow::anyhow;
@@ -15,7 +15,7 @@ use tokio::sync::mpsc::{Receiver, Sender};
 pub async fn dialogue_task(
     mut request_rx: Receiver<Request>,
     result_tx: Sender<Result>,
-    config: Arc<RwLock<ChatConfig>>,
+    manager: Arc<RwLock<ChatConfigManager>>,
     ctx: egui::Context,
 ) {
     loop {
@@ -27,7 +27,7 @@ pub async fn dialogue_task(
         match request {
             Request::Send((idx, send_type, messages, token)) => {
                 tokio::spawn({
-                    let config = config.read().unwrap().clone();
+                    let config = manager.read().unwrap().cur_config().clone();
                     let tx = result_tx.clone();
                     let ctx = ctx.clone();
 

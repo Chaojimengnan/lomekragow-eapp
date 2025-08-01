@@ -80,7 +80,7 @@ impl DialogueManager {
         tokio::spawn(dialogue_task(
             request_rx,
             result_tx,
-            data.config.clone(),
+            data.manager.clone(),
             ctx,
         ));
 
@@ -182,7 +182,8 @@ impl DialogueManager {
             .into(),
         );
 
-        let config = self.data.config.read().unwrap();
+        let manager = self.data.manager.read().unwrap();
+        let config = manager.cur_config();
         let current_tokens = dialogue.token_count();
         let threshold = (config.compression_threshold * config.n_ctx as f32) as usize;
 

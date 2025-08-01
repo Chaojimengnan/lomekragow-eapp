@@ -85,3 +85,61 @@ impl ChatParam {
         }
     }
 }
+
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
+pub struct ChatConfigProfile {
+    pub name: String,
+    pub config: ChatConfig,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ChatConfigManager {
+    pub profiles: Vec<ChatConfigProfile>,
+    pub current_profile_index: usize,
+}
+
+impl Default for ChatConfigManager {
+    fn default() -> Self {
+        Self {
+            profiles: vec![ChatConfigProfile {
+                name: "Default".to_string(),
+                config: ChatConfig::default(),
+            }],
+            current_profile_index: 0,
+        }
+    }
+}
+
+impl ChatConfigManager {
+    pub fn cur_config(&self) -> &ChatConfig {
+        &self.profiles[self.current_profile_index].config
+    }
+
+    pub fn cur_config_mut(&mut self) -> &mut ChatConfig {
+        &mut self.profiles[self.current_profile_index].config
+    }
+
+    pub fn cur_name(&self) -> &String {
+        &self.profiles[self.current_profile_index].name
+    }
+
+    pub fn cur_name_mut(&mut self) -> &mut String {
+        &mut self.profiles[self.current_profile_index].name
+    }
+
+    pub fn add_profile(&mut self, name: &str) {
+        self.profiles.push(ChatConfigProfile {
+            name: name.to_string(),
+            config: self.cur_config().clone(),
+        });
+    }
+
+    pub fn remove_profile(&mut self, index: usize) {
+        if self.profiles.len() > 1 {
+            self.profiles.remove(index);
+            if self.current_profile_index >= index {
+                self.current_profile_index = self.current_profile_index.saturating_sub(1);
+            }
+        }
+    }
+}

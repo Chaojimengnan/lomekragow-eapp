@@ -5,6 +5,54 @@ use crate::chat::config::ChatParam;
 
 impl super::App {
     pub fn ui_setting(&mut self, ui: &mut egui::Ui) {
+        ui.horizontal(|ui| {
+            let mut manager = self.manager.data.manager.write().unwrap();
+            let current_index = manager.current_profile_index;
+            ui.label("Current Profile:");
+            let response = egui::ComboBox::from_id_salt("profile_selector")
+                .selected_text(manager.cur_name().clone())
+                .show_ui(ui, |ui| {
+                    let mut new_index = current_index;
+                    for (idx, profile) in manager.profiles.iter().enumerate() {
+                        if ui
+                            .selectable_label(idx == current_index, &profile.name)
+                            .clicked()
+                        {
+                            new_index = idx;
+                        }
+                    }
+                    new_index
+                });
+
+            if let Some(new_index) = response.inner {
+                if new_index != current_index {
+                    manager.current_profile_index = new_index;
+                    self.config = manager.cur_config().clone();
+                }
+            }
+
+            if ui.button("Add Profile").clicked() {
+                let new_name = format!("Profile {}", manager.profiles.len() + 1);
+                manager.add_profile(&new_name);
+                manager.current_profile_index = manager.profiles.len() - 1;
+                self.config = manager.cur_config().clone();
+            }
+
+            if ui.button("Remove Profile").clicked() && manager.profiles.len() > 1 {
+                let remove_index = manager.current_profile_index;
+                manager.remove_profile(remove_index);
+                self.config = manager.cur_config().clone();
+            }
+        });
+
+        ui.horizontal(|ui| {
+            let mut manager = self.manager.data.manager.write().unwrap();
+            ui.label("Rename Profile:");
+            ui.text_edit_singleline(manager.cur_name_mut());
+        });
+
+        ui.add_space(4.0);
+
         let height = ui.available_height()
             - (get_button_height(ui)
                 + get_body_text_size(ui)
@@ -44,7 +92,7 @@ impl super::App {
                     });
             });
 
-        let config_changed = self.config != *self.manager.data.config.read().unwrap();
+        let config_changed = self.config != *self.manager.data.manager.read().unwrap().cur_config();
 
         if config_changed {
             ui.colored_label(Color32::YELLOW, "Configure Unsaved");
@@ -55,14 +103,14 @@ impl super::App {
         ui.horizontal(|ui| {
             ui.add_enabled_ui(config_changed && self.manager.is_idle(), |ui| {
                 if ui.button("Save").clicked() {
-                    let mut config = self.manager.data.config.write().unwrap();
-                    *config = self.config.clone();
+                    let mut manager = self.manager.data.manager.write().unwrap();
+                    *manager.cur_config_mut() = self.config.clone();
                 }
             });
 
             if ui.button("Reset").clicked() {
-                let config = self.manager.data.config.read().unwrap();
-                self.config = config.clone();
+                let manager = self.manager.data.manager.read().unwrap();
+                self.config = manager.cur_config().clone();
             }
         });
     }

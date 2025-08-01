@@ -11,7 +11,7 @@ use eapp_utils::{
     ui_font_selector::UiFontSelector,
     widgets::simple_widgets::{frameless_btn, get_theme_button, theme_button},
 };
-use eframe::egui::{self, Color32, PopupCloseBehavior, UiBuilder, Vec2};
+use eframe::egui::{self, Color32, UiBuilder, Vec2};
 use serde::{Deserialize, Serialize};
 
 use crate::chat::{Message, Role, config::ChatConfig, dialogue_manager::DialogueManager};
@@ -19,6 +19,7 @@ use crate::chat::{Message, Role, config::ChatConfig, dialogue_manager::DialogueM
 #[derive(Deserialize, Serialize)]
 #[serde(default)]
 pub struct State {
+    pub show_setting_window: bool,
     pub show_left_panel: bool,
     pub show_bottom_panel: bool,
     pub show_summarized: bool,
@@ -28,6 +29,7 @@ pub struct State {
 impl Default for State {
     fn default() -> Self {
         Self {
+            show_setting_window: false,
             show_left_panel: true,
             show_bottom_panel: true,
             show_summarized: true,
@@ -61,7 +63,7 @@ impl App {
             State::default()
         };
         let manager = DialogueManager::new(cc.egui_ctx.clone());
-        let config = manager.data.config.read().unwrap().clone();
+        let config = manager.data.manager.read().unwrap().cur_config().clone();
 
         let selector = if let Some(storage) = cc.storage {
             eframe::get_value(storage, UiFontSelector::KEY).unwrap_or_default()
@@ -129,12 +131,9 @@ impl App {
                 self.rebuild_fonts(ui.ctx());
             }
 
-            egui::Popup::menu(&frameless_btn(ui, ICON_SETTINGS_GEAR.to_string()))
-                .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
-                .show(|ui| {
-                    ui.set_max_height(ui.ctx().screen_rect().height() * 0.65);
-                    self.ui_setting(ui);
-                });
+            if frameless_btn(ui, ICON_SETTINGS_GEAR.to_string()).clicked() {
+                self.state.show_setting_window = !self.state.show_setting_window;
+            }
 
             ui.painter().text(
                 title_bar_rect.center(),
@@ -144,6 +143,19 @@ impl App {
                 ui.style().visuals.text_color(),
             );
         });
+    }
+
+    fn show_setting_window(&mut self, ui: &mut egui::Ui) {
+        let mut show_setting_window = self.state.show_setting_window;
+
+        egui::Window::new("Setting")
+            .open(&mut show_setting_window)
+            .max_height(600.0)
+            .show(ui.ctx(), |ui| {
+                self.ui_setting(ui);
+            });
+
+        self.state.show_setting_window = show_setting_window;
     }
 
     fn ui_contents(&mut self, ui: &mut egui::Ui) {
@@ -225,6 +237,8 @@ impl eframe::App for App {
             .shrink2(Vec2::new(0.5, 0.5));
 
             self.manager.update(&mut self.status_msg);
+
+            self.show_setting_window(ui);
 
             self.ui_title_bar(ui, title_bar_rect);
             self.ui_contents(

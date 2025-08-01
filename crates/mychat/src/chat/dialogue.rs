@@ -1,4 +1,4 @@
-use crate::chat::{Message, Role, config::ChatConfig};
+use crate::chat::{Message, Role, config::ChatConfigManager};
 use egui_commonmark::CommonMarkCache;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -145,7 +145,7 @@ impl Dialogue {
 #[derive(Serialize, Deserialize, Default)]
 pub struct DialoguesData {
     pub dialogues: VecDeque<Dialogue>,
-    pub config: Arc<RwLock<ChatConfig>>,
+    pub manager: Arc<RwLock<ChatConfigManager>>,
 }
 
 impl DialoguesData {
