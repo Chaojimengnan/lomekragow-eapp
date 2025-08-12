@@ -9,7 +9,7 @@ use eframe::egui::{
     text::{CCursor, CCursorRange},
 };
 use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
     path::Path,
@@ -70,6 +70,10 @@ fn default_as_true() -> bool {
 impl Arg {
     pub fn optional_and_disabled(&self) -> bool {
         self.optional && !self.enabled
+    }
+
+    pub fn optional_and_enabled(&self) -> bool {
+        self.optional && self.enabled
     }
 
     pub fn show_ui(&mut self, ui: &mut egui::Ui) {
@@ -421,8 +425,16 @@ impl Command {
         self.args.iter_mut().for_each(|arg| {
             arg.initialize_value();
 
-            if let Some(value) = remembered_args.get(&unique_name!(prefix, self.name, arg.name)) {
-                arg.set_value(Some(value.to_owned()));
+            if let Some(remembered) =
+                remembered_args.get(&unique_name!(prefix, self.name, arg.name))
+            {
+                if let Some(value) = &remembered.value {
+                    arg.set_value(Some(value.to_owned()));
+                }
+
+                if arg.optional && remembered.enabled {
+                    arg.enabled = true;
+                }
             }
         })
     }
@@ -433,9 +445,19 @@ impl Command {
         for arg in &self.args {
             if arg.remember {
                 let value = arg.get_value();
-                if !value.is_empty() && Some(&value) != arg.default.as_ref() {
-                    remembered_args.insert(unique_name!(prefix, self.name, arg.name), value);
+                let value_changed = !value.is_empty() && Some(&value) != arg.default.as_ref();
+
+                let value = value_changed.then_some(value);
+                let enabled = arg.optional_and_enabled();
+
+                if value.is_none() && !enabled {
+                    continue;
                 }
+
+                remembered_args.insert(
+                    unique_name!(prefix, self.name, arg.name),
+                    RememberedArg { value, enabled },
+                );
             }
         }
 
@@ -544,7 +566,21 @@ pub struct Loader {
     pub script_path: String,
 }
 
-pub type RememberedArgs = HashMap<String, String>;
+#[derive(Clone, Serialize, Deserialize, PartialEq, Default)]
+#[serde(default)]
+pub struct RememberedArg {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value: Option<String>,
+
+    #[serde(skip_serializing_if = "is_false")]
+    pub enabled: bool,
+}
+
+fn is_false(flag: &bool) -> bool {
+    !*flag
+}
+
+pub type RememberedArgs = HashMap<String, RememberedArg>;
 
 impl Loader {
     const INFO_FILENAME: &'static str = "info.json";
