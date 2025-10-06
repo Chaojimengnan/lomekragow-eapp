@@ -231,11 +231,10 @@ impl App {
                         .button(ICON_FOLDER.to_string())
                         .on_hover_text("Load from current work directory")
                         .clicked()
+                        && let Ok(dir) = std::env::current_dir()
                     {
-                        if let Ok(dir) = std::env::current_dir() {
-                            self.search_list
-                                .push_back(dir.to_string_lossy().into_owned());
-                        }
+                        self.search_list
+                            .push_back(dir.to_string_lossy().into_owned());
                     }
 
                     ui.selectable_value(
@@ -427,18 +426,17 @@ impl App {
 
                 let current_offset = self.translation.image_offset;
 
-                if let Some(mouse_pos) = ui.input(|i| i.pointer.hover_pos()) {
-                    if let Some(scale_old) = self.translation.scale_old_for_calculate {
-                        let image_pos =
-                            rect.center() - (image_size * scale_old) * 0.5 + current_offset;
-                        let mouse_in_image = (mouse_pos - image_pos) / (image_size * scale_old);
-                        let image_pos_new = rect.center() - scaled_size * 0.5 + current_offset;
-                        let target_pos = image_pos_new + mouse_in_image * scaled_size;
-                        let offset_delta = mouse_pos - target_pos;
+                if let Some(mouse_pos) = ui.input(|i| i.pointer.hover_pos())
+                    && let Some(scale_old) = self.translation.scale_old_for_calculate
+                {
+                    let image_pos = rect.center() - (image_size * scale_old) * 0.5 + current_offset;
+                    let mouse_in_image = (mouse_pos - image_pos) / (image_size * scale_old);
+                    let image_pos_new = rect.center() - scaled_size * 0.5 + current_offset;
+                    let target_pos = image_pos_new + mouse_in_image * scaled_size;
+                    let offset_delta = mouse_pos - target_pos;
 
-                        self.translation.image_offset = current_offset + offset_delta;
-                        self.translation.scale_old_for_calculate = None;
-                    }
+                    self.translation.image_offset = current_offset + offset_delta;
+                    self.translation.scale_old_for_calculate = None;
                 }
 
                 self.translation.max_offset =
@@ -670,15 +668,12 @@ impl App {
                         self.spawn();
                     }
 
-                    if btn_clicked!(ICON_INSPECT, "Change Window size to fit image aspect ratio") {
-                        if let Some(cur_img_name) = self.img_finder.cur_image_name() {
-                            if let Some(texture) =
-                                self.tex_loader.textures().get(cur_img_name).unwrap()
-                            {
-                                let size = texture.get_cur_handle().size_vec2();
-                                eapp_utils::window_resize_by_fit_scale(ui, size);
-                            }
-                        }
+                    if btn_clicked!(ICON_INSPECT, "Change Window size to fit image aspect ratio")
+                        && let Some(cur_img_name) = self.img_finder.cur_image_name()
+                        && let Some(texture) = self.tex_loader.textures().get(cur_img_name).unwrap()
+                    {
+                        let size = texture.get_cur_handle().size_vec2();
+                        eapp_utils::window_resize_by_fit_scale(ui, size);
                     }
 
                     if btn_clicked!(ICON_REFRESH, "Reset image translation") {
@@ -695,29 +690,28 @@ impl App {
                         ui.ctx().request_repaint();
                     }
 
-                    if btn_clicked!(ICON_GO_TO_FILE, "Open in explorer") {
-                        if let Some(cur_img) = self.img_finder.cur_image_name() {
-                            eapp_utils::open_in_explorer(cur_img);
-                        }
+                    if btn_clicked!(ICON_GO_TO_FILE, "Open in explorer")
+                        && let Some(cur_img) = self.img_finder.cur_image_name()
+                    {
+                        eapp_utils::open_in_explorer(cur_img);
                     }
                 });
             });
 
-            if response.dragged() {
-                if let Some(pointer) = response.interact_pointer_pos() {
-                    let new_page =
-                        value_from_x(total_pages as f64, progress_bar_rect, pointer.x as f64)
-                            as usize;
+            if response.dragged()
+                && let Some(pointer) = response.interact_pointer_pos()
+            {
+                let new_page =
+                    value_from_x(total_pages as f64, progress_bar_rect, pointer.x as f64) as usize;
 
-                    let new_page = new_page.min(total_pages.saturating_sub(1));
-                    self.img_finder.set_cur_image_idx(new_page);
+                let new_page = new_page.min(total_pages.saturating_sub(1));
+                self.img_finder.set_cur_image_idx(new_page);
 
-                    for page in new_page.saturating_sub(3)..=new_page.saturating_add(3) {
-                        if page < total_pages {
-                            if let Some(img_name) = self.img_finder.image_at(page) {
-                                self.tex_loader.load(img_name);
-                            }
-                        }
+                for page in new_page.saturating_sub(3)..=new_page.saturating_add(3) {
+                    if page < total_pages
+                        && let Some(img_name) = self.img_finder.image_at(page)
+                    {
+                        self.tex_loader.load(img_name);
                     }
                 }
             }
@@ -825,21 +819,21 @@ impl App {
         }
 
         ui.ctx().input(|i| {
-            if !i.raw.dropped_files.is_empty() {
-                if let Some(path) = &i.raw.dropped_files.first().unwrap().path {
-                    let cwd = if path.is_dir() {
-                        path
-                    } else {
-                        path.parent().unwrap()
-                    };
+            if !i.raw.dropped_files.is_empty()
+                && let Some(path) = &i.raw.dropped_files.first().unwrap().path
+            {
+                let cwd = if path.is_dir() {
+                    path
+                } else {
+                    path.parent().unwrap()
+                };
 
-                    if let Err(err) = std::env::set_current_dir(cwd) {
-                        log::error!("set current dir '{cwd:?}' fails: {err}");
-                    }
-
-                    self.search_list
-                        .push_back(path.to_string_lossy().into_owned());
+                if let Err(err) = std::env::set_current_dir(cwd) {
+                    log::error!("set current dir '{cwd:?}' fails: {err}");
                 }
+
+                self.search_list
+                    .push_back(path.to_string_lossy().into_owned());
             }
         });
 

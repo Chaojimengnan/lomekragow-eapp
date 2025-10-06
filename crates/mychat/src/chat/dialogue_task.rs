@@ -146,28 +146,27 @@ async fn stream_from_api(
                 break;
             }
 
-            if let Some(data) = line.strip_prefix("data: ") {
-                if let Ok(json) = serde_json::from_str::<serde_json::Value>(data) {
-                    if let Some(delta) = json["choices"][0]["delta"].as_object() {
-                        macro_rules! send_streaming_if_has {
-                            ($name: expr, $stream_type: expr) => {
-                                if let Some(part) = delta.get($name).and_then(|v| v.as_str()) {
-                                    ctx.request_repaint();
-                                    tx.send(Result::Streaming((
-                                        dialogue_idx,
-                                        $stream_type,
-                                        part.to_string(),
-                                    )))
-                                    .await
-                                    .map_err(|e| anyhow!("Failed to send streaming: {}", e))?;
-                                }
-                            };
+            if let Some(data) = line.strip_prefix("data: ")
+                && let Ok(json) = serde_json::from_str::<serde_json::Value>(data)
+                && let Some(delta) = json["choices"][0]["delta"].as_object()
+            {
+                macro_rules! send_streaming_if_has {
+                    ($name: expr, $stream_type: expr) => {
+                        if let Some(part) = delta.get($name).and_then(|v| v.as_str()) {
+                            ctx.request_repaint();
+                            tx.send(Result::Streaming((
+                                dialogue_idx,
+                                $stream_type,
+                                part.to_string(),
+                            )))
+                            .await
+                            .map_err(|e| anyhow!("Failed to send streaming: {}", e))?;
                         }
-
-                        send_streaming_if_has!("content", StreamType::Content);
-                        send_streaming_if_has!("reasoning", StreamType::Reasoning);
-                    }
+                    };
                 }
+
+                send_streaming_if_has!("content", StreamType::Content);
+                send_streaming_if_has!("reasoning", StreamType::Reasoning);
             }
         }
     }

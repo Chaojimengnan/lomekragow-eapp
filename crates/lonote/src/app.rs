@@ -200,10 +200,10 @@ impl App {
                 self.save();
             }
 
-            if ui.input_mut(|i| i.consume_shortcut(&Self::SAVE_AS)) {
-                if let Err(err) = self.save_as() {
-                    self.note.borrow_mut().state_msg = err.to_string();
-                }
+            if ui.input_mut(|i| i.consume_shortcut(&Self::SAVE_AS))
+                && let Err(err) = self.save_as()
+            {
+                self.note.borrow_mut().state_msg = err.to_string();
             }
 
             if ui.input_mut(|i| i.consume_shortcut(&Self::SEARCH)) {
@@ -247,72 +247,71 @@ impl App {
     }
 
     fn try_search(&mut self, ui: &mut egui::Ui, id: egui::Id, mut output: TextEditOutput) {
-        if let Some(down) = self.search_down.take() {
-            if !self.search_words.is_empty() {
-                let range = output
-                    .cursor_range
-                    .unwrap_or_default()
-                    .as_sorted_char_range();
+        if let Some(down) = self.search_down.take()
+            && !self.search_words.is_empty()
+        {
+            let range = output
+                .cursor_range
+                .unwrap_or_default()
+                .as_sorted_char_range();
 
-                let search_result = {
-                    let contents = &self.note.borrow().contents;
-                    let down_offset = byte_index_from_char_index(contents, range.end);
-                    let contents = if down {
-                        &contents[down_offset..]
-                    } else {
-                        &contents[..byte_index_from_char_index(contents, range.start)]
-                    };
-                    let contents = if self.case_sense {
-                        Cow::Borrowed(contents)
-                    } else {
-                        Cow::Owned(contents.to_ascii_lowercase())
-                    };
-                    if down {
-                        contents.find(&self.search_words).map(|v| v + down_offset)
-                    } else {
-                        contents.rfind(&self.search_words)
-                    }
+            let search_result = {
+                let contents = &self.note.borrow().contents;
+                let down_offset = byte_index_from_char_index(contents, range.end);
+                let contents = if down {
+                    &contents[down_offset..]
+                } else {
+                    &contents[..byte_index_from_char_index(contents, range.start)]
                 };
+                let contents = if self.case_sense {
+                    Cow::Borrowed(contents)
+                } else {
+                    Cow::Owned(contents.to_ascii_lowercase())
+                };
+                if down {
+                    contents.find(&self.search_words).map(|v| v + down_offset)
+                } else {
+                    contents.rfind(&self.search_words)
+                }
+            };
 
-                match search_result {
-                    Some(new_bi) => {
-                        let mut new_ci = None;
-                        for (ci, (bi, _)) in self.note.borrow().contents.char_indices().enumerate()
-                        {
-                            if new_bi == bi {
-                                new_ci = Some(ci);
-                                break;
-                            }
-                        }
-
-                        if let Some(new_ci_start) = new_ci {
-                            let new_ci_end = new_ci_start + self.search_words.chars().count();
-                            output.state.cursor.set_char_range(Some(CCursorRange::two(
-                                CCursor::new(new_ci_start),
-                                CCursor::new(new_ci_end),
-                            )));
-                            let primary_cursor_rect = cursor_rect(
-                                &output.galley,
-                                &output.state.cursor.range(&output.galley).unwrap().primary,
-                                ui.fonts(|f| f.row_height(&get_body_font_id(ui))),
-                            );
-
-                            ui.scroll_to_rect(
-                                egui::Rect::from_center_size(
-                                    primary_cursor_rect.center() + output.galley_pos.to_vec2(),
-                                    primary_cursor_rect.size(),
-                                ),
-                                None,
-                            );
-                            ui.ctx().request_repaint();
-                            output.state.store(ui.ctx(), id);
-
-                            self.note.borrow_mut().state_msg = "Found".to_owned();
+            match search_result {
+                Some(new_bi) => {
+                    let mut new_ci = None;
+                    for (ci, (bi, _)) in self.note.borrow().contents.char_indices().enumerate() {
+                        if new_bi == bi {
+                            new_ci = Some(ci);
+                            break;
                         }
                     }
-                    None => {
-                        self.note.borrow_mut().state_msg = "Search finished".to_owned();
+
+                    if let Some(new_ci_start) = new_ci {
+                        let new_ci_end = new_ci_start + self.search_words.chars().count();
+                        output.state.cursor.set_char_range(Some(CCursorRange::two(
+                            CCursor::new(new_ci_start),
+                            CCursor::new(new_ci_end),
+                        )));
+                        let primary_cursor_rect = cursor_rect(
+                            &output.galley,
+                            &output.state.cursor.range(&output.galley).unwrap().primary,
+                            ui.fonts(|f| f.row_height(&get_body_font_id(ui))),
+                        );
+
+                        ui.scroll_to_rect(
+                            egui::Rect::from_center_size(
+                                primary_cursor_rect.center() + output.galley_pos.to_vec2(),
+                                primary_cursor_rect.size(),
+                            ),
+                            None,
+                        );
+                        ui.ctx().request_repaint();
+                        output.state.store(ui.ctx(), id);
+
+                        self.note.borrow_mut().state_msg = "Found".to_owned();
                     }
+                }
+                None => {
+                    self.note.borrow_mut().state_msg = "Search finished".to_owned();
                 }
             }
         }
@@ -518,12 +517,11 @@ impl App {
 
     fn open(&mut self, mut path: Option<std::path::PathBuf>) {
         confirm_dialog_or_calling!(self, note, {
-            if path.is_none() {
-                if let Some(open_path) =
+            if path.is_none()
+                && let Some(open_path) =
                     rfd::FileDialog::new().add_filter("*", &["txt"]).pick_file()
-                {
-                    path = Some(open_path);
-                }
+            {
+                path = Some(open_path);
             }
 
             if let Some(path) = path {

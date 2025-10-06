@@ -146,14 +146,13 @@ impl Arg {
                         let mut response = output.response;
 
                         if self.existing_path {
-                            if response.has_focus() && ui.input(|i| i.key_pressed(egui::Key::Tab)) {
-                                if let Some(mut cursor_range) = output.state.cursor.char_range() {
-                                    if path_utils::tab_path_completion(value, &mut cursor_range) {
-                                        response.mark_changed();
-                                        output.state.cursor.set_char_range(Some(cursor_range));
-                                        output.state.store(ui.ctx(), id);
-                                    }
-                                }
+                            if response.has_focus()
+                                && ui.input(|i| i.key_pressed(egui::Key::Tab))
+                                && let Some(mut cursor_range) = output.state.cursor.char_range()
+                                && path_utils::tab_path_completion(value, &mut cursor_range)
+                            {
+                                response.mark_changed();
+                                output.state.cursor.set_char_range(Some(cursor_range));
                             }
 
                             let errors = path_utils::check_path_existence(value);

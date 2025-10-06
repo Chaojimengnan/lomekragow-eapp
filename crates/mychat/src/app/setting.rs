@@ -24,11 +24,11 @@ impl super::App {
                     new_index
                 });
 
-            if let Some(new_index) = response.inner {
-                if new_index != current_index {
-                    manager.current_profile_index = new_index;
-                    self.config = manager.cur_config().clone();
-                }
+            if let Some(new_index) = response.inner
+                && new_index != current_index
+            {
+                manager.current_profile_index = new_index;
+                self.config = manager.cur_config().clone();
             }
 
             if ui.button("Add Profile").clicked() {

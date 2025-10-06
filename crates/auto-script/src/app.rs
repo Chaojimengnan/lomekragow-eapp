@@ -276,10 +276,10 @@ impl App {
                         }
                     }
 
-                    if let Some(err) = self.check_error.as_ref() {
-                        if !self.editor.is_showing_completion() {
-                            response = response.on_hover_text_at_pointer(err);
-                        }
+                    if let Some(err) = self.check_error.as_ref()
+                        && !self.editor.is_showing_completion()
+                    {
+                        response = response.on_hover_text_at_pointer(err);
                     }
 
                     let rect = response.interact_rect;
@@ -449,10 +449,10 @@ impl App {
         for action in self.handler.poll_events() {
             match action {
                 HotKeyAction::RunScript => {
-                    if let Some(script) = self.manager.scripts.get(self.cur_sel) {
-                        if !self.executor.is_executing() {
-                            self.executor.execute_script(script.content.clone());
-                        }
+                    if let Some(script) = self.manager.scripts.get(self.cur_sel)
+                        && !self.executor.is_executing()
+                    {
+                        self.executor.execute_script(script.content.clone());
                     }
                 }
                 HotKeyAction::CancelScript => self.executor.cancel(),

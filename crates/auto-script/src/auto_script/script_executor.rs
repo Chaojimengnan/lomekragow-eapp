@@ -75,26 +75,26 @@ impl ScriptExecutor {
     }
 
     pub fn try_get_execute_result(&mut self) -> Option<Result<(), String>> {
-        if let Some(handle) = &self.handle {
-            if handle.is_finished() {
-                let result = self
-                    .handle
-                    .take()
-                    .unwrap()
-                    .join()
-                    .unwrap_or_else(|e| Err(format!("Script panicked: {e:?}")));
+        if let Some(handle) = &self.handle
+            && handle.is_finished()
+        {
+            let result = self
+                .handle
+                .take()
+                .unwrap()
+                .join()
+                .unwrap_or_else(|e| Err(format!("Script panicked: {e:?}")));
 
-                if let Err(err) = result.as_ref() {
-                    if err.contains(SCRIPT_EXECUTION_CANCELLED_MSG) {
-                        self.console.logs.push_back(format!(
-                            "{CONSOLE_SYSTEM_LOG_PREFIEX} Script execution was cancelled by user"
-                        ));
-                        return Some(Ok(()));
-                    }
-                }
-
-                return Some(result);
+            if let Err(err) = result.as_ref()
+                && err.contains(SCRIPT_EXECUTION_CANCELLED_MSG)
+            {
+                self.console.logs.push_back(format!(
+                    "{CONSOLE_SYSTEM_LOG_PREFIEX} Script execution was cancelled by user"
+                ));
+                return Some(Ok(()));
             }
+
+            return Some(result);
         }
         None
     }

@@ -33,10 +33,10 @@ impl App {
             App::default()
         };
 
-        if !this.manager.main_save_dir.is_empty() {
-            if let Err(err) = this.manager.load_main_save_dir() {
-                this.msg = err.to_string();
-            }
+        if !this.manager.main_save_dir.is_empty()
+            && let Err(err) = this.manager.load_main_save_dir()
+        {
+            this.msg = err.to_string();
         }
 
         this.rebuild_fonts(&cc.egui_ctx);
@@ -112,10 +112,9 @@ impl App {
                     if ui
                         .add(egui::Button::new(ICON_FOLDER.to_string()).frame(false))
                         .clicked()
+                        && let Some(dir_path) = rfd::FileDialog::new().pick_folder()
                     {
-                        if let Some(dir_path) = rfd::FileDialog::new().pick_folder() {
-                            self.manager.main_save_dir = dir_path.to_string_lossy().into_owned();
-                        }
+                        self.manager.main_save_dir = dir_path.to_string_lossy().into_owned();
                     }
                     egui::TextEdit::singleline(&mut self.manager.main_save_dir)
                         .desired_width(f32::INFINITY)
@@ -161,15 +160,16 @@ impl App {
                 ui.separator();
 
                 ui.horizontal(|ui| {
-                    if ui.button("add").clicked() && !self.input_dir.is_empty() {
-                        if let Err(err) = self.manager.add(self.input_dir.clone()) {
-                            self.msg = err.to_string();
-                        }
+                    if ui.button("add").clicked()
+                        && !self.input_dir.is_empty()
+                        && let Err(err) = self.manager.add(self.input_dir.clone())
+                    {
+                        self.msg = err.to_string();
                     }
-                    if ui.button("remove").clicked() {
-                        if let Err(err) = self.manager.remove(&self.input_dir) {
-                            self.msg = err.to_string();
-                        }
+                    if ui.button("remove").clicked()
+                        && let Err(err) = self.manager.remove(&self.input_dir)
+                    {
+                        self.msg = err.to_string();
                     }
 
                     egui::TextEdit::singleline(&mut self.input_dir)
@@ -220,10 +220,10 @@ impl App {
                                         self.manager.main_save_dir_items[i].clone(),
                                     );
 
-                                    if let Some(reg) = self.manager.regex.as_ref() {
-                                        if !reg.is_match(&self.manager.main_save_dir_items[i]) {
-                                            text = text.color(ui.visuals().weak_text_color());
-                                        }
+                                    if let Some(reg) = self.manager.regex.as_ref()
+                                        && !reg.is_match(&self.manager.main_save_dir_items[i])
+                                    {
+                                        text = text.color(ui.visuals().weak_text_color());
                                     }
 
                                     ui.label(text)

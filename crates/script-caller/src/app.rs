@@ -148,12 +148,12 @@ impl App {
             let index = (start_index + i) % indices.len();
             let script_index = indices[index];
             let script = &self.loader.script_list[script_index];
-            if let Some(first_char) = script.command.name.chars().next() {
-                if first_char.to_ascii_lowercase() == search_letter {
-                    self.cur_sel_script = index;
-                    found = true;
-                    break;
-                }
+            if let Some(first_char) = script.command.name.chars().next()
+                && first_char.to_ascii_lowercase() == search_letter
+            {
+                self.cur_sel_script = index;
+                found = true;
+                break;
             }
         }
 
@@ -215,14 +215,13 @@ impl App {
                     ui.horizontal(|ui| {
                         ui.label("info.json");
 
-                        if ui.button(ICON_FOLDER.to_string()).clicked() {
-                            if let Some(open_path) = rfd::FileDialog::new()
+                        if ui.button(ICON_FOLDER.to_string()).clicked()
+                            && let Some(open_path) = rfd::FileDialog::new()
                                 .add_filter("JSON files", &["json"])
                                 .set_directory(self.cwd.clone().unwrap_or_default())
                                 .pick_file()
-                            {
-                                self.info_json_path = Some(open_path.to_string_lossy().to_string());
-                            }
+                        {
+                            self.info_json_path = Some(open_path.to_string_lossy().to_string());
                         }
 
                         let mut path_str = self.info_json_path.clone().unwrap_or_default();
