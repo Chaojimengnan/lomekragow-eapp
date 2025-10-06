@@ -94,10 +94,10 @@ impl App {
         while let Some(result) = syncer.update_once(&mut self.state.items) {
             match result {
                 Ok(true) => {
-                    if self.state.allow_delete {
-                        if let Err(err) = sync::remove_empty_dirs(&self.state.target) {
-                            self.state.msg = err.to_string();
-                        }
+                    if self.state.allow_delete
+                        && let Err(err) = sync::remove_empty_dirs(&self.state.target)
+                    {
+                        self.state.msg = err.to_string();
                     }
                     self.state.get_items();
                 }
@@ -171,10 +171,9 @@ impl App {
                         if ui
                             .add(egui::Button::new(ICON_FOLDER.to_string()).frame(false))
                             .clicked()
+                            && let Some(dir_path) = rfd::FileDialog::new().pick_folder()
                         {
-                            if let Some(dir_path) = rfd::FileDialog::new().pick_folder() {
-                                *path = dir_path.to_string_lossy().into_owned();
-                            }
+                            *path = dir_path.to_string_lossy().into_owned();
                         }
                         egui::TextEdit::singleline(path)
                             .desired_width(f32::INFINITY)

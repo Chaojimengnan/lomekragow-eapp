@@ -149,14 +149,13 @@ impl super::App {
                         let size = self.preview.size();
                         let size = vec2(size.0 as _, size.1 as _);
                         let (_, rect) = ui.allocate_space(size);
-                        if !self.player.state().is_audio {
-                            if let Some(tex) = self.preview.get(hover_time) {
-                                if let Some(tex_id) = self.tex_register.get(*tex) {
-                                    egui::Image::from_texture(SizedTexture::new(tex_id, size))
-                                        .corner_radius(4)
-                                        .paint_at(ui, rect);
-                                }
-                            }
+                        if !self.player.state().is_audio
+                            && let Some(tex) = self.preview.get(hover_time)
+                            && let Some(tex_id) = self.tex_register.get(*tex)
+                        {
+                            egui::Image::from_texture(SizedTexture::new(tex_id, size))
+                                .corner_radius(4)
+                                .paint_at(ui, rect);
                         }
                         let text = mpv::make_time_string(hover_time);
                         text_in_center_bottom_of_rect(ui, text, &rect);
@@ -166,17 +165,16 @@ impl super::App {
 
             let progress_bar_rect = response.rect;
 
-            if response.dragged() {
-                if let Some(pointer) = response.interact_pointer_pos() {
-                    let new_playback_time =
-                        value_from_x(duration, progress_bar_rect, pointer.x as _);
+            if response.dragged()
+                && let Some(pointer) = response.interact_pointer_pos()
+            {
+                let new_playback_time = value_from_x(duration, progress_bar_rect, pointer.x as _);
 
-                    let seek_threshold = duration * 0.001;
-                    if (playback_time - new_playback_time).abs() < seek_threshold.max(0.05) {
-                        self.player.set_play_state(PlayState::Pause);
-                    } else {
-                        self.player.seek(new_playback_time, false);
-                    }
+                let seek_threshold = duration * 0.001;
+                if (playback_time - new_playback_time).abs() < seek_threshold.max(0.05) {
+                    self.player.set_play_state(PlayState::Pause);
+                } else {
+                    self.player.seek(new_playback_time, false);
                 }
             }
 
@@ -236,10 +234,9 @@ impl super::App {
                     if ui
                         .add(new_button(24.0, ICON_ARROW_CIRCLE_LEFT.to_string()))
                         .clicked()
+                        && let Some(new_media) = self.playlist.prev_item()
                     {
-                        if let Some(new_media) = self.playlist.prev_item() {
-                            self.set_media(&new_media);
-                        }
+                        self.set_media(&new_media);
                     }
 
                     let is_pause = !self.player.state().play_state.is_playing();
@@ -260,10 +257,9 @@ impl super::App {
                     if ui
                         .add(new_button(24.0, ICON_ARROW_CIRCLE_RIGHT.to_string()))
                         .clicked()
+                        && let Some(new_media) = self.playlist.next_item()
                     {
-                        if let Some(new_media) = self.playlist.next_item() {
-                            self.set_media(&new_media);
-                        }
+                        self.set_media(&new_media);
                     }
 
                     let mute = self.player.state().mute;

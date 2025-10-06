@@ -172,19 +172,19 @@ impl<'a> Widget for ProgressBar<'a> {
             }
 
             // Show preview tooltip on hover
-            if let Some(ref mut preview_callback) = self.preview {
-                if let Some(pointer) = response.hover_pos() {
-                    let value = value_from_x(self.max, rect, pointer.x as _);
-                    let preview_pos = pos2(pointer.x, rect.top() - 10.0);
+            if let Some(ref mut preview_callback) = self.preview
+                && let Some(pointer) = response.hover_pos()
+            {
+                let value = value_from_x(self.max, rect, pointer.x as _);
+                let preview_pos = pos2(pointer.x, rect.top() - 10.0);
 
-                    Area::new("progress_bar_preview_area".into())
-                        .order(Order::Tooltip)
-                        .fixed_pos(preview_pos)
-                        .pivot(Align2::CENTER_BOTTOM)
-                        .show(ui.ctx(), |ui| {
-                            preview_callback(ui, value);
-                        });
-                }
+                Area::new("progress_bar_preview_area".into())
+                    .order(Order::Tooltip)
+                    .fixed_pos(preview_pos)
+                    .pivot(Align2::CENTER_BOTTOM)
+                    .show(ui.ctx(), |ui| {
+                        preview_callback(ui, value);
+                    });
             }
         }
 

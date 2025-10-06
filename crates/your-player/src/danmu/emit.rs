@@ -30,10 +30,10 @@ impl Manager {
                 continue;
             }
 
-            if let Some(reg) = regex {
-                if reg.is_match(&self.danmu[i].text) {
-                    continue;
-                }
+            if let Some(reg) = regex
+                && reg.is_match(&self.danmu[i].text)
+            {
+                continue;
             }
 
             self.danmu[i].emitted_data = Some(DanmuEmittedData::default());

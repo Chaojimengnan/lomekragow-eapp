@@ -285,10 +285,10 @@ impl Manager {
                 let top_key = NotNan::new(emitted.rect.top()).unwrap();
                 match danmu.danmu_type {
                     DanmuType::Rolling => {
-                        if let Some(&(_, p)) = self.rolling_emitted_map.get(&top_key) {
-                            if p == ptr {
-                                self.rolling_emitted_map.remove(&top_key);
-                            }
+                        if let Some(&(_, p)) = self.rolling_emitted_map.get(&top_key)
+                            && p == ptr
+                        {
+                            self.rolling_emitted_map.remove(&top_key);
                         }
                     }
                     DanmuType::Top | DanmuType::Bottom => {

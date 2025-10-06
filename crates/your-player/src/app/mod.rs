@@ -244,11 +244,11 @@ impl App {
         this.rebuild_fonts(&cc.egui_ctx);
         this.selector.apply_text_style(&cc.egui_ctx);
 
-        if let Some(path_str) = std::env::args().nth(1) {
-            if std::path::Path::new(&path_str).is_file() {
-                this.set_media(&path_str);
-                this.playlist.set_current_play(None);
-            }
+        if let Some(path_str) = std::env::args().nth(1)
+            && std::path::Path::new(&path_str).is_file()
+        {
+            this.set_media(&path_str);
+            this.playlist.set_current_play(None);
         }
 
         this
@@ -332,10 +332,10 @@ impl App {
 
             let mut opt_path = None;
             ui.ctx().input(|i| {
-                if !i.raw.dropped_files.is_empty() {
-                    if let Some(path) = &i.raw.dropped_files.first().unwrap().path {
-                        opt_path = Some(path.to_string_lossy().into_owned());
-                    }
+                if !i.raw.dropped_files.is_empty()
+                    && let Some(path) = &i.raw.dropped_files.first().unwrap().path
+                {
+                    opt_path = Some(path.to_string_lossy().into_owned());
                 }
             });
 

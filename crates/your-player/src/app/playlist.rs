@@ -232,10 +232,10 @@ impl super::App {
                                 color = ui.visuals().strong_text_color();
                             }
 
-                            if let Some(regex) = &self.state.danmu_regex {
-                                if regex.is_match(&danmu.text) {
-                                    color = ui.visuals().weak_text_color();
-                                }
+                            if let Some(regex) = &self.state.danmu_regex
+                                && regex.is_match(&danmu.text)
+                            {
+                                color = ui.visuals().weak_text_color();
                             }
 
                             let text = egui::RichText::new(&danmu.text).color(color);

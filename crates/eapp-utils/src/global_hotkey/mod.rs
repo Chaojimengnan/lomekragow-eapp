@@ -92,10 +92,10 @@ where
         assert!(self.is_ok(), "call `create_manager` first");
         let mut result = Vec::new();
         for event in GlobalHotKeyEvent::receiver().try_iter() {
-            if let Some((_, action)) = self.key_map.get(&event.id()) {
-                if self.action_to_edit.is_none() {
-                    result.push(action.clone());
-                }
+            if let Some((_, action)) = self.key_map.get(&event.id())
+                && self.action_to_edit.is_none()
+            {
+                result.push(action.clone());
             }
         }
         result

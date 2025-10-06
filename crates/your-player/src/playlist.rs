@@ -56,10 +56,10 @@ impl Playlist {
 
     pub fn set_current_play(&mut self, list_and_media: Option<(String, String)>) {
         if let Some((list, media)) = list_and_media {
-            if let Some(media_set) = self.map.get(&list) {
-                if media_set.search(&media).is_ok() {
-                    self.current_play = Some((list, media));
-                }
+            if let Some(media_set) = self.map.get(&list)
+                && media_set.search(&media).is_ok()
+            {
+                self.current_play = Some((list, media));
             }
         } else {
             self.current_play = None;

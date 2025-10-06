@@ -253,10 +253,10 @@ impl Player {
                                 }
                             }
                             "eof-reached" => {
-                                if let Flag(end_reached) = change {
-                                    if end_reached {
-                                        self.state.play_state = PlayState::EndReached;
-                                    }
+                                if let Flag(end_reached) = change
+                                    && end_reached
+                                {
+                                    self.state.play_state = PlayState::EndReached;
                                 }
                             }
                             "track-list" => {
@@ -328,15 +328,16 @@ impl Player {
             }
         }
 
-        if self.mpv.consume_need_update_flag() && self.state.media_size != (0, 0) {
-            if let Err(err) = self.mpv.render_ctx.render::<glow::Context>(
+        if self.mpv.consume_need_update_flag()
+            && self.state.media_size != (0, 0)
+            && let Err(err) = self.mpv.render_ctx.render::<glow::Context>(
                 self.fbo.0.get() as _,
                 self.state.media_size.0 as _,
                 self.state.media_size.1 as _,
                 false,
-            ) {
-                log::error!("mpv render fbo fails: {err}");
-            }
+            )
+        {
+            log::error!("mpv render fbo fails: {err}");
         }
     }
 

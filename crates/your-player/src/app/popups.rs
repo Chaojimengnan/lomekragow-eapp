@@ -286,13 +286,12 @@ impl super::App {
                 ui.separator();
 
                 ui.horizontal(|ui| {
-                    if frameless_btn(ui, ICON_FOLDER.to_string()).clicked() {
-                        if let Some(open_path) = rfd::FileDialog::new()
+                    if frameless_btn(ui, ICON_FOLDER.to_string()).clicked()
+                        && let Some(open_path) = rfd::FileDialog::new()
                             .add_filter("*", &["ttf", "otf", "ttc"])
                             .pick_file()
-                        {
-                            self.state.danmu_font_path = open_path.to_string_lossy().to_string();
-                        }
+                    {
+                        self.state.danmu_font_path = open_path.to_string_lossy().to_string();
                     }
                     ui.add(
                         egui::TextEdit::singleline(&mut self.state.danmu_font_path)
