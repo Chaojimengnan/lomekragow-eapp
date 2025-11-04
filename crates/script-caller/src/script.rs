@@ -631,7 +631,7 @@ pub fn runas_admin(script_path: &str, args: &[String]) -> anyhow::Result<()> {
         };
 
         let escaped_args_string = args_to_escaped_string(args);
-        let mut args: Vec<_> = format!("python -i \"{script_path}\" {escaped_args_string}")
+        let mut args: Vec<_> = format!("-i \"{script_path}\" {escaped_args_string}")
             .encode_utf16()
             .collect();
         args.push(0);
@@ -639,7 +639,7 @@ pub fn runas_admin(script_path: &str, args: &[String]) -> anyhow::Result<()> {
         let mut verb: Vec<_> = "runas".encode_utf16().collect();
         verb.push(0);
 
-        let mut file: Vec<_> = "wt".encode_utf16().collect();
+        let mut file: Vec<_> = "python".encode_utf16().collect();
         file.push(0);
 
         let mut info = SHELLEXECUTEINFOW {
@@ -674,8 +674,7 @@ pub fn runas_admin(script_path: &str, args: &[String]) -> anyhow::Result<()> {
 
 pub fn runas_normal(script_path: &str, args: &[String]) -> anyhow::Result<()> {
     #[cfg(windows)]
-    std::process::Command::new("wt")
-        .arg("python")
+    std::process::Command::new("python")
         .arg("-i")
         .arg(script_path)
         .args(args)
